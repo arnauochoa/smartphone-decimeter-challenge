@@ -1,0 +1,8 @@
+# MATLAB autosave files
+*.asv
+*.m~
+
+# Files that can be generated from the code
+*.fig
+*.mat
+*.pos
