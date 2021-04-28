@@ -1,18 +1,16 @@
-% Script description
-
 clearvars -except
 close all; clc;
+% Script description
 
-[project_path, ~, ~] = fileparts(mfilename('fullpath'));
-[workspace_path, ~, ~] = fileparts(project_path);
-
-%% Load configuration
-[CONFIG] = loadConfig();
+% Change the configuration in Config class
 
 %% Input
-
+[gnss, imu, nav, ref] = loadData();
 
 %% Compute geometry
+
+
+%% Pre-process IMU measurements
 
 
 %% Navigate

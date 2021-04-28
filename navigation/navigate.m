@@ -1,4 +1,4 @@
-function [outputArg1,outputArg2] = navigate(inputArg1,inputArg2)
+function [] = navigate()
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
