@@ -10,10 +10,13 @@ classdef Config < handle
     
     properties (Constant)
         % Dataset selection
-        CAMPAIGN_NAME =  '2020-07-17-US-MTV-2';
-        PHONE_NAME = 'Mi8';
+        CAMPAIGN_NAME =  '2020-09-04-US-SF-1';
+        PHONE_NAME = 'Pixel4';
         FILTER_RAW_MEAS = true;
         NAV_FILE_DATETIME = '20201990000'; % Date in broadcasted obs RINEX filename
+        
+        % IMU parameters
+        MAX_IMU_INTERP_MILLIS = 20;
         
         % Navigation parameters
         CONSTELLATIONS = 'GE'
