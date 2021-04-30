@@ -1,4 +1,4 @@
-function [gnss, imu, nav, ref] = loadData()
+function [gnss, imuRaw, nav, ref] = loadData()
 % LOADDATA Loads the GNSS observations, IMU measurements, navigation data
 % and groundtruth data
 
@@ -11,9 +11,9 @@ gnss.obs = obsRinex;
 gnss.type = obsRinexType;
 gnss.utcMillis = obsRinexUtcMillis;
 
-imu.acc = accMeas;
-imu.gyr = gyrMeas;
-imu.mag = magMeas;
+imuRaw.acc = accMeas;
+imuRaw.gyr = gyrMeas;
+imuRaw.mag = magMeas;
 
 %% Navigation data
 nav = [];

@@ -19,6 +19,8 @@ function [vq] = interpMaxDist(x, v, xq, maxDist, method)
 %   vq      = vector with values at query points
 %
 % See also INTERP1.
+
+% Author: Arnau Ochoa Banuelos (CS Group), April 2021
     
 % Matrix of distances between data and query points
 distMat = x-xq';
@@ -26,12 +28,12 @@ distMat = x-xq';
 % Find minimum distances of query points below sample points
 distMatBelow = distMat; 
 distMatBelow(distMat < 0) = nan; % remove distances above
-[minDistBelow, ~] = min(distMatBelow, [], 2);
+[minDistBelow, ~] = min(distMatBelow, [], 1);
 
 % Find minimum distances of query points above sample points
 distMatAbove = distMat; 
 distMatAbove(distMat > 0) = nan; % remove distances below
-[minDistAbove, ~] = min(-distMatAbove, [], 2);
+[minDistAbove, ~] = min(-distMatAbove, [], 1);
 
 xq(minDistBelow > maxDist) = nan; % Distance to next sample pt too large
 xq(minDistAbove > maxDist) = nan; % Distance to prev sample pt too large
