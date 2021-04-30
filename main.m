@@ -11,6 +11,7 @@ close all; clc;
 
 
 %% Pre-process IMU measurements
+imu = preprocessImu(imu);
 
 
 %% Navigate
