@@ -6,6 +6,7 @@ pathOfThisScript = mfilename('fullpath');
 addpath(genpath([pathstr filesep 'configuration']));
 addpath(genpath([pathstr filesep 'imu']));
 addpath(genpath([pathstr filesep 'input']));
+addpath(genpath([pathstr filesep 'lib']));
 addpath(genpath([pathstr filesep 'navigation']));
 addpath(genpath([pathstr filesep 'utils']));
 
