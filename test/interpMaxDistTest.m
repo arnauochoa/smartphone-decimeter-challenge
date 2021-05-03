@@ -1,6 +1,6 @@
 % Test for interpMaxDist
 
-maxDist = 0.5;
+maxDist = 1;
 f = @(x) sin(x/4);
 
 xRef = (-5:.1:45)';
@@ -11,7 +11,7 @@ vSamp = f(xSamp);
 
 xq = [-1.5:11.5 18:42]';
 
-vq = interpMaxDist(xSamp, vSamp, xq, maxDist, 'spline');
+vq = interp1gap(xSamp, vSamp, xq, maxDist, 'spline','extrap',nan);
 
 figure; hold on;
 plot(xRef, yRef);
