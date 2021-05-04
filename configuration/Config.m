@@ -9,33 +9,58 @@ classdef Config < handle
     %   Navigation:     {workspace_path}/data/training/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
     
     properties (Constant)
-        % Dataset selection
+        %% Dataset selection
         CAMPAIGN_NAME =  '2020-09-04-US-SF-1';
         PHONE_NAME = 'Pixel4';
         FILTER_RAW_MEAS = true;
         NAV_FILE_DATETIME = '20201990000'; % Date in broadcasted obs RINEX filename
         
-        % IMU parameters
+        %% IMU parameters
         MAX_IMU_INTERP_MILLIS = 20;
         
-        % Navigation parameters
+        %% Navigation parameters
         CONSTELLATIONS = 'GE'
         OBS_COMBINATION = {'none','none'};
         OBS_USED = {'C1C+C5X','C1C+C5X'};
         IONO_CORRECTION = 'Klobuchar'; % among 'none', 'iono-free' and 'Klobuchar'
         ELEVATION_MASK = 10;
-        MEAS_COVARIANCE = 'uncertainty'; % among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC = 'uncertainty'; % among 'elevation' and 'uncertainty'
+        MAX_DOPPLER_MEAS = 6e3;
+        MAX_DOPPLER_UNCERT = 10;
+        
+        %% KF tuning parameters
+        % Process noise covariance matrix
+        SIGMA_VEL_NED           = [50 50 3]';   % std m/sqrt(s^3) of NED velocity
+        SIGMA_CLK_BIAS          = 12.8;         % std m/sqrt(s) of receiver clock bias
+        SIGMA_CLK_DRIFT         = 0.4;          % std m/sqrt(s^3) of receiver clock drift
+        SIGMA_CLK_INTERFREQ     = 0.01;         % std m/sqrt(s) of code inter-frequency clock bias
+        SIGMA_CLK_INTERSYS      = 0.01;         % std m/sqrt(s) of inter-GNSS system clock bias
+        % Measurement covariance matrix
+        SIGMA_PR_M              = 4;            % Default std (m) for pseudorange meas (elevation-based model)
+        SIGMA_DOP_MPS           = 0.1;          % Default std (m/s) for doppler meas (elevation-based model)
+        COV_FACTOR_C            = 1;            % Covariance factor for pseudorange meas
+        COV_FACTOR_D            = 100;          % Covariance factor for Doppler meas
+        CONST_COV_FACTORS       = [1 1];        % Covariance factor for each constellation
+        % State covariance matrix initialization
+        SIGMA_P0_POS_NED        = [10 10 10];   % std m/sqrt(s) of NED position
+        SIGMA_P0_VEL_NED        = [10 10 10];   % std m/sqrt(s^3) of NED velocity
+        SIGMA_P0_CLK_BIAS       = 100;          % std m/sqrt(s) of receiver clock bias
+        SIGMA_P0_CLK_DRIFT      = 100;          % std m/sqrt(s^3) of receiver clock drift
+        SIGMA_P0_CLK_INTERFREQ  = 100;          % std m/sqrt(s) of code inter-frequency clock bias
+        SIGMA_P0_CLK_INTERSYS   = 100;          % std m/sqrt(s) of inter-GNSS system clock bias
+        
+        
     end
     
     %% Public methods
-    methods (Static)        
+    methods (Static)
         function [dirPath, fileName] = getObsDirFile()
             %GETOBSDIRFILE Returns the directory and the filename of the
             %observation file according to the selected configuration.
             dirPath = [Config.dataPath 'datasets' filesep Config.CAMPAIGN_NAME filesep];
             fileName = [Config.PHONE_NAME '_GnssLog.txt'];
         end
-
+        
         function filepaths = getNavFilepaths()
             %GETNAVFILEPATH Returns the file path(s) of the navigation
             %file(s) according to the CONSTELLATIONSs selected.
@@ -55,6 +80,31 @@ classdef Config < handle
             [dirPath, ~] = Config.getObsDirFile();
             fileName = ['SPAN_' Config.PHONE_NAME '_10Hz.nmea'];
         end
+        
+        function nConst = getNumConst()
+            nConst = length(Config.CONSTELLATIONS);
+        end
+        
+        function nFreq = getNumFreq()
+            freqs = '';
+            for iConst = 1:length(Config.OBS_USED)
+                obs = split(Config.OBS_USED{iConst}, '+');
+                for iObs = 1:length(obs)
+                    freqs = [freqs obs{iObs}(2)];
+                end
+            end
+            nFreq = length(unique(freqs));
+        end
+        
+        function P0 = getP0()
+            P0 = diag([ Config.SIGMA_P0_POS_NED ...
+                Config.SIGMA_P0_VEL_NED ...
+                SIGMA_P0_CLK_BIAS       ...
+                SIGMA_P0_CLK_DRIFT      ...
+                SIGMA_P0_CLK_INTERFREQ	...
+                SIGMA_P0_CLK_INTERSYS]);
+        end
+        
     end
     
     %% Private methods
@@ -63,6 +113,7 @@ classdef Config < handle
             % DATAPATH Returns the absolute path where all the data is saved
             path = [workspacePath 'data' filesep 'training' filesep];
         end
+        
     end
 end
 

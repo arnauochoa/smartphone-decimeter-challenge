@@ -1,29 +1,23 @@
 %% Example of Orekit
-
-javaaddpath(workspacePath);
-javaaddpath([workspacePath '/orekit/target/orekit-11.0-SNAPSHOT.jar'])
-% javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-clustering-1.8.jar'])
-javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-core-1.8.jar'])
-% javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-fft-1.8.jar'])
-% javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-filtering-1.8.jar'])
-javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-fitting-1.8.jar'])
-javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-geometry-1.8.jar'])
-% javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-migration-1.8.jar'])
-javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-ode-1.8.jar'])
-javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-optim-1.8.jar'])
-% javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-samples-1.8.jar'])
-% javaaddpath([workspacePath '/orekit/hipparchus-1.8-bin/hipparchus-stat-1.8.jar'])
-
+clear;
 import org.orekit.gnss.*
 import org.orekit.gnss.navigation.*
+import org.orekit.propagation.analytical.gnss.*
 import org.orekit.time.*
 import org.hipparchus.util.*
+
+%% Configure Orekit. The file orekit-data.zip must be in current dir
+DM = org.orekit.data.DataProvidersManager.getInstance();
+crawler = org.orekit.data.ZipJarCrawler('orekit-data.zip');
+DM.clearProviders()
+DM.addProvider(crawler)
 
 % Read Rinex
 rnxPath = './data/training/brdc/2020-08-06-US-MTV-2/BRDC00WRD_R_20202190000_01D_GN.rnx';
 rnxFIS = java.io.FileInputStream(rnxPath);
-NFParser = NavigationFileParser();
-gpsNav = NFParser.parse(rnxFIS);
+nfParser = NavigationFileParser();
+gpsNav = nfParser.parse(rnxFIS);
+g17 = gpsNav.getGPSNavigationMessages('G17');
 
 % s = Frequency.G01;
 % s.getName
