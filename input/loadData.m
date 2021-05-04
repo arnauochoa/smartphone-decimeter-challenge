@@ -1,4 +1,4 @@
-function [gnss, imuRaw, nav, ref] = loadData()
+function [gnssRnx, imuRaw, nav, ref] = loadData()
 % LOADDATA Loads the GNSS observations, IMU measurements, navigation data
 % and groundtruth data
 
@@ -7,9 +7,9 @@ function [gnss, imuRaw, nav, ref] = loadData()
 [obsRinex, obsRinexType, obsRinexUtcMillis, ~, accMeas, gyrMeas, magMeas, ~] = ...
     getGnssLogObs(obsDirPath, obsFileName, Config.FILTER_RAW_MEAS);
 
-gnss.obs = obsRinex;
-gnss.type = obsRinexType;
-gnss.utcMillis = obsRinexUtcMillis;
+gnssRnx.obs = obsRinex;
+gnssRnx.type = obsRinexType;
+gnssRnx.utcMillis = obsRinexUtcMillis;
 
 imuRaw.acc = accMeas;
 imuRaw.gyr = gyrMeas;
