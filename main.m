@@ -5,7 +5,7 @@ close all; clc;
 % Change the configuration in Config class
 
 %% Input
-[gnssRnx, imuRaw, nav, ref] = loadData();
+[gnssRnx, imuRaw, nav, iono, ref] = loadData();
 
 %% Compute geometry
 
@@ -14,7 +14,7 @@ close all; clc;
 imuClean = preprocessImu(imuRaw);
 
 %% Navigate
-
+[xEst] = navigate(gnssRnx, imuClean, nav, iono);
 
 %% Output
 
