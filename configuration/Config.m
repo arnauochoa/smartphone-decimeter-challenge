@@ -10,10 +10,10 @@ classdef Config < handle
     
     properties (Constant)
         %% Dataset selection
-        CAMPAIGN_NAME =  '2020-09-04-US-SF-1';
-        PHONE_NAME = 'Pixel4';
+        CAMPAIGN_NAME =  '2020-08-06-US-MTV-2';
+        PHONE_NAME = 'Mi8';
         FILTER_RAW_MEAS = true;
-        NAV_FILE_DATETIME = '20201990000'; % Date in broadcasted obs RINEX filename
+        NAV_FILE_DATETIME = '20202190000'; % Date in broadcasted obs RINEX filename
         
         %% IMU parameters
         MAX_IMU_INTERP_MILLIS = 20;
@@ -21,10 +21,10 @@ classdef Config < handle
         %% Navigation parameters
         CONSTELLATIONS = 'GE'
         OBS_COMBINATION = {'none','none'};
-        OBS_USED = {'C1C+C5X','C1C+C5X'};
+        OBS_USED = {'C1C','C1C'};
         IONO_CORRECTION = 'Klobuchar'; % among 'none', 'iono-free' and 'Klobuchar'
         ELEVATION_MASK = 10;
-        MEAS_COV_SRC = 'uncertainty'; % among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC = 'elevation'; % among 'elevation' and 'uncertainty'
         MAX_DOPPLER_MEAS = 6e3;
         MAX_DOPPLER_UNCERT = 10;
         
@@ -99,10 +99,10 @@ classdef Config < handle
         function P0 = getP0()
             P0 = diag([ Config.SIGMA_P0_POS_NED ...
                 Config.SIGMA_P0_VEL_NED ...
-                SIGMA_P0_CLK_BIAS       ...
-                SIGMA_P0_CLK_DRIFT      ...
-                SIGMA_P0_CLK_INTERFREQ	...
-                SIGMA_P0_CLK_INTERSYS]);
+                Config.SIGMA_P0_CLK_BIAS       ...
+                Config.SIGMA_P0_CLK_DRIFT      ...
+                Config.SIGMA_P0_CLK_INTERFREQ	...
+                Config.SIGMA_P0_CLK_INTERSYS]);
         end
         
     end
