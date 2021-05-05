@@ -40,7 +40,7 @@ while ~firstValidEpoch
 end
 % compute LS position
 % Approximate position is at lat = 0, lon = 0, alt = 0, clk = 0, interconstellation clk bias = 0
-xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, Config.getNumConst()-1)]';
+xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, PVTUtils.getNumConstellations()-1)]';
 [xLS, PLS] = compute_spp_ls(gnss.obs,satPos,satClkBias,xLS,Config.CONSTELLATIONS);
 
 % Fill ouptuts
@@ -54,7 +54,7 @@ function [x0, P0] = fillFullState(xLS, PLS)
 % parameters estimated by LS and the ones set by Config
 
 % Initialize state vector and cov matrix
-nStates = PVTUtils.getNStates();
+nStates = PVTUtils.getNumStates();
 x0 = zeros(nStates, 1);
 P0 = zeros(nStates); % TODO set diagonal terms of velocity and others
 
@@ -71,5 +71,5 @@ P0(PVTUtils.getStateIndex(PVTUtils.ID_VEL), PVTUtils.getStateIndex(PVTUtils.ID_V
 P0(PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT), PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT)) = ...
     Config.SIGMA_P0_CLK_DRIFT^2;
 P0(PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS), PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS)) = ...
-    diag(Config.SIGMA_P0_CLK_INTERFREQ^2 * ones(1, Config.getNumFreq-1));
+    diag(Config.SIGMA_P0_CLK_INTERFREQ^2 * ones(1, PVTUtils.getNumFrequencies-1));
 end

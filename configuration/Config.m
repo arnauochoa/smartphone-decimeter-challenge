@@ -19,9 +19,10 @@ classdef Config < handle
         MAX_IMU_INTERP_MILLIS = 20;
         
         %% Navigation parameters
-        CONSTELLATIONS = 'GEC'
+        CONSTELLATIONS = 'GE'
         OBS_COMBINATION = {'none','none'};
-        OBS_USED = {'C1C+C5X','C1C+C5X', 'C2I'};
+        OBS_USED = {'C1C','C1C'};
+        CONST_COV_FACTORS       = [1 1];        % Covariance factor for each constellation
         IONO_CORRECTION = 'Klobuchar'; % among 'none', 'iono-free' and 'Klobuchar'
         ELEVATION_MASK = 10;
         MEAS_COV_SRC = 'elevation'; % among 'elevation' and 'uncertainty'
@@ -40,7 +41,6 @@ classdef Config < handle
         SIGMA_DOP_MPS           = 0.1;          % Default std (m/s) for doppler meas (elevation-based model)
         COV_FACTOR_C            = 1;            % Covariance factor for pseudorange meas
         COV_FACTOR_D            = 100;          % Covariance factor for Doppler meas
-        CONST_COV_FACTORS       = [1 1];        % Covariance factor for each constellation
         % State covariance matrix initialization
         SIGMA_P0_VEL_XYZ        = [10 10 10];   % std m/sqrt(s^3) of initial velocity
         SIGMA_P0_CLK_DRIFT      = 100;          % std m/sqrt(s^3) of initial receiver clock drift
@@ -75,21 +75,6 @@ classdef Config < handle
             %groundtruth file according to the selected configuration.
             [dirPath, ~] = Config.getObsDirFile();
             fileName = ['SPAN_' Config.PHONE_NAME '_10Hz.nmea'];
-        end
-        
-        function nConst = getNumConst()
-            nConst = length(Config.CONSTELLATIONS);
-        end
-        
-        function nFreq = getNumFreq()
-            freqs = '';
-            for iConst = 1:length(Config.OBS_USED)
-                obs = split(Config.OBS_USED{iConst}, '+');
-                for iObs = 1:length(obs)
-                    freqs = [freqs obs{iObs}(2)];
-                end
-            end
-            nFreq = length(unique(freqs));
         end
         
         function P0 = getP0()
