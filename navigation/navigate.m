@@ -3,9 +3,7 @@ function [xEst] = navigate(gnssRnx, imuRaw, nav, iono)
 %   Detailed explanation goes here
 
 %% Initializations
-% States:
-% 3D pos, 3D vel, clock bias, clock drift, inter-freq. bias, inter-sys bias
-nStates = 8 + Config.getNumFreq-1 + Config.getNumConst-1;
+nStates = PVTUtils.getNStates();
 % EKF:
 esekf = EKF.build(uint16(nStates));
 % Disable outlier rejection:
@@ -13,7 +11,7 @@ esekf.probabilityOfFalseOutlierRejection = 0;
 
 
 %% Obtain first position
-[esekf.x, esekf.P, esekf.tx] = getFirstPosition(nStates, gnssRnx, nav);
+[esekf.x, esekf.P, esekf.tx] = getFirstPosition(gnssRnx, nav);
 
 % Loop variables
 thisUtcMillis = esekf.tx; % First time is from the first GNSS estimation
@@ -61,23 +59,37 @@ while ~hasEnded % while there are more observations/measurements
     fArgs.xEst = xEst(:, idxEst);
     % Measurement model arguments
     hArgs.xEst = xEst(:, idxEst);
-    hArgs.prCorr = prCorr;
-    hArgs.prRate = prRate;
-    hArgs.obsFreq = [gnss.obs(:).D_fcarrier_Hz];
-    hArgs.obsConst = [gnss.obs(:).constellation];
-    hArgs.satPos = satPos;
-    hArgs.satVel = satVel;
-    hArgs.satClkBias = satClkBias;
-    hArgs.satClkDrift = satClkDrift;
-    hArgs.satElev = satElDeg;
-    hArgs.sigmaPr = [gnss.obs(:).C_sigma];
-    hArgs.sigmaPrRate = [gnss.obs(:).D_sigma] .* Constants.CELERITY ./ [gnss.obs(:).D_fcarrier_Hz];
     
-    % loop over measurements and call processObs for each 
-    esekf = EKF.processObservation(esekf, gnss.utcMillis, ...
-        @fTransition, fArgs, ...
-        @hMeasurement, hArgs, ...
-        'gnssObs');
+    for iObs = 1:length(prCorr)
+        hArgs.obsFreq = gnss.obs(iObs).D_fcarrier_Hz;
+        hArgs.obsConst = gnss.obs(iObs).constellation;
+        hArgs.satPos = satPos(:, iObs);
+        hArgs.satVel = satVel(:, iObs);
+        hArgs.satClkBias = satClkBias(iObs);
+        hArgs.satClkDrift = satClkDrift(iObs);
+        hArgs.satElev = satElDeg(iObs);
+        
+        % Process code observation
+        hArgs.obs = prCorr(iObs);
+        hArgs.sigmaObs = gnss.obs(iObs).C_sigma;
+        esekf = EKF.processObservation(esekf, gnss.utcMillis, ...
+            @fTransition, fArgs, ...
+            @hCodeObs, hArgs, ...
+            'gnssObs');
+        
+        % Process Doppler observation
+        hArgs.obs = prRate(iObs);
+        hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
+            Constants.CELERITY ./ hArgs.obsFreq;
+        esekf = EKF.processObservation(esekf, gnss.utcMillis, ...
+            @fTransition, fArgs, ...
+            @hDopplerObs, hArgs, ...
+            'gnssObs');
+    end
+    
+    
+    % loop over measurements and call processObs for each
+    
     
     %%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%
     esekf.tx

@@ -19,9 +19,9 @@ classdef Config < handle
         MAX_IMU_INTERP_MILLIS = 20;
         
         %% Navigation parameters
-        CONSTELLATIONS = 'GE'
+        CONSTELLATIONS = 'GEC'
         OBS_COMBINATION = {'none','none'};
-        OBS_USED = {'C1C','C1C'};
+        OBS_USED = {'C1C+C5X','C1C+C5X', 'C2I'};
         IONO_CORRECTION = 'Klobuchar'; % among 'none', 'iono-free' and 'Klobuchar'
         ELEVATION_MASK = 10;
         MEAS_COV_SRC = 'elevation'; % among 'elevation' and 'uncertainty'
@@ -42,13 +42,9 @@ classdef Config < handle
         COV_FACTOR_D            = 100;          % Covariance factor for Doppler meas
         CONST_COV_FACTORS       = [1 1];        % Covariance factor for each constellation
         % State covariance matrix initialization
-        SIGMA_P0_POS_NED        = [10 10 10];   % std m/sqrt(s) of NED position
-        SIGMA_P0_VEL_NED        = [10 10 10];   % std m/sqrt(s^3) of NED velocity
-        SIGMA_P0_CLK_BIAS       = 100;          % std m/sqrt(s) of receiver clock bias
-        SIGMA_P0_CLK_DRIFT      = 100;          % std m/sqrt(s^3) of receiver clock drift
-        SIGMA_P0_CLK_INTERFREQ  = 100;          % std m/sqrt(s) of code inter-frequency clock bias
-        SIGMA_P0_CLK_INTERSYS   = 100;          % std m/sqrt(s) of inter-GNSS system clock bias
-        
+        SIGMA_P0_VEL_XYZ        = [10 10 10];   % std m/sqrt(s^3) of initial velocity
+        SIGMA_P0_CLK_DRIFT      = 100;          % std m/sqrt(s^3) of initial receiver clock drift
+        SIGMA_P0_CLK_INTERFREQ  = 100;          % std m/sqrt(s) of initial code inter-frequency clock bias
         
     end
     

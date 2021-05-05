@@ -17,7 +17,7 @@ rnxPath = './data/training/brdc/2020-08-06-US-MTV-2/BRDC00WRD_R_20202190000_01D_
 rnxFIS = java.io.FileInputStream(rnxPath);
 nfParser = NavigationFileParser();
 gpsNav = nfParser.parse(rnxFIS);
-g17 = gpsNav.getGPSNavigationMessages('G17');
+g17NavigationMessage = gpsNav.getGPSNavigationMessages('G17');
 
 % s = Frequency.G01;
 % s.getName

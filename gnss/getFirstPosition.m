@@ -1,4 +1,4 @@
-function [x0, P0, utcMillis0] = getFirstPosition(nStates, gnssRnx, nav)
+function [x0, P0, utcMillis0] = getFirstPosition(gnssRnx, nav)
 % GETFIRSTPOSITION Computes the position using LS at the first epoch with
 % enough GNSS observations
 
@@ -43,13 +43,33 @@ end
 xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, Config.getNumConst()-1)]';
 [xLS, PLS] = compute_spp_ls(gnss.obs,satPos,satClkBias,xLS,Config.CONSTELLATIONS);
 
-% Fill full state vector and covariance matrix with parameters estimated by LS
+% Fill ouptuts
+[x0, P0] = fillFullState(xLS, PLS);
+utcMillis0 = thisUtcMillis;
+end %end of function getFirstPosition
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [x0, P0] = fillFullState(xLS, PLS)
+% FILLFULLSTATE Fills full state vector and covariance matrix with 
+% parameters estimated by LS and the ones set by Config
+
+% Initialize state vector and cov matrix
+nStates = PVTUtils.getNStates();
 x0 = zeros(nStates, 1);
 P0 = zeros(nStates); % TODO set diagonal terms of velocity and others
+
+% Fill parameters estimated by LS
 idxLS = [PVTUtils.getStateIndex(PVTUtils.ID_POS) ...
     PVTUtils.getStateIndex(PVTUtils.ID_CLK_BIAS) ...
     PVTUtils.getStateIndex(PVTUtils.ID_INTER_SYS_BIAS)];
 x0(idxLS) = xLS;
 P0(idxLS, idxLS) = PLS;
-utcMillis0 = thisUtcMillis;
+
+% Fill the rest with the Config values
+P0(PVTUtils.getStateIndex(PVTUtils.ID_VEL), PVTUtils.getStateIndex(PVTUtils.ID_VEL)) = ...
+    diag(Config.SIGMA_P0_VEL_XYZ.^2);
+P0(PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT), PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT)) = ...
+    Config.SIGMA_P0_CLK_DRIFT^2;
+P0(PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS), PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS)) = ...
+    diag(Config.SIGMA_P0_CLK_INTERFREQ^2 * ones(1, Config.getNumFreq-1));
 end
