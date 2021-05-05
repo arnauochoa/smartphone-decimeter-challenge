@@ -13,8 +13,16 @@ classdef PVTUtils < handle
     end
     
     methods (Static)
+        
+        function nStates = getNStates()
+            % GETNSTATES Returns the number of states in the state vector
+            % 3D pos, 3D vel, clock bias, clock drift, inter-freq bias,
+            % inter-system bias
+            nStates = 8 + Config.getNumFreq-1 + Config.getNumConst-1;
+        end
+        
         function idx = getStateIndex(unknown)
-            %GETSTATEINDEXReturns the index in the state vector of the
+            %GETSTATEINDEX Returns the index in the state vector of the
             %given unknown.
             switch unknown
                 case PVTUtils.ID_POS
