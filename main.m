@@ -17,4 +17,6 @@ imuClean = preprocessImu(imuRaw);
 [xEst] = navigate(gnssRnx, imuClean, nav, iono);
 
 %% Output
+disp('Navigation ended, plotting results...');
+plotResults(xEst, ref);
 

@@ -2,6 +2,7 @@
 clear;
 import org.orekit.gnss.*
 import org.orekit.gnss.navigation.*
+import org.orekit.propagation.analytical.gnss.data.*
 import org.orekit.propagation.analytical.gnss.*
 import org.orekit.time.*
 import org.hipparchus.util.*
@@ -18,6 +19,10 @@ rnxFIS = java.io.FileInputStream(rnxPath);
 nfParser = NavigationFileParser();
 gpsNav = nfParser.parse(rnxFIS);
 g17NavigationMessage = gpsNav.getGPSNavigationMessages('G17');
+g17Propagator = GNSSPropagatorBuilder(g17NavigationMessage.get(0)).build();
+g17State = g17Propagator.propagate(g17NavigationMessage.get(0).getDate());
+% getDate --> UTC 
+% coordinates in inertial frame 
 
 % s = Frequency.G01;
 % s.getName
