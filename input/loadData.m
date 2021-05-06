@@ -9,7 +9,7 @@ function [gnssRnx, imuRaw, nav, iono, ref] = loadData()
 
 gnssRnx.obs = obsRinex;
 gnssRnx.type = obsRinexType;
-gnssRnx.utcMillis = obsRinexUtcMillis;
+gnssRnx.utcSeconds = obsRinexUtcMillis / 1e3;
 
 imuRaw.acc = accMeas;
 imuRaw.gyr = gyrMeas;

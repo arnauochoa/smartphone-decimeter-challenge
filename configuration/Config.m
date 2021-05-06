@@ -10,24 +10,24 @@ classdef Config < handle
     
     properties (Constant)
         %% Dataset selection
-        CAMPAIGN_NAME =  '2020-08-06-US-MTV-2';
-        PHONE_NAME = 'Mi8';
-        FILTER_RAW_MEAS = true;
-        NAV_FILE_DATETIME = '20202190000'; % Date in broadcasted obs RINEX filename
+        CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';
+        PHONE_NAME              = 'Mi8';
+        FILTER_RAW_MEAS         = true;
+        NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
         
         %% IMU parameters
-        MAX_IMU_INTERP_MILLIS = 20;
+        MAX_IMU_INTERP_MILLIS   = 20;
         
         %% Navigation parameters
-        CONSTELLATIONS = 'GE'
-        OBS_COMBINATION = {'none','none'};
-        OBS_USED = {'C1C','C1C'};
-        CONST_COV_FACTORS       = [1 1];        % Covariance factor for each constellation
-        IONO_CORRECTION = 'Klobuchar'; % among 'none', 'iono-free' and 'Klobuchar'
-        ELEVATION_MASK = 10;
-        MEAS_COV_SRC = 'elevation'; % among 'elevation' and 'uncertainty'
-        MAX_DOPPLER_MEAS = 6e3;
-        MAX_DOPPLER_UNCERT = 10;
+        CONSTELLATIONS          = 'G'
+        OBS_COMBINATION         = {'none'};
+        OBS_USED                = {'C1C'};
+        CONST_COV_FACTORS       = [1];        % Covariance factor for each constellation
+        IONO_CORRECTION         = 'Klobuchar'; % among 'none', 'iono-free' and 'Klobuchar'
+        ELEVATION_MASK          = 10;
+        MEAS_COV_SRC            = 'elevation'; % among 'elevation' and 'uncertainty'
+        MAX_DOPPLER_MEAS        = 6e3;
+        MAX_DOPPLER_UNCERT      = 10;
         
         %% KF tuning parameters
         % Process noise covariance matrix

@@ -1,28 +1,44 @@
-function [xEst] = navigate(gnssRnx, imuRaw, nav, iono)
+function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist] = ...
+    navigate(gnssRnx, imuMeas, nav, iono)
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
 %% Initializations
 nStates = PVTUtils.getNumStates();
+nSatellites = PVTUtils.getNumSatelliteIndices();
+gnssEpochs = unique(gnssRnx.utcSeconds);
+nGnssEpochs = length(gnssEpochs);
 % EKF:
 esekf = EKF.build(uint16(nStates));
-% Disable outlier rejection:
-esekf.probabilityOfFalseOutlierRejection = 0;
 
 
 %% Obtain first position
 [esekf.x, esekf.P, esekf.tx] = getFirstPosition(gnssRnx, nav);
 
 % Loop variables
-thisUtcMillis = esekf.tx; % First time is from the first GNSS estimation
+% thisUtcSeconds -> time ref for both IMU and GNSS. 
+thisUtcSeconds = esekf.tx; % First time is from the first GNSS estimation
 idxEst = 1;
-xEst = esekf.x; % TODO change to error state
+xEstHist = esekf.x; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
 
-% First gnss observations -> same as for the first approx pos
-gnss = getNextGnss(thisUtcMillis, gnssRnx, 'this');
+%
+prInnovations = nan(nSatellites, nGnssEpochs);
+prInnovationCovariances = nan(nSatellites, nGnssEpochs);
+dopInnovations = nan(nSatellites, nGnssEpochs);
+dopInnovationCovariances = nan(nSatellites, nGnssEpochs);
+utcSecondsHist = []; % TODO size is not known yet since it depends on predictions and updates
+
+% First gnss observations is the same as for the first approx position
+gnss = getNextGnss(thisUtcSeconds, gnssRnx, 'this');
 hasEnded = isempty(gnss); % TODO check imu
+
 while ~hasEnded % while there are more observations/measurements
-    thisUtcMillis = gnss.utcMillis; % TODO check imu time
+    
+    thisUtcSeconds = gnss.utcSeconds; % TODO check imu time
+    
+    % First iteration: x0 is result from LS
+    if idxEst == 1,     x0 = xEstHist(:, 1);
+    else,               x0 = xEstHist(:, idxEst-1); end
     
     % Get states of satellites selected in Config
     [satPos, satClkBias, satClkDrift, satVel] = ...
@@ -30,10 +46,10 @@ while ~hasEnded % while there are more observations/measurements
     
     % Remove invalid observations (no ephem, elevation mask, large dopplers)
     [gnss.obs, satPos, satClkBias, satClkDrift, satVel] = ...
-        filterObs(gnss.obs, satPos, satClkBias, satClkDrift, satVel, xEst(1:3, idxEst));
+        filterObs(gnss.obs, satPos, satClkBias, satClkDrift, satVel, x0(1:3));
     
     % Compute elevation and azimuth of satellites
-    [satAzDeg, satElDeg, rxLLH] = getSatAzEl(satPos, xEst(1:3, idxEst));
+    [satAzDeg, satElDeg, rxLLH] = getSatAzEl(satPos, x0(1:3));
     
     % Apply iono and tropo corrections
     switch Config.IONO_CORRECTION
@@ -50,18 +66,20 @@ while ~hasEnded % while there are more observations/measurements
         otherwise
             ionoCorr = zeros(1, length(gnss.obs));
     end
-    tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
+    %     tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
+    tropo = 0; % TODO apply tropo
     % Apply pr correction and convert doppler (Hz) to pr rate (m/s)
     prCorr = [gnss.obs(:).C]' - ionoCorr' - tropo';
     prRate = -[gnss.obs(:).D_Hz]' .* Constants.CELERITY ./ [gnss.obs(:).D_fcarrier_Hz]';
     
     % Transition model arguments
-    fArgs.xEst = xEst(:, idxEst);
+    fArgs.x0 = x0;
     % Measurement model arguments
-    hArgs.xEst = xEst(:, idxEst);
+    hArgs.x0 = x0;
     
     % Sequentally update with all observations
     for iObs = 1:length(prCorr)
+        idxSat = PVTUtils.getSatelliteIndex(gnss.obs(iObs).prn, gnss.obs(iObs).constellation);
         % Pack arguments that are common for Code and Doppler observations
         hArgs.obsFreqHz = gnss.obs(iObs).D_fcarrier_Hz;
         hArgs.obsConst = gnss.obs(iObs).constellation;
@@ -75,31 +93,46 @@ while ~hasEnded % while there are more observations/measurements
         hArgs.obs = prCorr(iObs);
         hArgs.sigmaObs = gnss.obs(iObs).C_sigma;
         % Process code observation
-        esekf = EKF.processObservation(esekf, gnss.utcMillis, ...
+        [esekf, innovation, innovationCovariance, rejected, z, y] = ...
+            EKF.processObservation(esekf, thisUtcSeconds, ...
             @fTransition, fArgs, ...
             @hCodeObs, hArgs, ...
             'Code');
+        prInnovations(idxSat, idxEst) = innovation;
+        prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
         
-        % Pack Doppler observation
-        hArgs.obs = prRate(iObs);
-        hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
-            Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
-        % Process Doppler observation
-        esekf = EKF.processObservation(esekf, gnss.utcMillis, ...
-            @fTransition, fArgs, ...
-            @hDopplerObs, hArgs, ...
-            'Doppler');
+        % TODO provisional outlier removal
+        if abs(prRate(iObs)) < (Config.MAX_DOPPLER_MEAS * Constants.CELERITY / hArgs.obsFreqHz) && ...
+                gnss.obs(iObs).D_sigma < Config.MAX_DOPPLER_UNCERT
+            % Pack Doppler observation
+            hArgs.obs = prRate(iObs);
+            hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
+                Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
+            % Process Doppler observation
+            [esekf, innovation, innovationCovariance, rejected, z, y] = ...
+                EKF.processObservation(esekf, thisUtcSeconds, ...
+                @fTransition, fArgs, ...
+                @hDopplerObs, hArgs, ...
+                'Doppler');
+            dopInnovations(idxSat, idxEst) = innovation;
+            dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+%         else
+%             a=1;
+        end
+        
     end
     
-    %%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%
-%     esekf.tx
-%     Xyz2Lla(esekf.x(1:3)')
+    utcSecondsHist(idxEst) = thisUtcSeconds;
+    
+    %%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%% TODO
+    %     esekf.tx
+    %     Xyz2Lla(esekf.x(1:3)')
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    xEstHist(:, idxEst) = esekf.x; % TODO perform correction when using error-state
     idxEst = idxEst + 1;
-    xEst(:, idxEst) = esekf.x; % TODO perform correction when using error-state
     
     % Check if there are more measurements/observations
-    gnss = getNextGnss(thisUtcMillis, gnssRnx);
+    gnss = getNextGnss(thisUtcSeconds, gnssRnx);
     hasEnded = isempty(gnss); % TODO check imu
 end
 
@@ -115,15 +148,19 @@ F(1,4) = dt; F(2,5) = dt; F(3,6) = dt;
 F(7,8) = dt;
 % State prediction
 x2 = F * x1;
-% Process noise covariance matrix
-rotN2E = compute_Rn2e(fArgs.xEst(1), fArgs.xEst(2), fArgs.xEst(3));
+% Process noise covariance matrix - Velocity
+rotN2E = compute_Rn2e(fArgs.x0(1), fArgs.x0(2), fArgs.x0(3));
 Qvel = dt * rotN2E * diag(Config.SIGMA_VEL_NED.^2) * rotN2E';
+% Process noise covariance matrix - Clock
 Qclk(1, 1) = dt * Config.SIGMA_CLK_BIAS^2 + 1/3 * dt^3 * Config.SIGMA_CLK_DRIFT^2;
 Qclk(1, 2) = 1/2 * dt^2 * Config.SIGMA_CLK_DRIFT^2;
 Qclk(2, 1) = Qclk(1, 2);
 Qclk(2, 2) =  dt * Config.SIGMA_CLK_DRIFT^2;
+% Process noise covariance matrix - Inter-Frequency bias(es)
 Qif = dt * Config.SIGMA_CLK_INTERFREQ^2 * eye(PVTUtils.getNumFrequencies - 1);
+% Process noise covariance matrix - Inter-System bias(es)
 Qis = dt * Config.SIGMA_CLK_INTERSYS^2 * eye(PVTUtils.getNumConstellations - 1);
+% Process noise covariance matrix
 Q = blkdiag(zeros(3), Qvel, Qclk, Qif, Qis);
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -144,34 +181,34 @@ idxConstel = PVTUtils.getConstelIdx(hArgs.obsConst);
 z = hArgs.obs;
 
 % Distance between receiver and satellite. Second term is Sagnac effect.
-dist = norm(hArgs.xEst(idxStatePos) - hArgs.satPos) + ...
+dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...
     Constants.OMEGA_E/Constants.CELERITY * ...
-    (hArgs.satPos(1)*hArgs.xEst(idxStatePos(2)) - ...
-    hArgs.satPos(2)*hArgs.xEst(idxStatePos(1)));
+    (hArgs.satPos(1)*hArgs.x0(idxStatePos(2)) - ...
+    hArgs.satPos(2)*hArgs.x0(idxStatePos(1)));
 
 % Inter-frequency bias if it's not ref freq
 if isempty(idxStateFreq) || idxFreq == 1, interFreqBias = 0; % If only 1 freq or this is ref freq
-else, interFreqBias = hArgs.xEst(idxStateFreq(idxFreq-1)); end
+else, interFreqBias = hArgs.x0(idxStateFreq(idxFreq-1)); end
 % Inter-system bias if it's not ref system
 if isempty(idxStateConstel) || idxConstel == 1, interSysBias = 0; % If only 1 const or this is ref const
-else, interSysBias = hArgs.xEst(idxStateConstel(idxConstel-1)); end
+else, interSysBias = hArgs.x0(idxStateConstel(idxConstel-1)); end
 % Observation estimation
 y = dist + ...                                  % Distance between receiver and satellite.
-    hArgs.xEst(idxStateClkBias) - ...           % Receiver clock bias
+    hArgs.x0(idxStateClkBias) - ...             % Receiver clock bias
     Constants.CELERITY * hArgs.satClkBias + ... % Satellite clock bias
-    interFreqBias + ...                         % Inter-frequency bias
-    interSysBias;                               % Inter-system bias 
+    interFreqBias - ...                         % Inter-frequency bias
+    interSysBias;                               % Inter-system bias
 
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);
-H(idxStatePos) = (hArgs.xEst(idxStatePos) - hArgs.satPos)/dist;
+H(idxStatePos) = (hArgs.x0(idxStatePos) - hArgs.satPos)/dist;
 H(idxStateClkBias) = 1;
 H(idxStateFreq) = idxFreq > 1; % 1 if not ref freq
 H(idxStateConstel) = -(idxConstel > 1); % -1 if not ref const
 
 % Measurement covariance matrix
-R = computeMeasCovariance(hArgs.satElev, hArgs.sigmaObs, ...
-    Config.SIGMA_PR_M, hArgs.obsConst);
+R = Config.COV_FACTOR_C * computeMeasCovariance(hArgs.satElev, ...
+    hArgs.sigmaObs, Config.SIGMA_PR_M, hArgs.obsConst);
 end %end of function hCodeObs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -188,26 +225,26 @@ idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
 z = hArgs.obs;
 
 % Distance between receiver and satellite. Second term is Sagnac effect.
-dist = norm(hArgs.xEst(idxStatePos) - hArgs.satPos) + ...
+dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...
     Constants.OMEGA_E/Constants.CELERITY * ...
-    (hArgs.satPos(1)*hArgs.xEst(idxStatePos(2)) - ...
-    hArgs.satPos(2)*hArgs.xEst(idxStatePos(1)));
+    (hArgs.satPos(1)*hArgs.x0(idxStatePos(2)) - ...
+    hArgs.satPos(2)*hArgs.x0(idxStatePos(1)));
 
 % Unit vector from user to satellite
-vUS = unitVector(hArgs.satPos - hArgs.xEst(idxStatePos));
+vUS = unitVector(hArgs.satPos - hArgs.x0(idxStatePos));
 
 % Observation estimation
-y = dot(hArgs.satVel - hArgs.xEst(idxStateVel), vUS) + ...  % Radial velocity from user to sat
-    hArgs.xEst(idxStateClkDrift) - ...                      % Receiver clock drift
+y = dot(hArgs.satVel - hArgs.x0(idxStateVel), vUS) + ...  % Radial velocity from user to sat
+    hArgs.x0(idxStateClkDrift) - ...                      % Receiver clock drift
     Constants.CELERITY*hArgs.satClkDrift;                   % Satellite clock drift
 
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);
-H(idxStatePos) = (hArgs.xEst(idxStatePos) - hArgs.satPos)/dist;
+H(idxStatePos) = (hArgs.x0(idxStatePos) - hArgs.satPos)/dist;
 H(idxStateClkDrift) = 1;
 
 % Measurement covariance matrix
-R = computeMeasCovariance(hArgs.satElev, hArgs.sigmaObs, ...
-    Config.SIGMA_DOP_MPS, hArgs.obsConst);
+R = Config.COV_FACTOR_D * computeMeasCovariance(hArgs.satElev, ...
+    hArgs.sigmaObs, Config.SIGMA_DOP_MPS, hArgs.obsConst);
 end %end of function hDopplerObs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

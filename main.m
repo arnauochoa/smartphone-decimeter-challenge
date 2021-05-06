@@ -1,5 +1,6 @@
 clearvars -except
-close all; clc;
+% close all; 
+clc;
 % Script description
 
 % Change the configuration in Config class
@@ -14,9 +15,11 @@ close all; clc;
 imuClean = preprocessImu(imuRaw);
 
 %% Navigate
-[xEst] = navigate(gnssRnx, imuClean, nav, iono);
+disp('Computing positions...');
+[xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist] = ...
+    navigate(gnssRnx, imuClean, nav, iono);
 
 %% Output
 disp('Navigation ended, plotting results...');
-plotResults(xEst, ref);
+plotResults(ref, xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist);
 
