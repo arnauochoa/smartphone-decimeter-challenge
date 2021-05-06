@@ -8,6 +8,10 @@ classdef Constants < handle
         EARTH_RADIUS = 6371e3;      % m
         
         GPS_L1_HZ = 1575.42e6;      % Hz
+        
+        MAX_GPS_PRN = 100;
+        MAX_GAL_PRN = 100;
+        MAX_BDS_PRN = 100;
     end
     
 end

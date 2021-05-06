@@ -70,6 +70,24 @@ classdef PVTUtils < handle
             freqIdx = find(PVTUtils.getUniqueFreqsHz == freqHz);
         end
         
+        function numSatellites = getNumSatelliteIndices()
+            numSatellites = 0;
+            for iConst = 1:length(Config.CONSTELLATIONS)
+                numSatellites = numSatellites + ...
+                    PVTUtils.getTotalNumSatsConstellation(Config.CONSTELLATIONS(iConst));
+            end
+        end
+        
+        function satIdx = getSatelliteIndex(prn, constellationLetter)
+            prevConstLetters = Config.CONSTELLATIONS(1:strfind(Config.CONSTELLATIONS, constellationLetter)-1);
+            satIdx = 0;
+            for iConst = 1:length(prevConstLetters)
+                satIdx = satIdx + PVTUtils.getTotalNumSatsConstellation(prevConstLetters(iConst));
+            end
+            satIdx = satIdx + prn;
+            assert(satIdx > 0 && satIdx < PVTUtils.getNumSatelliteIndices, 'Invalid prn.');
+        end
+        
     end
     
     methods (Static, Access = private)
@@ -83,7 +101,18 @@ classdef PVTUtils < handle
             freqsHz = unique(frequencies, 'stable');
         end
         
-        
+        function nSatsConstellation = getTotalNumSatsConstellation(constellationLetter)
+            switch constellationLetter
+                case 'G'
+                    nSatsConstellation = Constants.MAX_GPS_PRN;
+                case 'E'
+                    nSatsConstellation = Constants.MAX_GAL_PRN;
+                case 'C'
+                    nSatsConstellation = Constants.MAX_BDS_PRN;
+                otherwise
+                    error('Constellation %c is not supported.', Config.CONSTELLATIONS(iConst));
+            end
+        end
     end
 end
 
