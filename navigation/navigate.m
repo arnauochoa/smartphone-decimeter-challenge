@@ -101,24 +101,24 @@ while ~hasEnded % while there are more observations/measurements
         prInnovations(idxSat, idxEst) = innovation;
         prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
         
-        % TODO provisional outlier removal
-        if abs(prRate(iObs)) < (Config.MAX_DOPPLER_MEAS * Constants.CELERITY / hArgs.obsFreqHz) && ...
-                gnss.obs(iObs).D_sigma < Config.MAX_DOPPLER_UNCERT
-            % Pack Doppler observation
-            hArgs.obs = prRate(iObs);
-            hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
-                Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
-            % Process Doppler observation
-            [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-                EKF.processObservation(esekf, thisUtcSeconds, ...
-                @fTransition, fArgs, ...
-                @hDopplerObs, hArgs, ...
-                'Doppler');
-            dopInnovations(idxSat, idxEst) = innovation;
-            dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-%         else
-%             a=1;
-        end
+%         % TODO provisional outlier removal
+%         if abs(prRate(iObs)) < (Config.MAX_DOPPLER_MEAS * Constants.CELERITY / hArgs.obsFreqHz) && ...
+%                 gnss.obs(iObs).D_sigma < Config.MAX_DOPPLER_UNCERT
+%             % Pack Doppler observation
+%             hArgs.obs = prRate(iObs);
+%             hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
+%                 Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
+%             % Process Doppler observation
+%             [esekf, innovation, innovationCovariance, rejected, z, y] = ...
+%                 EKF.processObservation(esekf, thisUtcSeconds, ...
+%                 @fTransition, fArgs, ...
+%                 @hDopplerObs, hArgs, ...
+%                 'Doppler');
+%             dopInnovations(idxSat, idxEst) = innovation;
+%             dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+% %         else
+% %             a=1;
+%         end
         
     end
     
