@@ -1,7 +1,7 @@
-function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, refInnovations, refInnovationCovariances, utcSecondsHist] = ...
+function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist] = ...
     navigate(gnssRnx, imuMeas, nav, iono, ref)
 if nargin <1
-   run main.m; 
+    run main.m;
 end
 
 %NAVIGATE Summary of this function goes here
@@ -34,11 +34,6 @@ prInnovations = nan(nSatellites, nGnssEpochs);
 prInnovationCovariances = nan(nSatellites, nGnssEpochs);
 dopInnovations = nan(nSatellites, nGnssEpochs);
 dopInnovationCovariances = nan(nSatellites, nGnssEpochs);
-refInnovations = nan(3, nGnssEpochs);
-refInnovationCovariances = nan(3, nGnssEpochs);
-utcSecondsHist = []; % TODO size is not known yet since it depends on predictions and updates
-idxRef = 1;
-lastTow = gnss.tow;
 
 pp = csaps(gnssRnx.obs(:, 2), gnssRnx.utcSeconds);
 ref.utcSeconds = fnval(pp, ref.gpsTime(:, 2));
@@ -51,135 +46,98 @@ while ~hasEnded % while there are more observations/measurements
     % Transition model arguments
     fArgs.x0 = x0;
     
-    % If next ref pos is more recent, process it as observation << TODO: only for debugging
-%     idxRef = find(ref.gpsTime(:, 2) > lastTow & ref.gpsTime(:, 2) < gnss.tow, 1, 'first');
-    idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first');
-    if ~isempty(idxRef) && ref.utcSeconds(idxRef) < gnss.utcSeconds && false
-%     if ~isempty(idxRef)
-        thisUtcSeconds = ref.utcSeconds(idxRef);
+    thisUtcSeconds = gnss.utcSeconds; % TODO check imu time
+    
+    % Get states of satellites selected in Config
+    [satPos, satClkBias, satClkDrift, satVel] = ...
+        compute_satellite_state_all(gnss.tow, gnss.obs, nav, Config.CONSTELLATIONS);
+    
+    % Remove invalid observations (no ephem, elevation mask, large dopplers)
+    [gnss.obs, satPos, satClkBias, satClkDrift, satVel] = ...
+        filterObs(gnss.obs, satPos, satClkBias, satClkDrift, satVel, x0(1:3));
+    
+    if length([gnss.obs(:).C]) < 4 + PVTUtils.getNumFrequencies + PVTUtils.getNumConstellations
+        warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', gnss.tow);
+        esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
+    else
+        % Compute elevation and azimuth of satellites
+        [satAzDeg, satElDeg, rxLLH] = getSatAzEl(satPos, x0(1:3));
+        
+        % Apply iono and tropo corrections
+        switch Config.IONO_CORRECTION
+            case 'Klobuchar'
+                ionoCorr = compute_klobuchar_iono_correction(...
+                    iono.alpha,              ...
+                    iono.beta,               ...
+                    deg2rad(satElDeg),  ...
+                    deg2rad(satAzDeg),  ...
+                    deg2rad(rxLLH(1)),  ...
+                    deg2rad(rxLLH(2)),  ...
+                    gnss.tow);
+                ionoCorr = ionoCorr .* (Constants.GPS_L1_HZ./[gnss.obs(:).D_fcarrier_Hz]).^2;
+            otherwise
+                ionoCorr = zeros(1, length(gnss.obs));
+        end
+        tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
+        
+        % Apply pr correction and convert doppler (Hz) to pr rate (m/s)
+        prCorr = [gnss.obs(:).C]' - ionoCorr' - tropo';
+        prRate = -[gnss.obs(:).D_Hz]' .* Constants.CELERITY ./ [gnss.obs(:).D_fcarrier_Hz]';
         
         % Measurement model arguments
         hArgs.x0 = x0;
-        hArgs.obs = Lla2Xyz(ref.posLla(idxRef, :))';
-        hArgs.sigmaObs = [1e-1 1e-1 1e-1]';
         
-        [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-            EKF.processObservation(esekf, thisUtcSeconds, ...
-            @fTransition, fArgs, ...
-            @hRefObs, hArgs, ...
-            'Reference');
-        
-        refInnovations(:, idxEst) = innovation;
-        refInnovationCovariances(:, idxEst) = diag(innovationCovariance);
-        
-%         lastTow = ref.gpsTime(idxRef, 2);
-    else
-%         hasEnded = true;
-        thisUtcSeconds = gnss.utcSeconds; % TODO check imu time
-        
-        % Get states of satellites selected in Config
-        [satPos, satClkBias, satClkDrift, satVel] = ...
-            compute_satellite_state_all(gnss.tow, gnss.obs, nav, Config.CONSTELLATIONS);
-        
-        % Remove invalid observations (no ephem, elevation mask, large dopplers)
-        [gnss.obs, satPos, satClkBias, satClkDrift, satVel] = ...
-            filterObs(gnss.obs, satPos, satClkBias, satClkDrift, satVel, x0(1:3));
-        
-        if length([gnss.obs(:).C]) < 4 + PVTUtils.getNumFrequencies + PVTUtils.getNumConstellations
-            warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', gnss.tow);
-            esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
-        else
-            % Compute elevation and azimuth of satellites
-            [satAzDeg, satElDeg, rxLLH] = getSatAzEl(satPos, x0(1:3));
+        % Sequentally update with all observations
+        for iObs = 1:length(prCorr)
+            idxSat = PVTUtils.getSatelliteIndex(gnss.obs(iObs).prn, gnss.obs(iObs).constellation);
+            % Pack arguments that are common for Code and Doppler observations
+            hArgs.obsFreqHz = gnss.obs(iObs).D_fcarrier_Hz;
+            hArgs.obsConst = gnss.obs(iObs).constellation;
+            hArgs.satPos = satPos(:, iObs);
+            hArgs.satVel = satVel(:, iObs);
+            hArgs.satClkBias = satClkBias(iObs);
+            hArgs.satClkDrift = satClkDrift(iObs);
+            hArgs.satElev = satElDeg(iObs);
             
-            % Apply iono and tropo corrections
-            switch Config.IONO_CORRECTION
-                case 'Klobuchar'
-                    ionoCorr = compute_klobuchar_iono_correction(...
-                        iono.alpha,              ...
-                        iono.beta,               ...
-                        deg2rad(satElDeg),  ...
-                        deg2rad(satAzDeg),  ...
-                        deg2rad(rxLLH(1)),  ...
-                        deg2rad(rxLLH(2)),  ...
-                        gnss.tow);
-                    ionoCorr = ionoCorr .* (Constants.GPS_L1_HZ./[gnss.obs(:).D_fcarrier_Hz]).^2;
-                otherwise
-                    ionoCorr = zeros(1, length(gnss.obs));
-            end
-            tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
-%             tropo = 0; % TODO apply tropo
-            % Apply pr correction and convert doppler (Hz) to pr rate (m/s)
-            prCorr = [gnss.obs(:).C]' - ionoCorr' - tropo';
-            prRate = -[gnss.obs(:).D_Hz]' .* Constants.CELERITY ./ [gnss.obs(:).D_fcarrier_Hz]';
+            % Pack code observation
+            hArgs.obs = prCorr(iObs);
+            hArgs.sigmaObs = gnss.obs(iObs).C_sigma;
+            % Process code observation
+            [esekf, innovation, innovationCovariance, ~, ~, ~] = ...
+                EKF.processObservation(esekf, thisUtcSeconds, ...
+                @fTransition, fArgs, ...
+                @hCodeObs, hArgs, ...
+                'Code');
+            prInnovations(idxSat, idxEst) = innovation;
+            prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+            fArgs.x0 = esekf.x;
+            hArgs.x0 = esekf.x;
             
-            
-            % Measurement model arguments
-            hArgs.x0 = x0;
-            
-            % Sequentally update with all observations
-            for iObs = 1:length(prCorr)
-                idxSat = PVTUtils.getSatelliteIndex(gnss.obs(iObs).prn, gnss.obs(iObs).constellation);
-                % Pack arguments that are common for Code and Doppler observations
-                hArgs.obsFreqHz = gnss.obs(iObs).D_fcarrier_Hz;
-                hArgs.obsConst = gnss.obs(iObs).constellation;
-                hArgs.satPos = satPos(:, iObs);
-                hArgs.satVel = satVel(:, iObs);
-                hArgs.satClkBias = satClkBias(iObs);
-                hArgs.satClkDrift = satClkDrift(iObs);
-                hArgs.satElev = satElDeg(iObs);
-                
-                % Pack code observation
-                hArgs.obs = prCorr(iObs);
-                hArgs.sigmaObs = gnss.obs(iObs).C_sigma;
-                % Process code observation
-                [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-                    EKF.processObservation(esekf, thisUtcSeconds, ...
-                    @fTransition, fArgs, ...
-                    @hCodeObs, hArgs, ...
-                    'Code');
-                prInnovations(idxSat, idxEst) = innovation;
-                prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-                hArgs.x0 = esekf.x;
-                
-%                 % TODO provisional outlier removal
-                if abs(prRate(iObs)) < (Config.MAX_DOPPLER_MEAS * Constants.CELERITY / hArgs.obsFreqHz) && ...
-                        gnss.obs(iObs).D_sigma < Config.MAX_DOPPLER_UNCERT
-                    % Pack Doppler observation
-                    hArgs.obs = prRate(iObs);
-                    hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
-                        Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
-                    % Process Doppler observation
-                    [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-                        EKF.processObservation(esekf, thisUtcSeconds, ...
-                        @fTransition, fArgs, ...
-                        @hDopplerObs, hArgs, ...
-                        'Doppler');
-                    dopInnovations(idxSat, idxEst) = innovation;
-                    dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-                    %         else
-                    %             a=1;
-                    hArgs.x0 = esekf.x;
-                end
-                
-            end
+            % Pack Doppler observation
+            hArgs.obs = prRate(iObs);
+            hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
+                Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
+            % Process Doppler observation
+            [esekf, innovation, innovationCovariance, ~, ~, ~] = ...
+                EKF.processObservation(esekf, thisUtcSeconds, ...
+                @fTransition, fArgs, ...
+                @hDopplerObs, hArgs, ...
+                'Doppler');
+            dopInnovations(idxSat, idxEst) = innovation;
+            dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+            fArgs.x0 = esekf.x;
+            hArgs.x0 = esekf.x;
         end
-%         lastTow = gnss.tow; % TODO: used to compare with ref time, only for testing
     end
     
     utcSecondsHist(idxEst) = thisUtcSeconds;
     
-    %%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%% TODO
-    %     esekf.tx
-    %     Xyz2Lla(esekf.x(1:3)')
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     xEstHist(:, idxEst) = esekf.x; % TODO perform correction when using error-state
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
     gnss = getNextGnss(thisUtcSeconds, gnssRnx);
     hasEnded = isempty(gnss); % TODO check imu
-    
 end
 
 end

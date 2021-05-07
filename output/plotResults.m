@@ -1,5 +1,5 @@
 function plotResults(ref, xEst, prInnovations, prInnovationCovariances, ...
-    dopInnovations, dopInnovationCovariances, refInnovations, refInnovationCovariances, utcSecondsHist)
+    dopInnovations, dopInnovationCovariances, utcSecondsHist)
 %PLOTRESULTS Summary of this function goes here
 %   Detailed explanation goes here
 
