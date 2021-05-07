@@ -16,10 +16,10 @@ imuClean = preprocessImu(imuRaw);
 
 %% Navigate
 disp('Computing positions...');
-[xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, refInnovations, refInnovationCovariances, utcSecondsHist] = ...
+[xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist] = ...
     navigate(gnssRnx, imuClean, nav, iono, ref);
 
 %% Output
 disp('Navigation ended, plotting results...');
-plotResults(ref, xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, refInnovations, refInnovationCovariances, utcSecondsHist);
+plotResults(ref, xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist);
 
