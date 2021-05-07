@@ -23,7 +23,7 @@ classdef Config < handle
         OBS_COMBINATION         = {'none'};
         OBS_USED                = {'C1C'};
         CONST_COV_FACTORS       = [1];        % Covariance factor for each constellation
-        IONO_CORRECTION         = 'Klobuchar'; % among 'none', 'iono-free' and 'Klobuchar'
+        IONO_CORRECTION         = 'Klobuchar'; % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
         MEAS_COV_SRC            = 'elevation'; % among 'elevation' and 'uncertainty'
         MAX_DOPPLER_MEAS        = 6e3;
@@ -37,7 +37,7 @@ classdef Config < handle
         SIGMA_CLK_INTERFREQ     = 0.01;         % std m/sqrt(s) of code inter-frequency clock bias
         SIGMA_CLK_INTERSYS      = 0.01;         % std m/sqrt(s) of inter-GNSS system clock bias
         % Measurement covariance matrix
-        SIGMA_PR_M              = 4;            % Default std (m) for pseudorange meas (elevation-based model)
+        SIGMA_PR_M              = 10;            % Default std (m) for pseudorange meas (elevation-based model)
         SIGMA_DOP_MPS           = 0.1;          % Default std (m/s) for doppler meas (elevation-based model)
         COV_FACTOR_C            = 1;            % Covariance factor for pseudorange meas
         COV_FACTOR_D            = 100;          % Covariance factor for Doppler meas
