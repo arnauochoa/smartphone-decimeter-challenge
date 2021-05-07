@@ -6,6 +6,7 @@ function plotResults(ref, xEst, prInnovations, prInnovationCovariances, ...
 
 % Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+idxStateClkBias = PVTUtils.getStateIndex(PVTUtils.ID_CLK_BIAS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 timelineSec = (utcSecondsHist - utcSecondsHist(1));
 
@@ -19,12 +20,15 @@ geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', posLat, posLon, '.-');
 geobasemap satellite %none
 legend('Groundtruth', 'Computed');
 
-% figure; plot(timelineSec, prInnovations')
-% xlabel('Time since start (s)'); ylabel('Pseudorange innovations (m)');
-% 
-% figure; plot(timelineSec, prInnovationCovariances')
-% xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
-% 
+figure; plot(timelineSec(1:end-1), xEst(idxStateClkBias, 1:end-1))
+xlabel('Time since start (s)'); ylabel('Receiver clock bias (m)');
+
+figure; plot(timelineSec, prInnovations')
+xlabel('Time since start (s)'); ylabel('Pseudorange innovations (m)');
+
+figure; plot(timelineSec, prInnovationCovariances')
+xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
+
 % figure; plot(timelineSec, dopInnovations')
 % xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
 % 
