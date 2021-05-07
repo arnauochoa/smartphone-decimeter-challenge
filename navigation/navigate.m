@@ -1,5 +1,9 @@
 function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, refInnovations, refInnovationCovariances, utcSecondsHist] = ...
     navigate(gnssRnx, imuMeas, nav, iono, ref)
+if nargin <1
+   run main.m; 
+end
+
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -35,6 +39,9 @@ refInnovationCovariances = nan(3, nGnssEpochs);
 utcSecondsHist = []; % TODO size is not known yet since it depends on predictions and updates
 idxRef = 1;
 lastTow = gnss.tow;
+
+pp = csaps(gnssRnx.obs(:, 2), gnssRnx.utcSeconds);
+ref.utcSeconds = fnval(pp, ref.gpsTime(:, 2));
 
 while ~hasEnded % while there are more observations/measurements
     
