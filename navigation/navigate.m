@@ -53,9 +53,10 @@ while ~hasEnded % while there are more observations/measurements
     
     % If next ref pos is more recent, process it as observation << TODO: only for debugging
 %     idxRef = find(ref.gpsTime(:, 2) > lastTow & ref.gpsTime(:, 2) < gnss.tow, 1, 'first');
-    idxRef = find(ref.gpsTime(:, 2) > lastTow, 1, 'first');
-    if ~isempty(idxRef)
-        thisUtcSeconds = thisUtcSeconds + (ref.gpsTime(idxRef, 2) - lastTow);
+    idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first');
+    if ~isempty(idxRef) && ref.utcSeconds(idxRef) < gnss.utcSeconds && false
+%     if ~isempty(idxRef)
+        thisUtcSeconds = ref.utcSeconds(idxRef);
         
         % Measurement model arguments
         hArgs.x0 = x0;
@@ -71,9 +72,9 @@ while ~hasEnded % while there are more observations/measurements
         refInnovations(:, idxEst) = innovation;
         refInnovationCovariances(:, idxEst) = diag(innovationCovariance);
         
-        lastTow = ref.gpsTime(idxRef, 2);
+%         lastTow = ref.gpsTime(idxRef, 2);
     else
-        hasEnded = true;
+%         hasEnded = true;
         thisUtcSeconds = gnss.utcSeconds; % TODO check imu time
         
         % Get states of satellites selected in Config
@@ -106,8 +107,8 @@ while ~hasEnded % while there are more observations/measurements
                 otherwise
                     ionoCorr = zeros(1, length(gnss.obs));
             end
-            %     tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
-            tropo = 0; % TODO apply tropo
+            tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
+%             tropo = 0; % TODO apply tropo
             % Apply pr correction and convert doppler (Hz) to pr rate (m/s)
             prCorr = [gnss.obs(:).C]' - ionoCorr' - tropo';
             prRate = -[gnss.obs(:).D_Hz]' .* Constants.CELERITY ./ [gnss.obs(:).D_fcarrier_Hz]';
@@ -139,29 +140,31 @@ while ~hasEnded % while there are more observations/measurements
                     'Code');
                 prInnovations(idxSat, idxEst) = innovation;
                 prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+                hArgs.x0 = esekf.x;
                 
-                % TODO provisional outlier removal
-%                 if abs(prRate(iObs)) < (Config.MAX_DOPPLER_MEAS * Constants.CELERITY / hArgs.obsFreqHz) && ...
-%                         gnss.obs(iObs).D_sigma < Config.MAX_DOPPLER_UNCERT
-%                     % Pack Doppler observation
-%                     hArgs.obs = prRate(iObs);
-%                     hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
-%                         Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
-%                     % Process Doppler observation
-%                     [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-%                         EKF.processObservation(esekf, thisUtcSeconds, ...
-%                         @fTransition, fArgs, ...
-%                         @hDopplerObs, hArgs, ...
-%                         'Doppler');
-%                     dopInnovations(idxSat, idxEst) = innovation;
-%                     dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-%                     %         else
-%                     %             a=1;
-%                 end
+%                 % TODO provisional outlier removal
+                if abs(prRate(iObs)) < (Config.MAX_DOPPLER_MEAS * Constants.CELERITY / hArgs.obsFreqHz) && ...
+                        gnss.obs(iObs).D_sigma < Config.MAX_DOPPLER_UNCERT
+                    % Pack Doppler observation
+                    hArgs.obs = prRate(iObs);
+                    hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
+                        Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
+                    % Process Doppler observation
+                    [esekf, innovation, innovationCovariance, rejected, z, y] = ...
+                        EKF.processObservation(esekf, thisUtcSeconds, ...
+                        @fTransition, fArgs, ...
+                        @hDopplerObs, hArgs, ...
+                        'Doppler');
+                    dopInnovations(idxSat, idxEst) = innovation;
+                    dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+                    %         else
+                    %             a=1;
+                    hArgs.x0 = esekf.x;
+                end
                 
             end
         end
-        lastTow = gnss.tow; % TODO: used to compare with ref time, only for testing
+%         lastTow = gnss.tow; % TODO: used to compare with ref time, only for testing
     end
     
     utcSecondsHist(idxEst) = thisUtcSeconds;
@@ -174,8 +177,9 @@ while ~hasEnded % while there are more observations/measurements
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
-%     gnss = getNextGnss(thisUtcSeconds, gnssRnx);
-%     hasEnded = isempty(gnss); % TODO check imu
+    gnss = getNextGnss(thisUtcSeconds, gnssRnx);
+    hasEnded = isempty(gnss); % TODO check imu
+    
 end
 
 end
