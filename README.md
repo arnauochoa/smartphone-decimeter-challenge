@@ -26,5 +26,6 @@ Observations:   {workspace_path}/data/training/datasets/{campaign_name}/{phone_n
 Groundtruth:    {workspace_path}/data/training/datasets/{campaign_name}/SPAN_{phone_name}_10Hz.nmea
 Navigation:     {workspace_path}/data/training/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
 ```
+* Set your workspace as the parent directory that contains all the packages.
 * Select the desired configuration in the class `Config`.
 * Run `main`.

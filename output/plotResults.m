@@ -1,5 +1,5 @@
 function plotResults(ref, xEst, prInnovations, prInnovationCovariances, ...
-    dopInnovations, dopInnovationCovariances, utcSecondsHist)
+    dopInnovations, dopInnovationCovariances, refInnovations, refInnovationCovariances, utcSecondsHist)
 %PLOTRESULTS Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -16,20 +16,27 @@ timelineSec = (utcSecondsHist - utcSecondsHist(1));
 
 figure;
 geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', posLat, posLon, '.-');
-geobasemap none
+geobasemap satellite %none
 legend('Groundtruth', 'Computed');
 
-figure; plot(timelineSec, prInnovations')
-xlabel('Time since start (s)'); ylabel('Pseudorange innovations (m)');
+% figure; plot(timelineSec, prInnovations')
+% xlabel('Time since start (s)'); ylabel('Pseudorange innovations (m)');
+% 
+% figure; plot(timelineSec, prInnovationCovariances')
+% xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
+% 
+% figure; plot(timelineSec, dopInnovations')
+% xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
+% 
+% figure; plot(timelineSec, dopInnovationCovariances')
+% xlabel('Time since start (s)'); ylabel('Doppler innovation covariances (m²/s²)');
 
-figure; plot(timelineSec, prInnovationCovariances')
-xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
+figure; plot(timelineSec(1:end-1), refInnovations')
+xlabel('Time since start (s)'); ylabel('Reference pos. innovations (m)');
 
-figure; plot(timelineSec, dopInnovations')
-xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
 
-figure; plot(timelineSec, dopInnovationCovariances')
-xlabel('Time since start (s)'); ylabel('Doppler innovation covariances (m²/s²)');
+figure; plot(timelineSec(1:end-1), refInnovationCovariances')
+xlabel('Time since start (s)'); ylabel('Reference pos. innovation covariances (m²)');
 
 end
 
