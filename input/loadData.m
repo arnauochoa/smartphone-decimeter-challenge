@@ -38,6 +38,9 @@ ggaVec = [ref_nmea.Gga];
 rmcVec = [ref_nmea.Rmc];
 ref.posLla = [[ggaVec.LatDeg]' [ggaVec.LonDeg]' [ggaVec.AltM]'];
 % Transform groundtruth's UTC time to GPS time
-[ref.gpsTime, ~, ~] = Utc2Gps(datevec([rmcVec.Datenum]));
+ref.gpsTime = Utc2Gps(datevec([rmcVec.Datenum]));
+% Obtain groundtruth's UTC time
+pp = csaps(gnssRnx.obs(:, 2), gnssRnx.utcSeconds);
+ref.utcSeconds = fnval(pp, ref.gpsTime(:, 2));
 
 end
