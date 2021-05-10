@@ -10,6 +10,7 @@ classdef PVTUtils < handle
         ID_INTER_FREQ_BIAS = 5;
         ID_INTER_SYS_BIAS = 6;
         
+        % Map from RINEX code to frequency
         FREQUENCIES_MAP = containers.Map(...
             {'C1C' 'C1X' 'C2I' 'C5X'}, ...                  % Code (RINEX Format)
             [1575.42e6 1575.42e6 1561.098e6 1176.45e6]);    % Frequency (Hz)

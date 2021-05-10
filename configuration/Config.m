@@ -19,29 +19,29 @@ classdef Config < handle
         MAX_IMU_INTERP_MILLIS   = 20;
         
         %% Navigation parameters
-        CONSTELLATIONS          = 'G'
-        OBS_COMBINATION         = {'none'};
-        OBS_USED                = {'C1C'};
-        CONST_COV_FACTORS       = [1];        % Covariance factor for each constellation
+        CONSTELLATIONS          = 'GE'
+        OBS_COMBINATION         = {'none', 'none'};
+        OBS_USED                = {'C1C+C5X','C1C+C5X'};
+        CONST_COV_FACTORS       = [1 1];        % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar'; % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
-        MEAS_COV_SRC            = 'elevation'; % among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC            = 'uncertainty'; % among 'elevation' and 'uncertainty'
         MAX_DOPPLER_MEAS        = 6e3;
         MAX_DOPPLER_UNCERT      = 10;
         
         %% KF tuning parameters
-        % Process noise covariance matrix
-        SIGMA_VEL_NED           = [50 50 3]';   % std m/sqrt(s^3) of NED velocity
+        % Process noise covariance matrix - Q
+        SIGMA_VEL_NED           = [90 90 50]';   % std m/sqrt(s^3) of NED velocity
         SIGMA_CLK_BIAS          = 12.8;         % std m/sqrt(s) of receiver clock bias
         SIGMA_CLK_DRIFT         = 0.4;          % std m/sqrt(s^3) of receiver clock drift
         SIGMA_CLK_INTERFREQ     = 0.01;         % std m/sqrt(s) of code inter-frequency clock bias
         SIGMA_CLK_INTERSYS      = 0.01;         % std m/sqrt(s) of inter-GNSS system clock bias
-        % Measurement covariance matrix
-        SIGMA_PR_M              = 10;            % Default std (m) for pseudorange meas (elevation-based model)
-        SIGMA_DOP_MPS           = 0.1;          % Default std (m/s) for doppler meas (elevation-based model)
-        COV_FACTOR_C            = 1;            % Covariance factor for pseudorange meas
-        COV_FACTOR_D            = 100;          % Covariance factor for Doppler meas
-        % State covariance matrix initialization
+        % Measurement covariance matrix - R
+        SIGMA_PR_M              = 20;           % Default std (m) for pseudorange meas (elevation-based model)
+        SIGMA_DOP_MPS           = 1;          % Default std (m/s) for doppler meas (elevation-based model)
+        COV_FACTOR_C            = 10;            % Covariance factor for pseudorange meas
+        COV_FACTOR_D            = 10000;          % Covariance factor for Doppler meas
+        % State covariance matrix initialization - P0
         SIGMA_P0_VEL_XYZ        = [10 10 10];   % std m/sqrt(s^3) of initial velocity
         SIGMA_P0_CLK_DRIFT      = 100;          % std m/sqrt(s^3) of initial receiver clock drift
         SIGMA_P0_CLK_INTERFREQ  = 100;          % std m/sqrt(s) of initial code inter-frequency clock bias

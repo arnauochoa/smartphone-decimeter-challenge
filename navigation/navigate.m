@@ -64,8 +64,8 @@ while ~hasEnded % while there are more observations/measurements
         switch Config.IONO_CORRECTION
             case 'Klobuchar'
                 ionoCorr = compute_klobuchar_iono_correction(...
-                    iono.alpha,              ...
-                    iono.beta,               ...
+                    iono.alpha,         ...
+                    iono.beta,          ...
                     deg2rad(satElDeg),  ...
                     deg2rad(satAzDeg),  ...
                     deg2rad(rxLLH(1)),  ...
@@ -76,7 +76,6 @@ while ~hasEnded % while there are more observations/measurements
                 ionoCorr = zeros(1, length(gnss.obs));
         end
         tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
-        
         % Apply pr correction and convert doppler (Hz) to pr rate (m/s)
         prCorr = [gnss.obs(:).C]' - ionoCorr' - tropo';
         prRate = -[gnss.obs(:).D_Hz]' .* Constants.CELERITY ./ [gnss.obs(:).D_fcarrier_Hz]';
@@ -166,20 +165,20 @@ Q = blkdiag(zeros(3), Qvel, Qclk, Qif, Qis);
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [z, y, H, R] = hRefObs(~, hArgs)
-
-idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-
-z = hArgs.obs;
-
-y = hArgs.x0(idxStatePos);
-
-% Jacobian matrix
-H = zeros(3, PVTUtils.getNumStates);
-H(idxStatePos,idxStatePos) = eye(3);
-
-R = diag(hArgs.sigmaObs);
-end
+% function [z, y, H, R] = hRefObs(~, hArgs)
+% 
+% idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+% 
+% z = hArgs.obs;
+% 
+% y = hArgs.x0(idxStatePos);
+% 
+% % Jacobian matrix
+% H = zeros(3, PVTUtils.getNumStates);
+% H(idxStatePos,idxStatePos) = eye(3);
+% 
+% R = diag(hArgs.sigmaObs);
+% end
 
 function [z, y, H, R] = hCodeObs(~, hArgs)
 % HCODEOBS provides the measurement model for the sequential code
