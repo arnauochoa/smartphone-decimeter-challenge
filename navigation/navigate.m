@@ -35,9 +35,6 @@ prInnovationCovariances = nan(nSatellites, nGnssEpochs);
 dopInnovations = nan(nSatellites, nGnssEpochs);
 dopInnovationCovariances = nan(nSatellites, nGnssEpochs);
 
-pp = csaps(gnssRnx.obs(:, 2), gnssRnx.utcSeconds);
-ref.utcSeconds = fnval(pp, ref.gpsTime(:, 2));
-
 while ~hasEnded % while there are more observations/measurements
     
     % First iteration: x0 is result from LS
