@@ -1,5 +1,5 @@
 function plotResults(ref, xEst, prInnovations, prInnovationCovariances, ...
-    dopInnovations, dopInnovationCovariances, utcSecondsHist)
+    dopInnovations, dopInnovationCovariances, utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist)
 %PLOTRESULTS Summary of this function goes here
 %   Detailed explanation goes here
 close all;
@@ -38,7 +38,11 @@ velErr = refVelEcefInterp - xEst(idxStateVel, :)';
 
 %% State plots
 figure;
-geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', posLat, posLon, '.-');
+if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
+    geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'x', posLat, posLon, '.', 'LineWidth', 1);
+else
+    geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', posLat, posLon, '.-');
+end
 geobasemap none
 legend('Groundtruth', 'Computed');
 
@@ -60,22 +64,42 @@ legend('X', 'Y', 'Z');
 title('Groundtruth - Estimation')
 grid on
 
-figure; plot(timelineSec, xEst(idxStateClkBias, :))
-xlabel('Time since start (s)'); ylabel('Receiver clock bias (m)');
+figure; 
+subplot(2,1,1)
+plot(timelineSec, xEst(idxStateClkBias, :))
+xlabel('Time since start (s)'); ylabel('RX clock bias (m)');
+subplot(2,1,2)
+plot(timelineSec, sigmaHist(idxStateClkBias, :))
+xlabel('Time since start (s)'); ylabel('STD of RX clock bias (m)');
 
-figure; plot(timelineSec, xEst(idxStateClkDrift, :))
-xlabel('Time since start (s)'); ylabel('Receiver clock drift (m/s)');
+figure; 
+subplot(2,1,1);
+plot(timelineSec, xEst(idxStateClkDrift, :))
+xlabel('Time since start (s)'); ylabel('RX clock drift (m/s)');
+subplot(2,1,2)
+plot(timelineSec, sigmaHist(idxStateClkDrift, :))
+xlabel('Time since start (s)'); ylabel('STD of RX clock drift (m/s)');
 
 if ~isempty(idxStateIFBias)
-    figure; plot(timelineSec, xEst(idxStateIFBias, :))
+    figure;  
+    subplot(2,1,1);
+    plot(timelineSec, xEst(idxStateIFBias, :))
     xlabel('Time since start (s)'); ylabel('Inter-frequency bias (m)');
+    subplot(2,1,2)
+    plot(timelineSec, sigmaHist(idxStateIFBias, :))
+    xlabel('Time since start (s)'); ylabel('STD of I-F bias (m)');
 end
 
 if ~isempty(idxStateISBias)
-    figure; plot(timelineSec, xEst(idxStateISBias, :))
+    figure;  
+    subplot(2,1,1);
+    plot(timelineSec, xEst(idxStateISBias, :))
     xlabel('Time since start (s)'); ylabel('Inter-system bias (m)');
-    
+    subplot(2,1,2)
+    plot(timelineSec, sigmaHist(idxStateISBias, :))
+    xlabel('Time since start (s)'); ylabel('STD of I-S bias (m)');
 end
+
 
 %% Innovations
 figure; plot(prInnovations', '.')
@@ -89,6 +113,14 @@ xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
 
 figure; plot(timelineSec, dopInnovationCovariances', '.')
 xlabel('Time since start (s)'); ylabel('Doppler innovation covariances (m²/s²)');
+
+%% # of rejected
+figure; subplot(2,1,1);
+plot(timelineSec, prRejectedHist)
+xlabel('Time since start (s)'); ylabel('# rejected Code obs');
+subplot(2,1,2);
+plot(timelineSec, dopRejectedHist)
+xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
 
 %% CDFs
 pctl = 95;

@@ -10,16 +10,17 @@ clc;
 
 %% Compute geometry
 
-
 %% Pre-process IMU measurements
 imuClean = preprocessImu(imuRaw);
 
 %% Navigate
 disp('Computing positions...');
-[xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist] = ...
+[xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, ...
+    utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist] = ...
     navigate(gnssRnx, imuClean, nav, iono, ref);
 
 %% Output
 disp('Navigation ended, plotting results...');
-plotResults(ref, xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist);
+plotResults(ref, xEst, prInnovations, prInnovationCovariances, dopInnovations, ...
+    dopInnovationCovariances, utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist);
 

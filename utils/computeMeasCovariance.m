@@ -17,10 +17,10 @@ switch Config.MEAS_COV_SRC
     case 'elevation'
         variances = covWeights .* ((defaultSigma ./ sind(elev)).^2);
     case 'uncertainty'
-        idxNan = isnan(sigmas);
-        if any(idxNan)
+        idxInv = isnan(sigmas);
+        if any(idxInv)
             warning('Some uncertainties are nan, using elevation model for these uncertainties');
-            sigmas(idxNan) = defaultSigma ./ sind(elev(idxNan));
+            sigmas(idxInv) = defaultSigma ./ sind(elev(idxInv));
         end
         variances = covWeights .* (sigmas.^2);
     otherwise

@@ -1,4 +1,5 @@
-function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, utcSecondsHist] = ...
+function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, ...
+    dopInnovationCovariances, utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist] = ...
     navigate(gnssRnx, imuMeas, nav, iono, ref)
 if nargin <1
     run main.m;
@@ -24,6 +25,7 @@ esekf = EKF.build(uint16(nStates));
 thisUtcSeconds = esekf.tx; % First time is from the first GNSS estimation
 idxEst = 1;
 xEstHist = esekf.x; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
+sigmaHist = zeros(nStates, 1);
 
 % First gnss observations is the same as for the first approx position
 gnss = getNextGnss(thisUtcSeconds, gnssRnx, 'this');
@@ -34,6 +36,8 @@ prInnovations = nan(nSatellites, nGnssEpochs);
 prInnovationCovariances = nan(nSatellites, nGnssEpochs);
 dopInnovations = nan(nSatellites, nGnssEpochs);
 dopInnovationCovariances = nan(nSatellites, nGnssEpochs);
+prRejectedHist = zeros(1, nGnssEpochs);
+dopRejectedHist = zeros(1, nGnssEpochs);
 
 while ~hasEnded % while there are more observations/measurements
     
@@ -57,27 +61,10 @@ while ~hasEnded % while there are more observations/measurements
         warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', gnss.tow);
         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
     else
-        % Compute elevation and azimuth of satellites
-        [satAzDeg, satElDeg, rxLLH] = getSatAzEl(satPos, x0(1:3));
         
-        % Apply iono and tropo corrections
-        switch Config.IONO_CORRECTION
-            case 'Klobuchar'
-                ionoCorr = compute_klobuchar_iono_correction(...
-                    iono.alpha,         ...
-                    iono.beta,          ...
-                    deg2rad(satElDeg),  ...
-                    deg2rad(satAzDeg),  ...
-                    deg2rad(rxLLH(1)),  ...
-                    deg2rad(rxLLH(2)),  ...
-                    gnss.tow);
-                ionoCorr = ionoCorr .* (Constants.GPS_L1_HZ./[gnss.obs(:).D_fcarrier_Hz]).^2;
-            otherwise
-                ionoCorr = zeros(1, length(gnss.obs));
-        end
-        tropo = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
+        [ionoCorr, tropoCorr, satElDeg] = getAtmosphericCorrections(satPos, x0, iono, gnss);
         % Apply pr correction and convert doppler (Hz) to pr rate (m/s)
-        prCorr = [gnss.obs(:).C]' - ionoCorr' - tropo';
+        prCorr = [gnss.obs(:).C]' - ionoCorr' - tropoCorr';
         prRate = -[gnss.obs(:).D_Hz]' .* Constants.CELERITY ./ [gnss.obs(:).D_fcarrier_Hz]';
         
         % Measurement model arguments
@@ -99,13 +86,14 @@ while ~hasEnded % while there are more observations/measurements
             hArgs.obs = prCorr(iObs);
             hArgs.sigmaObs = gnss.obs(iObs).C_sigma;
             % Process code observation
-            [esekf, innovation, innovationCovariance, ~, ~, ~] = ...
+            [esekf, innovation, innovationCovariance, rejected, z, y] = ...
                 EKF.processObservation(esekf, thisUtcSeconds, ...
                 @fTransition, fArgs, ...
                 @hCodeObs, hArgs, ...
-                'Code');
+                sprintf('Code - %d', hArgs.obsFreqHz));
             prInnovations(idxSat, idxEst) = innovation;
             prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+            prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
             fArgs.x0 = esekf.x;
             hArgs.x0 = esekf.x;
             
@@ -114,13 +102,14 @@ while ~hasEnded % while there are more observations/measurements
             hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
                 Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
             % Process Doppler observation
-            [esekf, innovation, innovationCovariance, ~, ~, ~] = ...
+            [esekf, innovation, innovationCovariance, rejected, z, y] = ...
                 EKF.processObservation(esekf, thisUtcSeconds, ...
                 @fTransition, fArgs, ...
                 @hDopplerObs, hArgs, ...
                 'Doppler');
             dopInnovations(idxSat, idxEst) = innovation;
             dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+            dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + rejected;
             fArgs.x0 = esekf.x;
             hArgs.x0 = esekf.x;
         end
@@ -129,6 +118,7 @@ while ~hasEnded % while there are more observations/measurements
     utcSecondsHist(idxEst) = thisUtcSeconds;
     
     xEstHist(:, idxEst) = esekf.x; % TODO perform correction when using error-state
+    sigmaHist(:, idxEst) = sqrt(diag(esekf.P));
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
@@ -137,6 +127,29 @@ while ~hasEnded % while there are more observations/measurements
 end
 
 end
+
+function [ionoCorr, tropoCorr, satElDeg] = getAtmosphericCorrections(satPos, x0, iono, gnss)
+% Compute elevation and azimuth of satellites
+[satAzDeg, satElDeg, rxLLH] = getSatAzEl(satPos, x0(1:3));
+
+% Apply iono and tropo corrections
+switch Config.IONO_CORRECTION
+    case 'Klobuchar'
+        ionoCorr = compute_klobuchar_iono_correction(...
+            iono.alpha,         ...
+            iono.beta,          ...
+            deg2rad(satElDeg),  ...
+            deg2rad(satAzDeg),  ...
+            deg2rad(rxLLH(1)),  ...
+            deg2rad(rxLLH(2)),  ...
+            gnss.tow);
+        ionoCorr = ionoCorr .* (Constants.GPS_L1_HZ./[gnss.obs(:).D_fcarrier_Hz]).^2;
+    otherwise
+        ionoCorr = zeros(1, length(gnss.obs));
+end
+tropoCorr = compute_saastamoinen_tropo_correction(rxLLH(3), deg2rad(satElDeg), deg2rad(rxLLH(1)));
+end %end of function getAtmosphericCorrections
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % State transition function
 function [x2, F, Q] = fTransition(x1, t1, t2, fArgs)
@@ -164,21 +177,6 @@ Qis = dt * Config.SIGMA_CLK_INTERSYS^2 * eye(PVTUtils.getNumConstellations - 1);
 Q = blkdiag(zeros(3), Qvel, Qclk, Qif, Qis);
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% function [z, y, H, R] = hRefObs(~, hArgs)
-% 
-% idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-% 
-% z = hArgs.obs;
-% 
-% y = hArgs.x0(idxStatePos);
-% 
-% % Jacobian matrix
-% H = zeros(3, PVTUtils.getNumStates);
-% H(idxStatePos,idxStatePos) = eye(3);
-% 
-% R = diag(hArgs.sigmaObs);
-% end
 
 function [z, y, H, R] = hCodeObs(~, hArgs)
 % HCODEOBS provides the measurement model for the sequential code
@@ -255,7 +253,7 @@ y = dot(hArgs.satVel - hArgs.x0(idxStateVel), vUS) + ...  % Radial velocity from
 
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);
-H(idxStatePos) = (hArgs.x0(idxStatePos) - hArgs.satPos)/dist;
+H(idxStateVel) = (hArgs.x0(idxStatePos) - hArgs.satPos)/dist;
 H(idxStateClkDrift) = 1;
 
 % Measurement covariance matrix
@@ -263,3 +261,19 @@ R = Config.COV_FACTOR_D * computeMeasCovariance(hArgs.satElev, ...
     hArgs.sigmaObs, Config.SIGMA_DOP_MPS, hArgs.obsConst);
 end %end of function hDopplerObs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+% function [z, y, H, R] = hRefObs(~, hArgs)
+% 
+% idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+% 
+% z = hArgs.obs;
+% 
+% y = hArgs.x0(idxStatePos);
+% 
+% % Jacobian matrix
+% H = zeros(3, PVTUtils.getNumStates);
+% H(idxStatePos,idxStatePos) = eye(3);
+% 
+% R = diag(hArgs.sigmaObs);
+% end
