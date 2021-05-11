@@ -14,37 +14,40 @@ classdef Config < handle
         PHONE_NAME              = 'Mi8';
         FILTER_RAW_MEAS         = true;
         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
+        % OBSERVATION RINEX - Uncomment to use, path from workspace
+        OBS_RINEX_PATH          = 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; % 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; ||| 'data/other/ARWD219W.rnx';
+        OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100]; % [-2700404.1800 -4292605.5200  3855137.4100] ||| [-2687510.5240 -4290645.5230  3866179.1130]
         
         %% IMU parameters
         MAX_IMU_INTERP_MILLIS   = 20;
         
         %% Navigation parameters
         CONSTELLATIONS          = 'GE'
-        OBS_COMBINATION         = {'none', 'none'};
-        OBS_USED                = {'C1C+C5X','C1C+C5X'};
-        CONST_COV_FACTORS       = [1 1];        % Covariance factor for each constellation
-        IONO_CORRECTION         = 'Klobuchar'; % among 'none' and 'Klobuchar'
+        OBS_COMBINATION         = {'none'};
+        OBS_USED                = {'C1C+C5X', 'C1X+C5X'};
+        CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
+        IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
-        MEAS_COV_SRC            = 'uncertainty'; % among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC            = 'elevation';    % among 'elevation' and 'uncertainty'
         MAX_DOPPLER_MEAS        = 6e3;
         MAX_DOPPLER_UNCERT      = 10;
         
         %% KF tuning parameters
         % Process noise covariance matrix - Q
-        SIGMA_VEL_NED           = [90 90 50]';   % std m/sqrt(s^3) of NED velocity
+        SIGMA_VEL_NED           = [90 90 50]';  % std m/sqrt(s^3) of NED velocity
         SIGMA_CLK_BIAS          = 12.8;         % std m/sqrt(s) of receiver clock bias
         SIGMA_CLK_DRIFT         = 0.4;          % std m/sqrt(s^3) of receiver clock drift
-        SIGMA_CLK_INTERFREQ     = 0.01;         % std m/sqrt(s) of code inter-frequency clock bias
+        SIGMA_CLK_INTERFREQ     = 0.1;         % std m/sqrt(s) of code inter-frequency clock bias
         SIGMA_CLK_INTERSYS      = 0.01;         % std m/sqrt(s) of inter-GNSS system clock bias
         % Measurement covariance matrix - R
-        SIGMA_PR_M              = 20;           % Default std (m) for pseudorange meas (elevation-based model)
-        SIGMA_DOP_MPS           = 1;          % Default std (m/s) for doppler meas (elevation-based model)
-        COV_FACTOR_C            = 10;            % Covariance factor for pseudorange meas
-        COV_FACTOR_D            = 10000;          % Covariance factor for Doppler meas
+        SIGMA_PR_M              = 1e1;          % Default std (m) for pseudorange meas (elevation-based model)
+        SIGMA_DOP_MPS           = 1e0;          % Default std (m/s) for doppler meas (elevation-based model)
+        COV_FACTOR_C            = 1e2;          % Covariance factor for pseudorange meas
+        COV_FACTOR_D            = 1e4;          % Covariance factor for Doppler meas
         % State covariance matrix initialization - P0
         SIGMA_P0_VEL_XYZ        = [10 10 10];   % std m/sqrt(s^3) of initial velocity
         SIGMA_P0_CLK_DRIFT      = 100;          % std m/sqrt(s^3) of initial receiver clock drift
-        SIGMA_P0_CLK_INTERFREQ  = 100;          % std m/sqrt(s) of initial code inter-frequency clock bias
+        SIGMA_P0_CLK_INTERFREQ  = 2e3;          % std m/sqrt(s) of initial code inter-frequency clock bias
         
     end
     

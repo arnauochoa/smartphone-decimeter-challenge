@@ -39,8 +39,8 @@ while ~firstValidEpoch
         idxInvalid = gnssRnx.utcSeconds == thisUtcSeconds;
         disp(['Skipped epoch ' num2str(gnss.tow) ]);
         gnssRnx.obs(idxInvalid,:) = [];
-        gnss.utcSeconds(idxInvalid) = [];
-        gnss.tow(idxInvalid) = [];
+        gnssRnx.utcSeconds(idxInvalid) = [];
+%         gnssRnx.tow(idxInvalid) = [];
     end
 end
 % compute LS position
