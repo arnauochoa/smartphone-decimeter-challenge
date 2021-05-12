@@ -14,6 +14,7 @@ classdef Config < handle
         PHONE_NAME              = 'Mi8';
         FILTER_RAW_MEAS         = true;
         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
+        OSR_FILENAME            = 'EAWD219W.20o';
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; % 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; ||| 'data/other/ARWD219W.rnx';
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100]; % [-2700404.1800 -4292605.5200  3855137.4100] ||| [-2687510.5240 -4290645.5230  3866179.1130]
@@ -27,7 +28,7 @@ classdef Config < handle
         %% Navigation parameters
         CONSTELLATIONS          = 'GE'
         OBS_COMBINATION         = {'none', 'none'};
-        OBS_USED                = {'C1C+C5X', 'C1C+C5X'};
+        OBS_USED                = {'C1C+C5X', 'C1X+C5X'};
         CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
@@ -74,6 +75,12 @@ classdef Config < handle
                     filesep 'BRDC00WRD_R_' Config.NAV_FILE_DATETIME '_01D_' ...
                     Config.CONSTELLATIONS(iConst) 'N.rnx'];
             end
+        end
+        
+        function filepath = getOSRFilepath()
+            %GETOSRFILEPATH Returns the file path of the OSR file.
+            filepath = [Config.dataPath 'corrections' filesep 'OSR' filesep ...
+                Config.CAMPAIGN_NAME filesep Config.OSR_FILENAME];
         end
         
         function [dirPath, fileName] = getRefDirFile()

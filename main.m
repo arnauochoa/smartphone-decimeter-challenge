@@ -6,7 +6,7 @@ clc;
 % Change the configuration in Config class
 
 %% Input
-[gnssRnx, imuRaw, nav, iono, ref] = loadData();
+[gnssRnx, imuRaw, nav, iono, osr, ref] = loadData();
 
 %% Compute geometry
 
