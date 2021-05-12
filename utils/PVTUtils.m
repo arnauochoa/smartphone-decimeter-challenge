@@ -12,8 +12,8 @@ classdef PVTUtils < handle
         
         % Map from RINEX code to frequency
         FREQUENCIES_MAP = containers.Map(...
-            {'C1C' 'C1X' 'C2I' 'C5X'}, ...                  % Code (RINEX Format)
-            [1575.42e6 1575.42e6 1561.098e6 1176.45e6]);    % Frequency (Hz)
+            {'C1C' 'C1X' 'C2I' 'C5X' 'C2X'}, ...                  % Code (RINEX Format)
+            [1575.42e6 1575.42e6 1561.098e6 1176.45e6 1227.6e6]);    % Frequency (Hz)
         
     end
     
