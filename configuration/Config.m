@@ -15,21 +15,24 @@ classdef Config < handle
         FILTER_RAW_MEAS         = true;
         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
         % OBSERVATION RINEX - Uncomment to use, path from workspace
-        OBS_RINEX_PATH          = 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; % 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; ||| 'data/other/ARWD219W.rnx';
-        OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100]; % [-2700404.1800 -4292605.5200  3855137.4100] ||| [-2687510.5240 -4290645.5230  3866179.1130]
+%         OBS_RINEX_PATH          = 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; % 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; ||| 'data/other/ARWD219W.rnx';
+%         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100]; % [-2700404.1800 -4292605.5200  3855137.4100] ||| [-2687510.5240 -4290645.5230  3866179.1130]
         
+        %% Operating mode
+        OUTLIER_REJECTION       = true;
+
         %% IMU parameters
         MAX_IMU_INTERP_MILLIS   = 20;
         
         %% Navigation parameters
         CONSTELLATIONS          = 'GE'
-        OBS_COMBINATION         = {'none'};
-        OBS_USED                = {'C1C+C5X', 'C1X+C5X'};
+        OBS_COMBINATION         = {'none', 'none'};
+        OBS_USED                = {'C1C+C5X', 'C1C+C5X'};
         CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
         MEAS_COV_SRC            = 'elevation';    % among 'elevation' and 'uncertainty'
-        MAX_DOPPLER_MEAS        = 6e3;
+        MAX_DOPPLER_MEAS        = 6e3;          % Maximum doppler measurement
         MAX_DOPPLER_UNCERT      = 10;
         
         %% KF tuning parameters

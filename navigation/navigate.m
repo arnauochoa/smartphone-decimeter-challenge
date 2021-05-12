@@ -15,7 +15,7 @@ gnssEpochs = unique(gnssRnx.utcSeconds);
 nGnssEpochs = length(gnssEpochs);
 % EKF:
 esekf = EKF.build(uint16(nStates));
-
+if ~Config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
 
 %% Obtain first position
 [esekf.x, esekf.P, esekf.tx] = getFirstPosition(gnssRnx, nav);
@@ -97,21 +97,26 @@ while ~hasEnded % while there are more observations/measurements
             fArgs.x0 = esekf.x;
             hArgs.x0 = esekf.x;
             
-            % Pack Doppler observation
-            hArgs.obs = prRate(iObs);
-            hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
-                Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
-            % Process Doppler observation
-            [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-                EKF.processObservation(esekf, thisUtcSeconds, ...
-                @fTransition, fArgs, ...
-                @hDopplerObs, hArgs, ...
-                'Doppler');
-            dopInnovations(idxSat, idxEst) = innovation;
-            dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-            dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + rejected;
-            fArgs.x0 = esekf.x;
-            hArgs.x0 = esekf.x;
+            % If outlier rejection active, use it in processObservation,
+            % otherwise reject Doppler obs higher than threshold
+            if Config.OUTLIER_REJECTION || ...
+                    (~Config.OUTLIER_REJECTION && abs(prRate(iObs)) < Config.MAX_DOPPLER_MEAS)
+                % Pack Doppler observation
+                hArgs.obs = prRate(iObs);
+                hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
+                    Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
+                % Process Doppler observation
+                [esekf, innovation, innovationCovariance, rejected, z, y] = ...
+                    EKF.processObservation(esekf, thisUtcSeconds, ...
+                    @fTransition, fArgs, ...
+                    @hDopplerObs, hArgs, ...
+                    'Doppler');
+                dopInnovations(idxSat, idxEst) = innovation;
+                dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+                dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + rejected;
+                fArgs.x0 = esekf.x;
+                hArgs.x0 = esekf.x;
+            end
         end
     end
     
@@ -185,10 +190,11 @@ function [z, y, H, R] = hCodeObs(~, hArgs)
 % Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateClkBias = PVTUtils.getStateIndex(PVTUtils.ID_CLK_BIAS);
-idxStateFreq = PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS);
-idxStateConstel = PVTUtils.getStateIndex(PVTUtils.ID_INTER_SYS_BIAS);
+idxStateAllFreqBias = PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS);
+idxStateAllSysBias = PVTUtils.getStateIndex(PVTUtils.ID_INTER_SYS_BIAS);
 idxFreq = PVTUtils.getFreqIdx(hArgs.obsFreqHz);
 idxConstel = PVTUtils.getConstelIdx(hArgs.obsConst);
+
 
 % Observation
 z = hArgs.obs;
@@ -200,11 +206,21 @@ dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...
     hArgs.satPos(2)*hArgs.x0(idxStatePos(1)));
 
 % Inter-frequency bias if it's not ref freq
-if isempty(idxStateFreq) || idxFreq == 1, interFreqBias = 0; % If only 1 freq or this is ref freq
-else, interFreqBias = hArgs.x0(idxStateFreq(idxFreq-1)); end
+if isempty(idxStateAllFreqBias) || idxFreq == 1
+    idxThisFreqBias = [];
+    interFreqBias = 0; % If only 1 freq or this is ref freq
+else
+    idxThisFreqBias = idxStateAllFreqBias(idxFreq-1);
+    interFreqBias = hArgs.x0(idxThisFreqBias);
+end
 % Inter-system bias if it's not ref system
-if isempty(idxStateConstel) || idxConstel == 1, interSysBias = 0; % If only 1 const or this is ref const
-else, interSysBias = hArgs.x0(idxStateConstel(idxConstel-1)); end
+if isempty(idxStateAllSysBias) || idxConstel == 1
+    idxThisSysBias = [];
+    interSysBias = 0; % If only 1 const or this is ref const
+else
+    idxThisSysBias = idxStateAllSysBias(idxConstel-1);
+    interSysBias = hArgs.x0(idxThisSysBias);
+end
 % Observation estimation
 y = dist + ...                                  % Distance between receiver and satellite.
     hArgs.x0(idxStateClkBias) - ...             % Receiver clock bias
@@ -216,8 +232,8 @@ y = dist + ...                                  % Distance between receiver and 
 H = zeros(1, PVTUtils.getNumStates);
 H(idxStatePos) = (hArgs.x0(idxStatePos) - hArgs.satPos)/dist;
 H(idxStateClkBias) = 1;
-H(idxStateFreq) = idxFreq > 1; % 1 if not ref freq
-H(idxStateConstel) = -(idxConstel > 1); % -1 if not ref const
+H(idxThisFreqBias) = idxFreq > 1; % 1 if not ref freq
+H(idxThisSysBias) = -(idxConstel > 1); % -1 if not ref const
 
 % Measurement covariance matrix
 R = Config.COV_FACTOR_C * computeMeasCovariance(hArgs.satElev, ...
@@ -264,16 +280,16 @@ end %end of function hDopplerObs
 
 
 % function [z, y, H, R] = hRefObs(~, hArgs)
-% 
+%
 % idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-% 
+%
 % z = hArgs.obs;
-% 
+%
 % y = hArgs.x0(idxStatePos);
-% 
+%
 % % Jacobian matrix
 % H = zeros(3, PVTUtils.getNumStates);
 % H(idxStatePos,idxStatePos) = eye(3);
-% 
+%
 % R = diag(hArgs.sigmaObs);
 % end
