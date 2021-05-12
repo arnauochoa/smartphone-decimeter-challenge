@@ -1,10 +1,6 @@
 function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, ...
     dopInnovationCovariances, utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist] = ...
     navigate(gnssRnx, imuMeas, nav, iono, ref)
-if nargin <1
-    run main.m;
-end
-
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -90,7 +86,7 @@ while ~hasEnded % while there are more observations/measurements
                 EKF.processObservation(esekf, thisUtcSeconds, ...
                 @fTransition, fArgs, ...
                 @hCodeObs, hArgs, ...
-                sprintf('Code - %d', hArgs.obsFreqHz));
+                sprintf('Code (''%c%d'' f = %d=',hArgs.obsConst, gnss.obs(iObs).prn, hArgs.obsFreqHz));
             prInnovations(idxSat, idxEst) = innovation;
             prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
             prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
@@ -110,12 +106,15 @@ while ~hasEnded % while there are more observations/measurements
                     EKF.processObservation(esekf, thisUtcSeconds, ...
                     @fTransition, fArgs, ...
                     @hDopplerObs, hArgs, ...
-                    'Doppler');
+                    sprintf('Doppler (''%c%d'' f = %d)',hArgs.obsConst, gnss.obs(iObs).prn, hArgs.obsFreqHz));
                 dopInnovations(idxSat, idxEst) = innovation;
                 dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
                 dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + rejected;
                 fArgs.x0 = esekf.x;
                 hArgs.x0 = esekf.x;
+            else % prRate > Config.MAX_DOPPLER_MEAS
+                disp([mfilename '>> Doppler outlier rejected, value = ' num2str(prRate(iObs)) 'm/s'])
+                dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + 1;
             end
         end
     end
