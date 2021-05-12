@@ -27,7 +27,7 @@ classdef Config < handle
         %% Navigation parameters
         CONSTELLATIONS          = 'GE'
         OBS_COMBINATION         = {'none', 'none'};
-        OBS_USED                = {'C1C+C5X', 'C1C+C5X'};
+        OBS_USED                = {'C1C+C5X', 'C1X+C5X'}; % G: C1C+C5X, E: C1X+C5X, C: C2I
         CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
