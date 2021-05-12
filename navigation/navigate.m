@@ -49,7 +49,7 @@ while ~hasEnded % while there are more observations/measurements
     [satPos, satClkBias, satClkDrift, satVel] = ...
         compute_satellite_state_all(gnss.tow, gnss.obs, nav, Config.CONSTELLATIONS);
     
-    % Remove invalid observations (no ephem, elevation mask, large dopplers)
+    % Remove invalid observations (no ephem, elevation mask)
     [gnss.obs, satPos, satClkBias, satClkDrift, satVel] = ...
         filterObs(gnss.obs, satPos, satClkBias, satClkDrift, satVel, x0(1:3));
     
