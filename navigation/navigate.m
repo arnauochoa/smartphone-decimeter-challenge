@@ -276,19 +276,3 @@ R = Config.COV_FACTOR_D * computeMeasCovariance(hArgs.satElev, ...
     hArgs.sigmaObs, Config.SIGMA_DOP_MPS, hArgs.obsConst);
 end %end of function hDopplerObs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-% function [z, y, H, R] = hRefObs(~, hArgs)
-%
-% idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-%
-% z = hArgs.obs;
-%
-% y = hArgs.x0(idxStatePos);
-%
-% % Jacobian matrix
-% H = zeros(3, PVTUtils.getNumStates);
-% H(idxStatePos,idxStatePos) = eye(3);
-%
-% R = diag(hArgs.sigmaObs);
-% end
