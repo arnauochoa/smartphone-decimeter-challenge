@@ -1,7 +1,7 @@
-function gnss = getNextGnss(lastUtcSeconds, gnssRnx, whichObs)
+function [gnss, osr] = getNextGnss(lastUtcSeconds, gnssRnx, osrRnx, whichObs)
 % GETNEXTGNSS returns a structure with the next GNSS observations 
 %
-%   gnss = GETNEXTGNSS(lastUtcMillis, gnssRnx, [whichObs])
+%   gnss = GETNEXTGNSS(lastUtcMillis, gnssRnx, [osrRnx, whichObs])
 %
 %   This function returns a structure with the next GNSS observations 
 %   received at:
@@ -10,6 +10,9 @@ function gnss = getNextGnss(lastUtcSeconds, gnssRnx, whichObs)
 
 if ~exist('whichObs', 'var')
     whichObs = 'next';
+end
+if ~exist('osrRnx', 'var')
+    osrRnx = [];
 end
 
 switch whichObs
@@ -34,7 +37,22 @@ if ~isempty(firstObsIdx) % If there are more observations
     % Timestamps of epoch to return
     gnss.utcSeconds = gnssRnx.utcSeconds(firstObsIdx);
     gnss.tow = nextTow;
+    
+    if ~isempty(osrRnx)
+    % Obs vector of epoch to return
+    osr.obs = get_obs_vector(nextTow,  ... 
+        Config.CONSTELLATIONS,  ...
+        Config.OSR_OBS_USED,    ...
+        Config.OBS_COMBINATION, ...
+        osrRnx.obs,             ...
+        osrRnx.type);
+    osr.utcSeconds = gnss.utcSeconds;
+    osr.tow = nextTow;
+    else
+        osr = [];
+    end
 else % If there aren't more observations
     gnss = [];
+    osr = [];
 end
 end

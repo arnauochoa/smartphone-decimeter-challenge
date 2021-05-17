@@ -10,6 +10,7 @@ addpath(genpath([pathstr filesep 'input']));
 addpath(genpath([pathstr filesep 'lib']));
 addpath(genpath([pathstr filesep 'navigation']));
 addpath(genpath([pathstr filesep 'output']));
+addpath(genpath([pathstr filesep 'rtk']));
 addpath(genpath([pathstr filesep 'utils']));
 
 end
