@@ -28,7 +28,12 @@ iono.alpha = [.4657E-08   .1490E-07  -.5960E-07  -.1192E-06]';
 iono.beta = [.8192E+05   .9830E+05  -.6554E+05  -.5243E+06]';
 
 %% OSR data
-[osr.obs, osr.type] = rinex_v3_obs_parser(Config.getOSRFilepath);
+osr.obs = [];
+for iOsr = 1:length(Config.getOSRFilepath)
+    [obs, type] = rinex_v3_obs_parser(Config.getOSRFilepath{iOsr});
+    osr.obs = [osr.obs; obs];
+end
+osr.type = type;
 
 %% Groundtruth data
 if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex

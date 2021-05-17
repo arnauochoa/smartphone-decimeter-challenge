@@ -14,21 +14,25 @@ classdef Config < handle
         PHONE_NAME              = 'Mi8';
         FILTER_RAW_MEAS         = true;
         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
-        OSR_FILENAME            = 'EAWD219W.20o';
+        OSR_FILENAME            = {'EAWD219W.20o' 'EAWD219X.20o'};
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; % 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; ||| 'data/other/ARWD219W.rnx';
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100]; % [-2700404.1800 -4292605.5200  3855137.4100] ||| [-2687510.5240 -4290645.5230  3866179.1130]
         
         %% Operating mode
         OUTLIER_REJECTION       = true;
+        
+        %% RTK parameters
+        MAX_OSR_INTERP_GAP_SEC  = 5;
 
         %% IMU parameters
-        MAX_IMU_INTERP_MILLIS   = 20;
+        MAX_IMU_INTERP_GAP_SEC  = 0.02;
         
         %% Navigation parameters
         CONSTELLATIONS          = 'GE'
         OBS_COMBINATION         = {'none', 'none'};
-        OBS_USED                = {'C1C+C5X', 'C1X+C5X'};
+        OBS_USED                = {'C1C+C5X', 'C1X+C5X'}; % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C+C5X', 'C1X+C5X'}; % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
@@ -79,8 +83,11 @@ classdef Config < handle
         
         function filepath = getOSRFilepath()
             %GETOSRFILEPATH Returns the file path of the OSR file.
-            filepath = [Config.dataPath 'corrections' filesep 'OSR' filesep ...
-                Config.CAMPAIGN_NAME filesep Config.OSR_FILENAME];
+            filepath = cell(1, length(Config.OSR_FILENAME));
+            for iOsr = 1:length(Config.OSR_FILENAME)
+                filepath{iOsr} = [Config.dataPath 'corrections' filesep 'OSR' filesep ...
+                    Config.CAMPAIGN_NAME filesep Config.OSR_FILENAME{iOsr}];
+            end
         end
         
         function [dirPath, fileName] = getRefDirFile()
