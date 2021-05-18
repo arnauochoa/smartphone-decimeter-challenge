@@ -7,10 +7,6 @@ close all;
 % Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-idxStateClkBias = PVTUtils.getStateIndex(PVTUtils.ID_CLK_BIAS);
-idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
-idxStateIFBias = PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS);
-idxStateISBias = PVTUtils.getStateIndex(PVTUtils.ID_INTER_SYS_BIAS);
 timelineSec = (utcSecondsHist - utcSecondsHist(1));
 
 % Estimated position in geodetic
@@ -37,6 +33,7 @@ refVelEcefInterp = interp1(refVelTime, refVelEcef, utcSecondsHist);
 velErr = refVelEcefInterp - xEst(idxStateVel, :)';
 
 %% State plots
+% Position
 figures = [];
 figures = [figures figure];
 if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
@@ -48,6 +45,7 @@ geobasemap none
 legend('Groundtruth', 'Computed');
 figureWindowTitle(figures(end), 'Map');
 
+% Position error
 figures = [figures figure];
 plot(timelineSec, nedError)
 xlabel('Time since start (s)'); ylabel('Position error (m)');
@@ -56,12 +54,14 @@ title('Groundtruth - Estimation')
 grid on
 figureWindowTitle(figures(end), 'Position error');
 
+% Velocity
 figures = [figures figure];
 plot(timelineSec(1:end-1), xEst(idxStateVel, 1:end-1))
 xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 legend('X', 'Y', 'Z');
 figureWindowTitle(figures(end), 'Velocity');
 
+% Velocity error
 figures = [figures figure];
 plot(timelineSec, velErr)
 xlabel('Time since start (s)'); ylabel('Velocity error (m)');
@@ -69,47 +69,6 @@ legend('X', 'Y', 'Z');
 title('Groundtruth - Estimation')
 grid on
 figureWindowTitle(figures(end), 'Velocity error');
-
-figures = [figures figure];
-subplot(2,1,1)
-plot(timelineSec, xEst(idxStateClkBias, :))
-xlabel('Time since start (s)'); ylabel('RX clock bias (m)');
-subplot(2,1,2)
-plot(timelineSec, sigmaHist(idxStateClkBias, :))
-xlabel('Time since start (s)'); ylabel('STD of RX clock bias (m)');
-figureWindowTitle(figures(end), 'RX clock bias');
-
-figures = [figures figure];
-subplot(2,1,1);
-plot(timelineSec, xEst(idxStateClkDrift, :))
-xlabel('Time since start (s)'); ylabel('RX clock drift (m/s)');
-subplot(2,1,2)
-plot(timelineSec, sigmaHist(idxStateClkDrift, :))
-xlabel('Time since start (s)'); ylabel('STD of RX clock drift (m/s)');
-figureWindowTitle(figures(end), 'RX clock drift');
-
-if ~isempty(idxStateIFBias)
-    figures = [figures figure];
-    subplot(2,1,1);
-    plot(timelineSec, xEst(idxStateIFBias, :))
-    xlabel('Time since start (s)'); ylabel('Inter-frequency bias (m)');
-    subplot(2,1,2)
-    plot(timelineSec, sigmaHist(idxStateIFBias, :))
-    xlabel('Time since start (s)'); ylabel('STD of I-F bias (m)');
-    figureWindowTitle(figures(end), 'I-F bias');
-end
-
-if ~isempty(idxStateISBias)
-    figures = [figures figure];
-    subplot(2,1,1);
-    plot(timelineSec, xEst(idxStateISBias, :))
-    xlabel('Time since start (s)'); ylabel('Inter-system bias (m)');
-    subplot(2,1,2)
-    plot(timelineSec, sigmaHist(idxStateISBias, :))
-    xlabel('Time since start (s)'); ylabel('STD of I-S bias (m)');
-    figureWindowTitle(figures(end), 'I-S bias');
-end
-
 
 %% Innovations
 figures = [figures figure];
@@ -120,16 +79,6 @@ subplot(2,1,2)
 plot(prInnovationCovariances', '.')
 xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
 figureWindowTitle(figures(end), 'Code innovations');
-
-
-figures = [figures figure];
-subplot(2,1,1)
-plot(timelineSec, dopInnovations', '.')
-xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
-subplot(2,1,2)
-plot(timelineSec, dopInnovationCovariances', '.')
-xlabel('Time since start (s)'); ylabel('Doppler innovation covariances (m²/s²)');
-figureWindowTitle(figures(end), 'Doppler innovations');
 
 %% # of rejected
 figures = [figures figure]; subplot(2,1,1);
