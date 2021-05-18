@@ -1,20 +1,22 @@
 function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, ...
     dopInnovationCovariances, utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist] = ...
-    navigate(gnssRnx, imuMeas, nav, osrRnx, ref)
+    navigate(rxGnssRnx, imuMeas, nav, osrGnssRnx, ref)
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
 %% Initializations
+idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 nStates = PVTUtils.getNumStates();
 nSatellites = PVTUtils.getNumSatelliteIndices();
-gnssEpochs = unique(gnssRnx.utcSeconds);
+gnssEpochs = unique(rxGnssRnx.utcSeconds);
 nGnssEpochs = length(gnssEpochs);
 % EKF:
 esekf = EKF.build(uint16(nStates));
 if ~Config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
 
 %% Obtain first position
-[esekf.x, esekf.P, esekf.tx] = getFirstPosition(gnssRnx, nav);
+[esekf.x, esekf.P, esekf.tx] = getFirstPosition(rxGnssRnx, nav);
 
 % Loop variables
 % thisUtcSeconds -> time ref for both IMU and GNSS.
@@ -24,7 +26,7 @@ xEstHist = esekf.x; % TODO change to error state, prealocate if num pos is known
 sigmaHist = zeros(nStates, 1);
 
 % First gnss observations is the same as for the first approx position
-[gnssRx, gnssOsr] = getNextGnss(thisUtcSeconds, gnssRnx, osrRnx, 'this');
+[gnssRx, gnssOsr] = getNextGnss(thisUtcSeconds, rxGnssRnx, osrGnssRnx, 'this');
 hasEnded = isempty(gnssRx); % TODO check imu
 
 % TODO: debugging variables, check which need to be kept
@@ -40,8 +42,9 @@ while ~hasEnded % while there are more observations/measurements
     % First iteration: x0 is result from LS
     if idxEst == 1,     x0 = xEstHist(:, 1);
     else,               x0 = xEstHist(:, idxEst-1); end
-    % Transition model arguments
+    % Initial estimate for transition and measurement models
     fArgs.x0 = x0;
+    hArgs.x0 = x0;
     
     thisUtcSeconds = gnssRx.utcSeconds; % TODO check imu time
     
@@ -49,8 +52,8 @@ while ~hasEnded % while there are more observations/measurements
     [satPos, satClkBias, satClkDrift, satVel] = ...
         compute_satellite_state_all(gnssRx.tow, gnssRx.obs, nav, Config.CONSTELLATIONS);
     
-    % Remove invalid observations (no ephem, elevation mask, large dopplers)
-    [gnssRx.obs, satPos, satClkBias, satClkDrift, satVel] = ...
+    % Remove invalid observations (no ephem, elevation mask)
+    [gnssRx.obs, satPos, ~, ~, ~] = ...
         filterObs(gnssRx.obs, satPos, satClkBias, satClkDrift, satVel, x0(1:3));
     
     if length([gnssRx.obs(:).C]) < 4 + PVTUtils.getNumFrequencies + PVTUtils.getNumConstellations
@@ -59,41 +62,44 @@ while ~hasEnded % while there are more observations/measurements
     else
         % TODO: compute double differences
         doubleDifferences = computeDoubleDifferences(gnssRx, gnssOsr);
-
-        % Measurement model arguments
-        hArgs.x0 = x0;
+        
         
         % Sequentally update with all observations
         for iObs = 1:length(doubleDifferences)
+            idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).prns(2), doubleDifferences(iObs).constel);
+            % Pack arguments that are common for all observations
+            hArgs.obsConst = doubleDifferences(iObs).constel;
+            hArgs.satPos = getSatPositions(gnssRx.obs, satPos, ...
+                hArgs.obsConst, doubleDifferences(iObs).prns);
+            [~, hArgs.satElev(1), ~] = getSatAzEl(hArgs.satPos(:, 1), hArgs.x0(idxStatePos));
+            [~, hArgs.satElev(2), ~] = getSatAzEl(hArgs.satPos(:, 2), hArgs.x0(idxStatePos));
             
-%             idxSat = PVTUtils.getSatelliteIndex(gnss.obs(iObs).prn, gnss.obs(iObs).constellation);
-
-            % TODO: Pack arguments that are common for Code and Phase observations
-%             hArgs.obsFreqHz = gnss.obs(iObs).D_fcarrier_Hz;
-%             hArgs.obsConst = gnss.obs(iObs).constellation;
-%             hArgs.satPos = satPos(:, iObs);
-%             hArgs.satVel = satVel(:, iObs);
-%             hArgs.satClkBias = satClkBias(iObs);
-%             hArgs.satClkDrift = satClkDrift(iObs);
-%             hArgs.satElev = satElDeg(iObs);
+            % Pack code DD observation
+            hArgs.obs = doubleDifferences(iObs).C;
+            hArgs.sigmaObs = doubleDifferences(iObs).sigmaC;
             
-            % TODO: Pack code observation
-%             hArgs.obs = prCorr(iObs);
-%             hArgs.sigmaObs = gnss.obs(iObs).C_sigma;
-
-            % TODO: Process code observation
-%             [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-%                 EKF.processObservation(esekf, thisUtcSeconds, ...
-%                 @fTransition, fArgs, ...
-%                 @hCodeObs, hArgs, ...
-%                 sprintf('Code (''%c%d'' f = %d=',hArgs.obsConst, gnss.obs(iObs).prn, hArgs.obsFreqHz));
-%             prInnovations(idxSat, idxEst) = innovation;
-%             prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-%             prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
-%             fArgs.x0 = esekf.x;
-%             hArgs.x0 = esekf.x;
+            % Label to show on console when outliers are detected
+            label = sprintf('Code (%c%d-%c%d, f = %g)', ...
+                doubleDifferences(iObs).constel, ...
+                doubleDifferences(iObs).prns(1), ...
+                doubleDifferences(iObs).constel, ...
+                doubleDifferences(iObs).prns(2), ...
+                doubleDifferences(iObs).freqHz);
+            % Process code observation
+            [esekf, innovation, innovationCovariance, rejected, ~, ~] = ...
+                EKF.processObservation(esekf, thisUtcSeconds, ...
+                @fTransition, fArgs, ...
+                @hCodeObs, hArgs, ...
+                label);
             
-            % TODO: Process phase observation
+            prInnovations(idxSat, idxEst) = innovation;
+            prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+            prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
+            
+            fArgs.x0(idxStatePos) = Config.STATION_POS_XYZ' - esekf.x(idxStatePos);
+            fArgs.x0(idxStateVel) = esekf.x(idxStateVel);
+            fArgs.x0 = fArgs.x0;
+            hArgs.x0 = fArgs.x0;
         end
     end
     
@@ -104,7 +110,7 @@ while ~hasEnded % while there are more observations/measurements
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
-    gnssRx = getNextGnss(thisUtcSeconds, gnssRnx);
+    gnssRx = getNextGnss(thisUtcSeconds, rxGnssRnx);
     hasEnded = isempty(gnssRx); % TODO check imu
 end
 
@@ -112,85 +118,50 @@ end
 
 % State transition function
 function [x2, F, Q] = fTransition(x1, t1, t2, fArgs)
-% dt = t2 - t1;
-% F = eye(PVTUtils.getNumStates);
-% % dp/dv
-% F(1,4) = dt; F(2,5) = dt; F(3,6) = dt;
-% % d clkbias/d clkdrift
-% F(7,8) = dt;
-% % State prediction
-% x2 = F * x1;
-% % Process noise covariance matrix - Velocity
-% rotN2E = compute_Rn2e(fArgs.x0(1), fArgs.x0(2), fArgs.x0(3));
-% Qvel = dt * rotN2E * diag(Config.SIGMA_VEL_NED.^2) * rotN2E';
-% % Process noise covariance matrix - Clock
-% Qclk(1, 1) = dt * Config.SIGMA_CLK_BIAS^2 + 1/3 * dt^3 * Config.SIGMA_CLK_DRIFT^2;
-% Qclk(1, 2) = 1/2 * dt^2 * Config.SIGMA_CLK_DRIFT^2;
-% Qclk(2, 1) = Qclk(1, 2);
-% Qclk(2, 2) =  dt * Config.SIGMA_CLK_DRIFT^2;
-% % Process noise covariance matrix - Inter-Frequency bias(es)
-% Qif = dt * Config.SIGMA_CLK_INTERFREQ^2 * eye(PVTUtils.getNumFrequencies - 1);
-% % Process noise covariance matrix - Inter-System bias(es)
-% Qis = dt * Config.SIGMA_CLK_INTERSYS^2 * eye(PVTUtils.getNumConstellations - 1);
-% % Process noise covariance matrix
-% Q = blkdiag(zeros(3), Qvel, Qclk, Qif, Qis);
+% Initializations
+idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+
+dt = t2 - t1;
+F = eye(PVTUtils.getNumStates);
+% dp/dv
+F(idxStatePos, idxStateVel) = dt * eye(3);
+% State prediction
+x2 = F * x1;
+% Process noise covariance matrix - Velocity
+rotN2E = compute_Rn2e(fArgs.x0(1), fArgs.x0(2), fArgs.x0(3));
+Qvel = dt * rotN2E * diag(Config.SIGMA_VEL_NED.^2) * rotN2E';
+% Process noise covariance matrix
+Q = zeros(PVTUtils.getNumStates);
+Q(idxStateVel, idxStateVel) = Qvel;
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [z, y, H, R] = hCodeObs(~, hArgs)
-% % HCODEOBS provides the measurement model for the sequential code
-% % observations
-% 
-% % Initializations
-% idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-% idxStateClkBias = PVTUtils.getStateIndex(PVTUtils.ID_CLK_BIAS);
-% idxStateAllFreqBias = PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS);
-% idxStateAllSysBias = PVTUtils.getStateIndex(PVTUtils.ID_INTER_SYS_BIAS);
-% idxFreq = PVTUtils.getFreqIdx(hArgs.obsFreqHz);
-% idxConstel = PVTUtils.getConstelIdx(hArgs.obsConst);
-% 
-% 
-% % Observation
-% z = hArgs.obs;
-% 
-% % Distance between receiver and satellite. Second term is Sagnac effect.
-% dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...
-%     Constants.OMEGA_E/Constants.CELERITY * ...
-%     (hArgs.satPos(1)*hArgs.x0(idxStatePos(2)) - ...
-%     hArgs.satPos(2)*hArgs.x0(idxStatePos(1)));
-% 
-% % Inter-frequency bias if it's not ref freq
-% if isempty(idxStateAllFreqBias) || idxFreq == 1
-%     idxThisFreqBias = [];
-%     interFreqBias = 0; % If only 1 freq or this is ref freq
-% else
-%     idxThisFreqBias = idxStateAllFreqBias(idxFreq-1);
-%     interFreqBias = hArgs.x0(idxThisFreqBias);
-% end
-% % Inter-system bias if it's not ref system
-% if isempty(idxStateAllSysBias) || idxConstel == 1
-%     idxThisSysBias = [];
-%     interSysBias = 0; % If only 1 const or this is ref const
-% else
-%     idxThisSysBias = idxStateAllSysBias(idxConstel-1);
-%     interSysBias = hArgs.x0(idxThisSysBias);
-% end
-% % Observation estimation
-% y = dist + ...                                  % Distance between receiver and satellite.
-%     hArgs.x0(idxStateClkBias) - ...             % Receiver clock bias
-%     Constants.CELERITY * hArgs.satClkBias + ... % Satellite clock bias
-%     interFreqBias - ...                         % Inter-frequency bias
-%     interSysBias;                               % Inter-system bias
-% 
-% % Jacobian matrix
-% H = zeros(1, PVTUtils.getNumStates);
-% H(idxStatePos) = (hArgs.x0(idxStatePos) - hArgs.satPos)/dist;
-% H(idxStateClkBias) = 1;
-% H(idxThisFreqBias) = idxFreq > 1; % 1 if not ref freq
-% H(idxThisSysBias) = -(idxConstel > 1); % -1 if not ref const
-% 
-% % Measurement covariance matrix
-% R = Config.COV_FACTOR_C * computeMeasCovariance(hArgs.satElev, ...
-%     hArgs.sigmaObs, Config.SIGMA_PR_M, hArgs.obsConst);
+% HCODEOBS provides the measurement model for the sequential code
+% observations
+
+% Initializations
+idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+rxPos = hArgs.x0(idxStatePos);
+
+% Observation
+z = hArgs.obs;
+
+% Observation estimation: Distance between receiver and OSR station
+y = norm(rxPos - Config.STATION_POS_XYZ');
+
+% Difference between LOS vectors of satellites towards
+refSatLosVec = rxPos - hArgs.satPos(:, 1);
+satLosVec = rxPos - hArgs.satPos(:, 2);
+ddLosVec = unitVector(refSatLosVec - satLosVec);
+
+% Jacobian matrix
+H = zeros(1, PVTUtils.getNumStates);
+H(idxStatePos) = ddLosVec;
+
+% Measurement covariance matrix, consider DD sigmas
+R = Config.COV_FACTOR_C * computeRtkMeasCovariance(hArgs.satElev, ...
+    hArgs.sigmaObs, Config.SIGMA_PR_M, hArgs.obsConst);
 end %end of function hCodeObs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

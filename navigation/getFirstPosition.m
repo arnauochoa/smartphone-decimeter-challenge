@@ -64,17 +64,11 @@ x0 = zeros(nStates, 1);
 P0 = zeros(nStates); % TODO set diagonal terms of velocity and others
 
 % Fill parameters estimated by LS
-idxLS = [PVTUtils.getStateIndex(PVTUtils.ID_POS) ...
-    PVTUtils.getStateIndex(PVTUtils.ID_CLK_BIAS) ...
-    PVTUtils.getStateIndex(PVTUtils.ID_INTER_SYS_BIAS)];
-x0(idxLS) = xLS;
-P0(idxLS, idxLS) = PLS;
+idxLS = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+x0(idxLS) = xLS(1:3);
+P0(idxLS, idxLS) = PLS(1:3,1:3);
 
 % Fill the rest with the Config values
 P0(PVTUtils.getStateIndex(PVTUtils.ID_VEL), PVTUtils.getStateIndex(PVTUtils.ID_VEL)) = ...
     diag(Config.SIGMA_P0_VEL_XYZ.^2);
-P0(PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT), PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT)) = ...
-    Config.SIGMA_P0_CLK_DRIFT^2;
-P0(PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS), PVTUtils.getStateIndex(PVTUtils.ID_INTER_FREQ_BIAS)) = ...
-    diag(Config.SIGMA_P0_CLK_INTERFREQ^2 * ones(1, PVTUtils.getNumFrequencies-1));
 end

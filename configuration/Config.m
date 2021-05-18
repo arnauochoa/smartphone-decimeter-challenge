@@ -24,6 +24,7 @@ classdef Config < handle
         
         %% RTK parameters
         MAX_OSR_INTERP_GAP_SEC  = 5;
+        STATION_POS_XYZ = [-2687510.5240 -4290645.5230  3866179.1130];
 
         %% IMU parameters
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
@@ -36,7 +37,7 @@ classdef Config < handle
         CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
-        MEAS_COV_SRC            = 'elevation';    % among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC            = 'uncertainty';    % among 'elevation' and 'uncertainty'
         MAX_DOPPLER_MEAS        = 6e3;          % Maximum doppler measurement
         MAX_DOPPLER_UNCERT      = 10;
         
