@@ -80,13 +80,13 @@ plot(prInnovationCovariances', '.')
 xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
 figureWindowTitle(figures(end), 'Code innovations');
 
-%% # of rejected
+%% % of rejected
 figures = [figures figure]; subplot(2,1,1);
 plot(timelineSec, prRejectedHist)
-xlabel('Time since start (s)'); ylabel('# rejected Code obs');
-subplot(2,1,2);
-plot(timelineSec, dopRejectedHist)
-xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
+xlabel('Time since start (s)'); ylabel('% rejected Code obs');
+% subplot(2,1,2);
+% plot(timelineSec, dopRejectedHist)
+% xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
 figureWindowTitle(figures(end), 'Outlier rejections');
 
 %% CDFs
@@ -118,13 +118,13 @@ figureWindowTitle(figures(end), 'Ver. pos. CDF');
 % Velocity
 velErrPctl = prctile(abs(velErr),pctl);
 for iDim = 1:3
-    [velErrF(:, iDim), velErrX(:, iDim)] = ecdf(abs(velErr(:, iDim)));
+    [velErrF{iDim}, velErrX{iDim}] = ecdf(abs(velErr(:, iDim)));
 end
 
 figures = [figures figure]; hold on;
 colors = [0 0 1; 0 1 0; 1 0 0];
 for iDim = 1:3
-    plot(velErrX(:, iDim),velErrF(:, iDim),'LineWidth',2, 'Color', colors(iDim, :))
+    plot(velErrX{iDim},velErrF{iDim},'LineWidth',2, 'Color', colors(iDim, :))
     plot([1;1]*velErrPctl(iDim), [0;1]*pctl/100, '--', 'Color', colors(iDim, :))
 end
 legend({'X',sprintf('%d%% bound = %.2f', pctl, velErrPctl(1)), ...

@@ -42,10 +42,7 @@ while ~hasEnded % while there are more observations/measurements
     % First iteration: x0 is result from LS
     if idxEst == 1,     x0 = xEstHist(:, 1);
     else,               x0 = xEstHist(:, idxEst-1); end
-    % Initial estimate for transition and measurement models
-    fArgs.x0 = x0;
-    hArgs.x0 = x0;
-    
+        
     thisUtcSeconds = gnssRx.utcSeconds; % TODO check imu time
     
     % Get states of satellites selected in Config
@@ -56,34 +53,42 @@ while ~hasEnded % while there are more observations/measurements
     [gnssRx.obs, satPos, ~, ~, ~] = ...
         filterObs(gnssRx.obs, satPos, satClkBias, satClkDrift, satVel, x0(1:3));
     
+    % Obtain satellite elevations
+    [~, satElDeg, ~] = getSatAzEl(satPos, x0(idxStatePos));
+    
+    % Initial estimate for the transition model
+    fArgs.x0 = x0;
     if length([gnssRx.obs(:).C]) < 4 + PVTUtils.getNumFrequencies + PVTUtils.getNumConstellations
         warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', gnssRx.tow);
         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
     else
         % TODO: compute double differences
-        doubleDifferences = computeDoubleDifferences(gnssRx, gnssOsr);
-        
+        doubleDifferences = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg);
         
         % Sequentally update with all observations
         for iObs = 1:length(doubleDifferences)
-            idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).prns(2), doubleDifferences(iObs).constel);
+            idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).varSatPrn, doubleDifferences(iObs).constel);
+            
             % Pack arguments that are common for all observations
+            fArgs.x0 = x0;
+            hArgs.x0 = x0;
             hArgs.obsConst = doubleDifferences(iObs).constel;
-            hArgs.satPos = getSatPositions(gnssRx.obs, satPos, ...
-                hArgs.obsConst, doubleDifferences(iObs).prns);
-            [~, hArgs.satElev(1), ~] = getSatAzEl(hArgs.satPos(:, 1), hArgs.x0(idxStatePos));
-            [~, hArgs.satElev(2), ~] = getSatAzEl(hArgs.satPos(:, 2), hArgs.x0(idxStatePos));
+            hArgs.pivSatPos = doubleDifferences(iObs).pivSatPos;
+            hArgs.varSatPos = doubleDifferences(iObs).varSatPos;
+            hArgs.satElDeg = [doubleDifferences(iObs).pivSatElDeg
+                doubleDifferences(iObs).varSatElDeg];
             
             % Pack code DD observation
             hArgs.obs = doubleDifferences(iObs).C;
-            hArgs.sigmaObs = doubleDifferences(iObs).sigmaC;
+            hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
+                doubleDifferences(iObs).varSatSigmaC];
             
             % Label to show on console when outliers are detected
             label = sprintf('Code (%c%d-%c%d, f = %g)', ...
-                doubleDifferences(iObs).constel, ...
-                doubleDifferences(iObs).prns(1), ...
-                doubleDifferences(iObs).constel, ...
-                doubleDifferences(iObs).prns(2), ...
+                doubleDifferences(iObs).constel,        ...
+                doubleDifferences(iObs).pivSatPrn,      ...
+                doubleDifferences(iObs).constel,        ...
+                doubleDifferences(iObs).varSatPrn,      ...
                 doubleDifferences(iObs).freqHz);
             % Process code observation
             [esekf, innovation, innovationCovariance, rejected, ~, ~] = ...
@@ -96,16 +101,16 @@ while ~hasEnded % while there are more observations/measurements
             prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
             prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
             
-            fArgs.x0(idxStatePos) = Config.STATION_POS_XYZ' - esekf.x(idxStatePos);
-            fArgs.x0(idxStateVel) = esekf.x(idxStateVel);
-            fArgs.x0 = fArgs.x0;
-            hArgs.x0 = fArgs.x0;
+            % TODO perform correction when using error-state
+            x0(idxStatePos) = Config.STATION_POS_XYZ + esekf.x(idxStatePos);
+            x0(idxStateVel) = esekf.x(idxStateVel);
         end
+        prRejectedHist(idxEst) = 100*prRejectedHist(idxEst) / length(doubleDifferences);
     end
     
     utcSecondsHist(idxEst) = thisUtcSeconds;
     
-    xEstHist(:, idxEst) = esekf.x; % TODO perform correction when using error-state
+    xEstHist(:, idxEst) = fArgs.x0; 
     sigmaHist(:, idxEst) = sqrt(diag(esekf.P));
     idxEst = idxEst + 1;
     
@@ -148,20 +153,23 @@ rxPos = hArgs.x0(idxStatePos);
 % Observation
 z = hArgs.obs;
 
-% Observation estimation: Distance between receiver and OSR station
-y = norm(rxPos - Config.STATION_POS_XYZ');
+% Observation estimation
+y = norm(Config.STATION_POS_XYZ - hArgs.pivSatPos) - ... % |stat - sat1|
+    norm(rxPos - hArgs.pivSatPos) -                  ... % |user - sat1|
+    norm(Config.STATION_POS_XYZ - hArgs.varSatPos) + ... % |stat - sat2|
+    norm(rxPos - hArgs.varSatPos);                       % |user - sat2|
 
-% Difference between LOS vectors of satellites towards
-refSatLosVec = rxPos - hArgs.satPos(:, 1);
-satLosVec = rxPos - hArgs.satPos(:, 2);
-ddLosVec = unitVector(refSatLosVec - satLosVec);
+% Difference between LOS vectors of satellites towards receiver
+refSatLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.pivSatPos);
+satLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.varSatPos);
+ddLosVec = (refSatLosVec - satLosVec);
 
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);
 H(idxStatePos) = ddLosVec;
 
 % Measurement covariance matrix, consider DD sigmas
-R = Config.COV_FACTOR_C * computeRtkMeasCovariance(hArgs.satElev, ...
+R = Config.COV_FACTOR_C * computeRtkMeasCovariance(hArgs.satElDeg, ...
     hArgs.sigmaObs, Config.SIGMA_PR_M, hArgs.obsConst);
 end %end of function hCodeObs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
