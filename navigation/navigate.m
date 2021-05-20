@@ -16,13 +16,14 @@ esekf = EKF.build(uint16(nStates));
 if ~Config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
 
 %% Obtain first position
-[esekf.x, esekf.P, esekf.tx] = getFirstPosition(rxGnssRnx, nav);
-
+[x0, esekf.P, esekf.tx] = getFirstPosition(rxGnssRnx, nav);
+esekf.x = zeros(PVTUtils.getNumStates, 1);
+esekf.x(idxStatePos) = x0(idxStatePos) - Config.STATION_POS_XYZ;
 % Loop variables
 % thisUtcSeconds -> time ref for both IMU and GNSS.
 thisUtcSeconds = esekf.tx; % First time is from the first GNSS estimation
 idxEst = 1;
-xEstHist = esekf.x; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
+xEstHist(:, 1) = x0; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
 sigmaHist = zeros(nStates, 1);
 
 % First gnss observations is the same as for the first approx position
@@ -63,7 +64,7 @@ while ~hasEnded % while there are more observations/measurements
         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
     else
         % TODO: compute double differences
-        doubleDifferences = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg);
+        doubleDifferences = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg, x0);
         
         % Sequentally update with all observations
         for iObs = 1:length(doubleDifferences)
@@ -130,7 +131,7 @@ idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 dt = t2 - t1;
 F = eye(PVTUtils.getNumStates);
 % dp/dv
-F(idxStatePos, idxStateVel) = dt * eye(3);
+% F(idxStatePos, idxStateVel) = dt * eye(3);
 % State prediction
 x2 = F * x1;
 % Process noise covariance matrix - Velocity
@@ -162,7 +163,7 @@ y = norm(Config.STATION_POS_XYZ - hArgs.pivSatPos) - ... % |stat - sat1|
 % Difference between LOS vectors of satellites towards receiver
 refSatLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.pivSatPos);
 satLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.varSatPos);
-ddLosVec = (refSatLosVec - satLosVec);
+ddLosVec = refSatLosVec - satLosVec;
 
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);

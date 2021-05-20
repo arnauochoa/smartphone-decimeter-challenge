@@ -1,6 +1,12 @@
-function [doubleDifferences] = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg)
+function [doubleDifferences] = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg, x0)
 % COMPUTEDOUBLEDIFFERENCES Computes the double differences considering
 % different constellations and frequencies
+
+% TODO: remove x0
+if nargin<1
+    selfTest();
+    return;
+end
 
 constels = unique([gnssRx.obs.constellation], 'stable');
 
@@ -20,7 +26,7 @@ for iConst = 1:length(constels)
         [dd, nDis] = getDD(gnssRx.obs(isConstFreqRx),   ... % Receiver pos
             gnssOsr.obs(isConstFreqOsr),                ... % Station pos
             satPos(:, isConstFreqRx),                   ... % Sat pos associated to rx obs
-            satElDeg(isConstFreqRx));                       % Sat elev associated to rx obs
+            satElDeg(isConstFreqRx), x0);                       % Sat elev associated to rx obs
         
         nDiscarded = nDiscarded + nDis;
         doubleDifferences = appendStruct(doubleDifferences, dd, 2);
@@ -31,7 +37,7 @@ doubleDifferences = soa2aos(doubleDifferences);
 fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', gnssRx.tow, nDiscarded);
 end
 
-function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg)
+function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg, x0)
 % GETDD Computes the DD of the two given sets of observations
 
 % Common satellites between receiver and OSR station
@@ -59,6 +65,45 @@ if numCommonSats > 1
     % Double differences
     dd.C = codeSd(idxPivSat) - codeSd(idxVarSats);
     dd.L = phaseSd(idxPivSat) - phaseSd(idxVarSats);
+    
+    % >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO remove >>>>
+%     expOsrC = vecnorm(Config.STATION_POS_XYZ - satPos);
+%     expRxC = vecnorm(x0(1:3)- satPos);
+%     figure(); clf; hold on; 
+%     plot(expOsrC, 'o-'); plot([osrObs(:).C], 'o-');
+%     plot(expRxC, '^-'); plot([rxObs(:).C], '^-'); xticklabels(num2str([rxObs.prn]'));
+%     legend('OSR Exp', 'OSR Meas', 'RX Exp', 'RX Meas');
+%     title(['Full ' rxObs(1).constellation]);
+%     
+% %     figure; hold on; 
+% %     legend('Exp', 'Meas');
+% %     title(['RX ' rxObs(1).constellation]);
+%     
+%     expSd = expOsrC - expRxC;
+%     figure(); clf; hold on; 
+%     plot(expSd, 'o-'); plot(codeSd, '^-'); xticklabels(num2str([rxObs.prn]'));
+%     legend('Exp', 'Meas');
+%     title(['SD (stat-usr) ' rxObs(1).constellation]);
+%     
+%     expSdSatOsr = expOsrC(idxPivSat) - expOsrC(idxVarSats);
+%     codeSdSatOsr = [osrObs(idxPivSat).C] - [osrObs(idxVarSats).C];
+%     expSdSatRx = expRxC(idxPivSat) - expRxC(idxVarSats);
+%     codeSdSatRx = [rxObs(idxPivSat).C] - [rxObs(idxVarSats).C];
+%     
+%     figure(); clf; hold on;
+%     plot(expSdSatOsr, 'o-'); plot(codeSdSatOsr, 'o-');
+%     plot(expSdSatRx, '^-'); plot(codeSdSatRx, '^-'); 
+%     xticklabels(num2str([rxObs(idxVarSats).prn]'));
+%     legend('OSR Exp', 'OSR Meas', 'RX Exp', 'RX Meas');
+%     title(['SD (' num2str(rxObs(idxPivSat).prn) '-sat) ' rxObs(1).constellation]);
+%     
+%     expDDSat = expSd(idxPivSat) - expSd(idxVarSats);
+%     figure(); clf; hold on;
+%     plot(expDDSat, 'o-'); plot(dd.C, '^-'); xticklabels(num2str([rxObs(idxVarSats).prn]'));
+%     legend('Exp', 'Meas');
+%     title(['DD (' num2str(rxObs(idxPivSat).prn) '-sat) ' rxObs(1).constellation]);
+    % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 %     dd.DHz = dopSd(idxPivSat) - dopSd(idxVarSats);
     nDD = length(dd.C);
     dd.constel = repmat(rxObs(idxPivSat).constellation, 1, nDD);
@@ -103,4 +148,60 @@ function [idxPivSat, idxVarSats] = choosePivotSat(satElDeg)
     satIndices = 1:length(satElDeg);
     [~, idxPivSat] = max(satElDeg);
     idxVarSats = satIndices(satIndices ~= idxPivSat); % All except pivot sat
+end
+
+function selfTest()
+
+obs.constellation = 'GGGGGEEEC';
+obs.D_fcarrier_Hz = [1575.42e6 1575.42e6 1575.42e6 1176.45e6 1176.45e6 1575.42e6 1575.42e6 1176.45e6 1561.098e6];
+obs.prn = [1 2 3 1 2 3 5 3 2];
+obs.C = [10 20 15 10 19 5 9 6 25];
+obs.L = [10 20 15 10 19 5 9 6 25];
+obs.C_sigma = ones(size(obs.C));
+obs.D_sigma = ones(size(obs.C));
+obs.L_sigma = ones(size(obs.C));
+gnssOsr.obs = soa2aos(obs);
+
+clear obs
+obs.constellation = 'GGGGEECC';
+obs.D_fcarrier_Hz = [1575.42e6 1575.42e6 1176.45e6 1176.45e6 1575.42e6 1176.45e6 1561.098e6 1561.098e6];
+obs.prn = [2 3 1 2 3 3 2 5];
+obs.C = [20 14 10 18 5 6 25 1]+0.5;
+obs.L = [20 14 10 18 5 6 25 1]+3.5;
+obs.C_sigma = ones(size(obs.C));
+obs.D_sigma = ones(size(obs.C));
+obs.L_sigma = ones(size(obs.C));
+gnssRx.obs = soa2aos(obs);
+gnssRx.tow = 0;
+
+
+satPos = repmat(obs.prn, 3, 1);
+satElDeg = [90 45 20 90 50 50 70 25];
+
+[doubleDifferences] = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg);
+assert(length(doubleDifferences) == 2, 'Test failed');
+%
+assert(doubleDifferences(1).C == -1, 'Test failed');
+assert(doubleDifferences(1).L == -1, 'Test failed');
+assert(doubleDifferences(1).constel == 'G', 'Test failed');
+assert(doubleDifferences(1).freqHz == 1575.42e6, 'Test failed');
+assert(doubleDifferences(1).pivSatPrn == 2, 'Test failed');
+assert(all(doubleDifferences(1).pivSatPos == [2;2;2]), 'Test failed');
+assert(all(doubleDifferences(1).pivSatElDeg == 90), 'Test failed');
+assert(doubleDifferences(1).varSatPrn == 3, 'Test failed');
+assert(all(doubleDifferences(1).varSatPos == [3;3;3]), 'Test failed');
+assert(all(doubleDifferences(1).varSatElDeg == 45), 'Test failed');
+%
+assert(doubleDifferences(2).C == 1, 'Test failed');
+assert(doubleDifferences(2).L == 1, 'Test failed');
+assert(doubleDifferences(2).constel == 'G', 'Test failed');
+assert(doubleDifferences(2).freqHz == 1176.45e6, 'Test failed');
+assert(doubleDifferences(2).pivSatPrn == 2, 'Test failed');
+assert(all(doubleDifferences(2).pivSatPos == [2;2;2]), 'Test failed');
+assert(all(doubleDifferences(2).pivSatElDeg == 90), 'Test failed');
+assert(doubleDifferences(2).varSatPrn == 1, 'Test failed');
+assert(all(doubleDifferences(2).varSatPos == [1;1;1]), 'Test failed');
+assert(all(doubleDifferences(2).varSatElDeg == 20), 'Test failed');
+
+disp([mfilename '>> Function self test(s) passed']);
 end
