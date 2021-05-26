@@ -22,7 +22,7 @@ classdef PVTUtils < handle
         function nStates = getNumStates()
             % GETNUMSTATES Returns the number of states in the state vector
             % 3D pos, 3D vel
-            nStates = 6; % TODO check
+            nStates = 3; % TODO check
         end
         
         function idx = getStateIndex(unknownID)
@@ -31,9 +31,9 @@ classdef PVTUtils < handle
             switch unknownID
                 case PVTUtils.ID_POS
                     idx = 1:3;
-                case PVTUtils.ID_VEL
-                    prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-                    idx = prevIdx(end) + (1:3);
+%                 case PVTUtils.ID_VEL
+%                     prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+%                     idx = prevIdx(end) + (1:3);
                 otherwise
                     error('Invalid unknown ID')
             end

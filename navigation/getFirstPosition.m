@@ -69,6 +69,6 @@ x0(idxLS) = xLS(1:3);
 P0(idxLS, idxLS) = PLS(1:3,1:3);
 
 % Fill the rest with the Config values
-P0(PVTUtils.getStateIndex(PVTUtils.ID_VEL), PVTUtils.getStateIndex(PVTUtils.ID_VEL)) = ...
-    diag(Config.SIGMA_P0_VEL_XYZ.^2);
+% P0(PVTUtils.getStateIndex(PVTUtils.ID_VEL), PVTUtils.getStateIndex(PVTUtils.ID_VEL)) = ...
+%     diag(Config.SIGMA_P0_VEL_XYZ.^2);
 end

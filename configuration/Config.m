@@ -14,17 +14,21 @@ classdef Config < handle
         PHONE_NAME              = 'Mi8';
         FILTER_RAW_MEAS         = true;
         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
-        OSR_FILENAME            = {'EAWD219W.20o' 'EAWD219X.20o'};
+        OSR_FILENAME            =  {'EAWD00XXX_R_20202192200_01H_01S_MO.rnx' 'EAWD00XXX_R_20202192300_01H_01S_MO.rnx'}; 
+            %{'EAWD00XXX_R_20202192200_01H_01S_MO.rnx' 'EAWD00XXX_R_20202192300_01H_01S_MO.rnx'};
         % OBSERVATION RINEX - Uncomment to use, path from workspace
-%         OBS_RINEX_PATH          = 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; % 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; ||| 'data/other/ARWD219W.rnx';
-%         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100]; % [-2700404.1800 -4292605.5200  3855137.4100] ||| [-2687510.5240 -4290645.5230  3866179.1130]
+%         OBS_RINEX_PATH          = [Config.dataPath 'other' filesep 'igs_data' filesep ...
+%                 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
+%         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
+%         OBS_RINEX_PATH          = [Config.trainPath 'corrections' filesep 'OSR_v3.04' filesep '2020-08-06-US-MTV-2' filesep 'EAWD00XXX_R_20202192200_01H_01S_MO.rnx'];
+%         OBS_RINEX_REF_XYZ       = [-2705252.9380 -4281214.6105  3864271.5517];
         
         %% Operating mode
         OUTLIER_REJECTION       = true;
         
         %% RTK parameters
-        MAX_OSR_INTERP_GAP_SEC  = 5;
-        STATION_POS_XYZ = [-2687510.5240 -4290645.5230  3866179.1130]';
+        MAX_OSR_INTERP_GAP_SEC  = 15;
+        STATION_POS_XYZ         = [-2705252.9380 -4281214.6105  3864271.5517]';
 
         %% IMU parameters
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
@@ -32,8 +36,8 @@ classdef Config < handle
         %% Navigation parameters
         CONSTELLATIONS          = 'GE'
         OBS_COMBINATION         = {'none', 'none'};
-        OBS_USED                = {'C1C+C5X', 'C1X+C5X'}; % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C+C5X', 'C1X+C5X'}; % PR Rinex code for OSR data
+        OBS_USED                = {'C1C', 'C1X+C5X'}; % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C', 'C1X+C5X'}; % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
@@ -59,7 +63,7 @@ classdef Config < handle
         function [dirPath, fileName] = getObsDirFile()
             %GETOBSDIRFILE Returns the directory and the filename of the
             %observation file according to the selected configuration.
-            dirPath = [Config.dataPath 'datasets' filesep Config.CAMPAIGN_NAME filesep];
+            dirPath = [Config.trainPath 'datasets' filesep Config.CAMPAIGN_NAME filesep];
             fileName = [Config.PHONE_NAME '_GnssLog.txt'];
         end
         
@@ -70,18 +74,22 @@ classdef Config < handle
             %   navigation file in the constant properties.
             filepaths = cell(1, length(Config.CONSTELLATIONS));
             for iConst = 1:length(Config.CONSTELLATIONS)
-                filepaths{iConst} = [Config.dataPath 'brdc' filesep Config.CAMPAIGN_NAME ...
+                filepaths{iConst} = [Config.trainPath 'brdc' filesep Config.CAMPAIGN_NAME ...
                     filesep 'BRDC00WRD_R_' Config.NAV_FILE_DATETIME '_01D_' ...
                     Config.CONSTELLATIONS(iConst) 'N.rnx'];
             end
         end
         
-        function filepath = getOSRFilepath()
+        function filepaths = getOSRFilepath()
             %GETOSRFILEPATH Returns the file path of the OSR file.
-            filepath = cell(1, length(Config.OSR_FILENAME));
+            rootPath = [Config.trainPath 'corrections' filesep 'OSR_v3.04' ...
+                filesep Config.CAMPAIGN_NAME filesep];
+            filepaths = cell(1, length(Config.OSR_FILENAME));
             for iOsr = 1:length(Config.OSR_FILENAME)
-                filepath{iOsr} = [Config.dataPath 'corrections' filesep 'OSR' filesep ...
-                    Config.CAMPAIGN_NAME filesep Config.OSR_FILENAME{iOsr}];
+                if strcmp(Config.OSR_FILENAME{iOsr}(end-2:end), 'crx')
+                    Config.crx2rnx([rootPath Config.OSR_FILENAME{iOsr}]);
+                end
+                filepaths{iOsr} = [rootPath Config.OSR_FILENAME{iOsr}(1:end-3) 'rnx'];
             end
         end
         
@@ -105,11 +113,20 @@ classdef Config < handle
     
     %% Private methods
     methods (Static, Access = private)
-        function path = dataPath()
-            % DATAPATH Returns the absolute path where all the data is saved
+        function path = trainPath()
+            % TRAINPATH Returns the absolute path where all the training data is saved
             path = [workspacePath 'data' filesep 'training' filesep];
         end
         
+        function path = dataPath()
+            % DATAPATH Returns the absolute path where all the data is saved
+            path = [workspacePath 'data' filesep];
+        end
+        
+        function crx2rnx(filepath)
+            cmd = [projectPath 'lib' filesep 'RNXCMP_4.0.8' filesep 'bin' filesep 'CRX2RNX ' filepath];
+            system(cmd);
+        end
     end
 end
 

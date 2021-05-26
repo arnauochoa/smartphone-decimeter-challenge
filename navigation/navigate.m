@@ -1,22 +1,22 @@
-function [xEstHist, prInnovations, prInnovationCovariances, dopInnovations, ...
-    dopInnovationCovariances, utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist] = ...
-    navigate(rxGnssRnx, imuMeas, nav, osrGnssRnx, ref)
+function [xEstHist, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, ...
+    dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist, refProc] = ...
+    navigate(phoneRnx, imuMeas, nav, osrRnx, ref)
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
 %% Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+% idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 nStates = PVTUtils.getNumStates();
 nSatellites = PVTUtils.getNumSatelliteIndices();
-gnssEpochs = unique(rxGnssRnx.utcSeconds);
+gnssEpochs = unique(phoneRnx.utcSeconds);
 nGnssEpochs = length(gnssEpochs);
 % EKF:
 esekf = EKF.build(uint16(nStates));
 if ~Config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
 
 %% Obtain first position
-[x0, esekf.P, esekf.tx] = getFirstPosition(rxGnssRnx, nav);
+[x0, esekf.P, esekf.tx] = getFirstPosition(phoneRnx, nav);
 esekf.x = zeros(PVTUtils.getNumStates, 1);
 esekf.x(idxStatePos) = x0(idxStatePos) - Config.STATION_POS_XYZ;
 % Loop variables
@@ -27,97 +27,145 @@ xEstHist(:, 1) = x0; % TODO change to error state, prealocate if num pos is know
 sigmaHist = zeros(nStates, 1);
 
 % First gnss observations is the same as for the first approx position
-[gnssRx, gnssOsr] = getNextGnss(thisUtcSeconds, rxGnssRnx, osrGnssRnx, 'this');
-hasEnded = isempty(gnssRx); % TODO check imu
+[phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx, 'this');
+hasEnded = isempty(phoneGnss); % TODO check imu
 
 % TODO: debugging variables, check which need to be kept
 prInnovations = nan(nSatellites, nGnssEpochs);
 prInnovationCovariances = nan(nSatellites, nGnssEpochs);
 dopInnovations = nan(nSatellites, nGnssEpochs);
 dopInnovationCovariances = nan(nSatellites, nGnssEpochs);
+refInnovations = nan(3, nGnssEpochs);
+refInnovationCovariances = nan(3, nGnssEpochs);
 prRejectedHist = zeros(1, nGnssEpochs);
 dopRejectedHist = zeros(1, nGnssEpochs);
 
+% >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO remove >>>>
+refProc.posLla = [];
+refProc.wNum = [];
+refProc.tow = [];
+refProc.utcSeconds = [];
+% <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 while ~hasEnded % while there are more observations/measurements
-    
+    idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove
     % First iteration: x0 is result from LS
     if idxEst == 1,     x0 = xEstHist(:, 1);
     else,               x0 = xEstHist(:, idxEst-1); end
+    
+    if ~isempty(idxRef) && ref.utcSeconds(idxRef) < phoneGnss.utcSeconds && false
+        thisUtcSeconds = ref.utcSeconds(idxRef);
+        % Initial estimate for the transition model
+        fArgs.x0 = x0;
+        % Measurement model arguments
+        hArgs.x0 = x0;
+        hArgs.obs = Lla2Xyz(ref.posLla(idxRef, :))' - Config.STATION_POS_XYZ;
+        hArgs.sigmaObs = [1e-10 1e-10 1e-10]';
         
-    thisUtcSeconds = gnssRx.utcSeconds; % TODO check imu time
-    
-    % Get states of satellites selected in Config
-    [satPos, satClkBias, satClkDrift, satVel] = ...
-        compute_satellite_state_all(gnssRx.tow, gnssRx.obs, nav, Config.CONSTELLATIONS);
-    
-    % Remove invalid observations (no ephem, elevation mask)
-    [gnssRx.obs, satPos, ~, ~, ~] = ...
-        filterObs(gnssRx.obs, satPos, satClkBias, satClkDrift, satVel, x0(1:3));
-    
-    % Obtain satellite elevations
-    [~, satElDeg, ~] = getSatAzEl(satPos, x0(idxStatePos));
-    
-    % Initial estimate for the transition model
-    fArgs.x0 = x0;
-    if length([gnssRx.obs(:).C]) < 4 + PVTUtils.getNumFrequencies + PVTUtils.getNumConstellations
-        warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', gnssRx.tow);
-        esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
+        [esekf, innovation, innovationCovariance, rejected, z, y] = ...
+            EKF.processObservation(esekf, thisUtcSeconds, ...
+            @fTransition, fArgs, ...
+            @hRefObs, hArgs, ...
+            'Reference');
+        
+        refInnovations(:, idxEst) = innovation;
+        refInnovationCovariances(:, idxEst) = diag(innovationCovariance);
+        
+        x0(idxStatePos) = Config.STATION_POS_XYZ + esekf.x(idxStatePos);
+%         x0(idxStateVel) = esekf.x(idxStateVel);
+%         Xyz2Lla(x0(1:3)')
+        dif(:, idxEst) = hArgs.obs - esekf.x(idxStatePos);
+        %         lastTow = ref.gpsTime(idxRef, 2);
     else
-        % TODO: compute double differences
-        doubleDifferences = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg, x0);
+        thisUtcSeconds = phoneGnss.utcSeconds; % TODO check imu time
+        dif(:, idxEst) = nan(3, 1); % TODO remove
         
-        % Sequentally update with all observations
-        for iObs = 1:length(doubleDifferences)
-            idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).varSatPrn, doubleDifferences(iObs).constel);
-            
-            % Pack arguments that are common for all observations
+        % Get states of satellites selected in Config
+        [satPos, satClkBias, satClkDrift, satVel] = ...
+            compute_satellite_state_all(phoneGnss.tow, phoneGnss.obs, nav, Config.CONSTELLATIONS);
+        
+        % Remove invalid observations (no ephem, elevation mask)
+        [phoneGnss.obs, satPos, ~, ~, ~] = ...
+            filterObs(phoneGnss.obs, satPos, satClkBias, satClkDrift, satVel, x0(idxStatePos));
+        
+        % Obtain satellite elevations
+        [~, satElDeg, ~] = getSatAzEl(satPos, x0(idxStatePos));
+        
+        if length([phoneGnss.obs(:).C]) < 4 + PVTUtils.getNumFrequencies + PVTUtils.getNumConstellations
+            warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', phoneGnss.tow);
+            % Initial estimate for the transition model
             fArgs.x0 = x0;
-            hArgs.x0 = x0;
-            hArgs.obsConst = doubleDifferences(iObs).constel;
-            hArgs.pivSatPos = doubleDifferences(iObs).pivSatPos;
-            hArgs.varSatPos = doubleDifferences(iObs).varSatPos;
-            hArgs.satElDeg = [doubleDifferences(iObs).pivSatElDeg
-                doubleDifferences(iObs).varSatElDeg];
+            esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
+        else
+            refPos = Lla2Xyz(ref.posLla(idxRef, :))'; % TODO: remove
+            doubleDifferences = computeDoubleDifferences(osrGnss, phoneGnss, satPos, satElDeg, x0, refPos);
             
-            % Pack code DD observation
-            hArgs.obs = doubleDifferences(iObs).C;
-            hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
-                doubleDifferences(iObs).varSatSigmaC];
-            
-            % Label to show on console when outliers are detected
-            label = sprintf('Code (%c%d-%c%d, f = %g)', ...
-                doubleDifferences(iObs).constel,        ...
-                doubleDifferences(iObs).pivSatPrn,      ...
-                doubleDifferences(iObs).constel,        ...
-                doubleDifferences(iObs).varSatPrn,      ...
-                doubleDifferences(iObs).freqHz);
-            % Process code observation
-            [esekf, innovation, innovationCovariance, rejected, ~, ~] = ...
-                EKF.processObservation(esekf, thisUtcSeconds, ...
-                @fTransition, fArgs, ...
-                @hCodeObs, hArgs, ...
-                label);
-            
-            prInnovations(idxSat, idxEst) = innovation;
-            prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-            prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
-            
-            % TODO perform correction when using error-state
-            x0(idxStatePos) = Config.STATION_POS_XYZ + esekf.x(idxStatePos);
-            x0(idxStateVel) = esekf.x(idxStateVel);
+            % Sequentally update with all observations
+            for iObs = 1:length(doubleDifferences)
+                idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).varSatPrn, ...
+                    doubleDifferences(iObs).constel);
+                
+                % Pack arguments that are common for all observations
+                fArgs.x0 = x0;
+                hArgs.x0 = x0;
+                hArgs.obsConst = doubleDifferences(iObs).constel;
+                hArgs.pivSatPos = doubleDifferences(iObs).pivSatPos;
+                hArgs.varSatPos = doubleDifferences(iObs).varSatPos;
+                hArgs.satElDeg = [doubleDifferences(iObs).pivSatElDeg
+                    doubleDifferences(iObs).varSatElDeg];
+                
+                % Pack code DD observation
+                hArgs.obs = doubleDifferences(iObs).C;
+                hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
+                    doubleDifferences(iObs).varSatSigmaC];
+                
+                % >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO remove >>>>
+                rOP = norm(Config.STATION_POS_XYZ - hArgs.pivSatPos);
+                rUP = norm(refPos - hArgs.pivSatPos);
+                rOi = norm(Config.STATION_POS_XYZ - hArgs.varSatPos);
+                rUi = norm(refPos - hArgs.varSatPos);
+                expObs = (rOP - rUP - rOi + rUi);
+%                 hArgs.obs = (rOP - rUP - rOi + rUi);
+%                 hArgs.sigmaObs = [1e-10 1e-10];
+                % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                
+                % Label to show on console when outliers are detected
+                label = sprintf('Code (%c%d-%c%d, f = %g)', ...
+                    doubleDifferences(iObs).constel,        ...
+                    doubleDifferences(iObs).pivSatPrn,      ...
+                    doubleDifferences(iObs).constel,        ...
+                    doubleDifferences(iObs).varSatPrn,      ...
+                    doubleDifferences(iObs).freqHz);
+                % Process code observation
+                [esekf, innovation, innovationCovariance, rejected, ~, ~] = ...
+                    EKF.processObservation(esekf, thisUtcSeconds, ...
+                    @fTransition, fArgs, ...
+                    @hCodeObs, hArgs, ...
+                    label);
+                
+                prInnovations(idxSat, idxEst) = innovation;
+                prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+%                 prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
+                
+                % TODO perform correction when using error-state
+                x0(idxStatePos) = Config.STATION_POS_XYZ + esekf.x(idxStatePos);
+%                 x0(idxStateVel) = esekf.x(idxStateVel);
+            end
+%             % Percentage of rejected code observations
+%             prRejectedHist(idxEst) = 100*prRejectedHist(idxEst) / length(doubleDifferences);
         end
-        prRejectedHist(idxEst) = 100*prRejectedHist(idxEst) / length(doubleDifferences);
     end
     
     utcSecondsHist(idxEst) = thisUtcSeconds;
     
-    xEstHist(:, idxEst) = fArgs.x0; 
+    xEstHist(:, idxEst) = x0;
     sigmaHist(:, idxEst) = sqrt(diag(esekf.P));
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
-    gnssRx = getNextGnss(thisUtcSeconds, rxGnssRnx);
-    hasEnded = isempty(gnssRx); % TODO check imu
+%     phoneGnss = getNextGnss(thisUtcSeconds, phoneRnx);
+    [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
+    hasEnded = isempty(phoneGnss); % TODO check imu
 end
 
 end
@@ -126,22 +174,39 @@ end
 function [x2, F, Q] = fTransition(x1, t1, t2, fArgs)
 % Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+% idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 
-dt = t2 - t1;
+% dt = t2 - t1;
 F = eye(PVTUtils.getNumStates);
 % dp/dv
 % F(idxStatePos, idxStateVel) = dt * eye(3);
 % State prediction
 x2 = F * x1;
 % Process noise covariance matrix - Velocity
-rotN2E = compute_Rn2e(fArgs.x0(1), fArgs.x0(2), fArgs.x0(3));
-Qvel = dt * rotN2E * diag(Config.SIGMA_VEL_NED.^2) * rotN2E';
+% rotN2E = compute_Rn2e(fArgs.x0(1), fArgs.x0(2), fArgs.x0(3));
+% Qvel = dt * rotN2E * diag(Config.SIGMA_VEL_NED.^2) * rotN2E';
 % Process noise covariance matrix
 Q = zeros(PVTUtils.getNumStates);
-Q(idxStateVel, idxStateVel) = Qvel;
+Q(idxStatePos, idxStatePos) = 100000*eye(3); %TODO only for testing
+% Q(idxStateVel, idxStateVel) = Qvel;
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [z, y, H, R] = hRefObs(~, hArgs)
+
+idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+
+z = hArgs.obs;
+
+y = hArgs.x0(idxStatePos) - Config.STATION_POS_XYZ;
+
+% Jacobian matrix
+H = zeros(3, PVTUtils.getNumStates);
+H(idxStatePos,idxStatePos) = eye(3);
+
+R = diag(hArgs.sigmaObs);
+end
+
 
 function [z, y, H, R] = hCodeObs(~, hArgs)
 % HCODEOBS provides the measurement model for the sequential code
@@ -161,9 +226,20 @@ y = norm(Config.STATION_POS_XYZ - hArgs.pivSatPos) - ... % |stat - sat1|
     norm(rxPos - hArgs.varSatPos);                       % |user - sat2|
 
 % Difference between LOS vectors of satellites towards receiver
-refSatLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.pivSatPos);
-satLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.varSatPos);
-ddLosVec = refSatLosVec - satLosVec;
+% pivSatLosVec = unitVector(rxPos - hArgs.pivSatPos);
+% varSatLosVec = unitVector(rxPos - hArgs.varSatPos);
+pivSatLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.pivSatPos);
+varSatLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.varSatPos);
+ddLosVec = (varSatLosVec - pivSatLosVec);
+
+% figure(1); clf; hold on
+% plot3(Config.STATION_POS_XYZ(1), Config.STATION_POS_XYZ(2), Config.STATION_POS_XYZ(3), '^')
+% plot3(rxPos(1), rxPos(2), rxPos(3), 'o')
+% plot3(hArgs.pivSatPos(1), hArgs.pivSatPos(2), hArgs.pivSatPos(3), 'v')
+% plot3(hArgs.varSatPos(1), hArgs.varSatPos(2), hArgs.varSatPos(3), 's')
+% plot3([hArgs.pivSatPos(1), hArgs.pivSatPos(1) + 1e6*pivSatLosVec(1)], [hArgs.pivSatPos(2), hArgs.pivSatPos(2) + 1e6*pivSatLosVec(2)], [hArgs.pivSatPos(3), hArgs.pivSatPos(3) + 1e6*pivSatLosVec(3)], 'LineWidth',1)
+% plot3([hArgs.varSatPos(1), hArgs.varSatPos(1) + 1e6*varSatLosVec(1)], [hArgs.varSatPos(2), hArgs.varSatPos(2) + 1e6*varSatLosVec(2)], [hArgs.varSatPos(3), hArgs.varSatPos(3) + 1e6*varSatLosVec(3)], 'LineWidth',1)
+% plot3([hArgs.varSatPos(1), hArgs.varSatPos(1) + 1e6*ddLosVec(1)], [hArgs.varSatPos(2), hArgs.varSatPos(2) + 1e6*ddLosVec(2)], [hArgs.varSatPos(3), hArgs.varSatPos(3) + 1e6*ddLosVec(3)], 'LineWidth',1)
 
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);

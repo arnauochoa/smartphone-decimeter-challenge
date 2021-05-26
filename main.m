@@ -6,7 +6,7 @@ clc;
 % Change the configuration in Config class
 
 %% Input
-[gnssRnx, imuRaw, nav, ~, osrRnx, ref] = loadData();
+[phoneRnx, imuRaw, nav, ~, osrRnx, ref] = loadData();
 
 %% Compute geometry
 
@@ -14,16 +14,17 @@ clc;
 imuClean = preprocessImu(imuRaw);
 
 %% Interpolate OSR data
-osrRnx = interpOSR(osrRnx, gnssRnx);
+if ~isprop(Config, 'OBS_RINEX_PATH')
+    osrRnx = interpOSR(osrRnx, phoneRnx);
+end
 
 %% Navigate
 disp('Computing positions...');
-[xEst, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, ...
-    utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist] = ...
-    navigate(gnssRnx, imuClean, nav, osrRnx, ref);
+[xEst, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, ...
+    utcSecondsHist, prRejectedHist, dopRejectedHist, refProc] = ...
+    navigate(phoneRnx, imuClean, nav, osrRnx, ref);
 
 %% Output
 disp('Navigation ended, plotting results...');
-plotResults(ref, xEst, prInnovations, prInnovationCovariances, dopInnovations, ...
-    dopInnovationCovariances, utcSecondsHist, sigmaHist, prRejectedHist, dopRejectedHist);
-
+plotResults(ref, xEst, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, ...
+    dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist, refProc);

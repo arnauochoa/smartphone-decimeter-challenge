@@ -47,7 +47,7 @@ if ~isempty(firstObsIdx) % If there are more observations
         osrRnx.obs,             ...
         osrRnx.type);
     osr.utcSeconds = gnss.utcSeconds;
-    osr.tow = nextTow;
+    osr.tow = gnss.tow;
     else
         osr = [];
     end
