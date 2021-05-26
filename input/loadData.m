@@ -22,8 +22,6 @@ end
 nav = rinex_v3_nav_parser(Config.getNavFilepaths);
 
 %% Ionospheric data
-% iono.alpha = [4.6566E-09  1.4901E-08 -5.9605E-08 -5.9605E-08]';
-% iono.beta = [7.7824E+04  4.9152E+04 -6.5536E+04 -3.2768E+05]';
 iono.alpha = [.4657E-08   .1490E-07  -.5960E-07  -.1192E-06]';
 iono.beta = [.8192E+05   .9830E+05  -.6554E+05  -.5243E+06]';
 

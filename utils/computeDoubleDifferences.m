@@ -1,8 +1,7 @@
-function [doubleDifferences] = computeDoubleDifferences(osrGnss, phoneGnss, satPos, satElDeg, x0, refPos)
+function [doubleDifferences] = computeDoubleDifferences(osrGnss, phoneGnss, satPos, satElDeg)
 % COMPUTEDOUBLEDIFFERENCES Computes the double differences considering
 % different constellations and frequencies
 
-% TODO: remove x0
 if nargin<1
     selfTest();
     return;
@@ -22,10 +21,10 @@ for iConst = 1:length(constels)
         isConstFreqRx = isConstRx & [phoneGnss.obs.D_fcarrier_Hz] == freqs(iFreq);
         isConstFreqOsr = isConstOsr & [osrGnss.obs.D_fcarrier_Hz] == freqs(iFreq);
         
-        [dd, nDis] = getDD(phoneGnss.obs(isConstFreqRx),   ... % Receiver pos
+        [dd, nDis] = getDD(phoneGnss.obs(isConstFreqRx),... % Receiver pos
             osrGnss.obs(isConstFreqOsr),                ... % Station pos
             satPos(:, isConstFreqRx),                   ... % Sat pos associated to rx obs
-            satElDeg(isConstFreqRx), x0, refPos);                   % Sat elev associated to rx obs
+            satElDeg(isConstFreqRx));                       % Sat elev associated to rx obs
         
         nDiscarded = nDiscarded + nDis;
         doubleDifferences = appendStruct(doubleDifferences, dd, 2);
@@ -33,10 +32,12 @@ for iConst = 1:length(constels)
 end
 % Convert from structure of arrays to array of structures
 doubleDifferences = soa2aos(doubleDifferences);
-% fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', gnssRx.tow, nDiscarded);
+if nDiscarded > 0
+    fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
+end
 end
 
-function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg, x0, refPos)
+function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg)
 % GETDD Computes the DD of the two given sets of observations
 
 % Common satellites between receiver and OSR station
@@ -64,49 +65,6 @@ if numCommonSats > 1
     % Double differences
     dd.C = (codeSd(idxPivSat) - codeSd(idxVarSats));
     dd.L = phaseSd(idxPivSat) - phaseSd(idxVarSats);
-    
-    % >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO remove >>>>
-%     expOsrC = vecnorm(Config.STATION_POS_XYZ - satPos);
-%     expRxC = vecnorm(refPos- satPos);
-%     figure(1); clf; hold on; 
-%     plot(expOsrC, 'o-'); plot([osrObs(:).C], 'o-');
-%     plot(expRxC, '^-'); plot([rxObs(:).C], '^-'); xticklabels(num2str([rxObs.prn]'));
-%     legend('OSR Exp', 'OSR Meas', 'RX Exp', 'RX Meas');
-%     title(['Full ' rxObs(1).constellation]);
-%     
-% %     figure; hold on; 
-% %     legend('Exp', 'Meas');
-% %     title(['RX ' rxObs(1).constellation]);
-%     
-%     expSd = (expOsrC - expRxC);
-%     figure(2); clf; hold on; 
-%     plot(expSd, 'o-'); plot(codeSd, '^-'); xticklabels(num2str([rxObs.prn]'));
-%     legend('Exp', 'Meas');
-%     title(['SD (stat-usr) ' rxObs(1).constellation]);
-%     
-%     expSdSatOsr = expOsrC(idxPivSat) - expOsrC(idxVarSats);
-%     codeSdSatOsr = [osrObs(idxPivSat).C] - [osrObs(idxVarSats).C];
-%     expSdSatRx = expRxC(idxPivSat) - expRxC(idxVarSats);
-%     codeSdSatRx = [rxObs(idxPivSat).C] - [rxObs(idxVarSats).C];
-%     
-%     figure(3); clf; hold on;
-%     plot(expSdSatOsr, 'o-'); plot(codeSdSatOsr, 'o-');
-%     plot(expSdSatRx, '^-'); plot(codeSdSatRx, '^-'); 
-%     xticklabels(num2str([rxObs(idxVarSats).prn]'));
-%     legend('OSR Exp', 'OSR Meas', 'RX Exp', 'RX Meas');
-%     title(['SD (SV' num2str(rxObs(idxPivSat).prn) '-SVi) ' rxObs(1).constellation]);
-%     
-%     expDDSat = expSd(idxPivSat) - expSd(idxVarSats);
-%     figure(4); clf; hold on;
-%     plot(expDDSat, 'o-'); plot(dd.C, '^-'); xticklabels(num2str([rxObs(idxVarSats).prn]'));
-%     legend('Exp', 'Meas');
-%     title(['DD (SV' num2str(rxObs(idxPivSat).prn) '-SVi) ' rxObs(1).constellation]);
-%     
-%     innov = [dd.C] - expDDSat;
-%     figure(5); clf; hold on;
-%     plot(innov, 'o-');xticklabels(num2str([rxObs(idxVarSats).prn]'));
-%     title(['Obs - Exp (SV' num2str(rxObs(idxPivSat).prn) '-SVi) ' rxObs(1).constellation]);
-    % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 %     dd.DHz = dopSd(idxPivSat) - dopSd(idxVarSats);
     nDD = length(dd.C);

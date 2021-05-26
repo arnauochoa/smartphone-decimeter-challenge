@@ -14,17 +14,15 @@ clc;
 imuClean = preprocessImu(imuRaw);
 
 %% Interpolate OSR data
-if ~isprop(Config, 'OBS_RINEX_PATH')
-    osrRnx = interpOSR(osrRnx, phoneRnx);
-end
+osrRnx = interpOSR(osrRnx, phoneRnx);
 
 %% Navigate
 disp('Computing positions...');
 [xEst, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, ...
-    utcSecondsHist, prRejectedHist, dopRejectedHist, refProc] = ...
+    utcSecondsHist, prRejectedHist, dopRejectedHist] = ...
     navigate(phoneRnx, imuClean, nav, osrRnx, ref);
 
 %% Output
 disp('Navigation ended, plotting results...');
 plotResults(ref, xEst, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, ...
-    dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist, refProc);
+    dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist);
