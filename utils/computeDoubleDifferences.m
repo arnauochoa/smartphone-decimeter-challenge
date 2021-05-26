@@ -1,4 +1,4 @@
-function [doubleDifferences] = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg, x0)
+function [doubleDifferences] = computeDoubleDifferences(osrGnss, phoneGnss, satPos, satElDeg, x0, refPos)
 % COMPUTEDOUBLEDIFFERENCES Computes the double differences considering
 % different constellations and frequencies
 
@@ -8,25 +8,24 @@ if nargin<1
     return;
 end
 
-constels = unique([gnssRx.obs.constellation], 'stable');
+constels = unique([phoneGnss.obs.constellation], 'stable');
 
 doubleDifferences = [];
-% doubleDifferences.L = [];
 nDiscarded = 0;
 
 for iConst = 1:length(constels)
-    isConstRx = [gnssRx.obs.constellation] == constels(iConst);
-    isConstOsr = [gnssOsr.obs.constellation] == constels(iConst);
+    isConstRx = [phoneGnss.obs.constellation] == constels(iConst);
+    isConstOsr = [osrGnss.obs.constellation] == constels(iConst);
     
-    freqs = unique([gnssRx.obs(isConstRx).D_fcarrier_Hz], 'stable');
+    freqs = unique([phoneGnss.obs(isConstRx).D_fcarrier_Hz], 'stable');
     for iFreq = 1:length(freqs)
-        isConstFreqRx = isConstRx & [gnssRx.obs.D_fcarrier_Hz] == freqs(iFreq);
-        isConstFreqOsr = isConstOsr & [gnssOsr.obs.D_fcarrier_Hz] == freqs(iFreq);
+        isConstFreqRx = isConstRx & [phoneGnss.obs.D_fcarrier_Hz] == freqs(iFreq);
+        isConstFreqOsr = isConstOsr & [osrGnss.obs.D_fcarrier_Hz] == freqs(iFreq);
         
-        [dd, nDis] = getDD(gnssRx.obs(isConstFreqRx),   ... % Receiver pos
-            gnssOsr.obs(isConstFreqOsr),                ... % Station pos
+        [dd, nDis] = getDD(phoneGnss.obs(isConstFreqRx),   ... % Receiver pos
+            osrGnss.obs(isConstFreqOsr),                ... % Station pos
             satPos(:, isConstFreqRx),                   ... % Sat pos associated to rx obs
-            satElDeg(isConstFreqRx), x0);                       % Sat elev associated to rx obs
+            satElDeg(isConstFreqRx), x0, refPos);                   % Sat elev associated to rx obs
         
         nDiscarded = nDiscarded + nDis;
         doubleDifferences = appendStruct(doubleDifferences, dd, 2);
@@ -34,10 +33,10 @@ for iConst = 1:length(constels)
 end
 % Convert from structure of arrays to array of structures
 doubleDifferences = soa2aos(doubleDifferences);
-fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', gnssRx.tow, nDiscarded);
+% fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', gnssRx.tow, nDiscarded);
 end
 
-function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg, x0)
+function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg, x0, refPos)
 % GETDD Computes the DD of the two given sets of observations
 
 % Common satellites between receiver and OSR station
@@ -63,13 +62,13 @@ if numCommonSats > 1
     [idxPivSat, idxVarSats] = choosePivotSat(satElDeg);
     
     % Double differences
-    dd.C = codeSd(idxPivSat) - codeSd(idxVarSats);
+    dd.C = (codeSd(idxPivSat) - codeSd(idxVarSats));
     dd.L = phaseSd(idxPivSat) - phaseSd(idxVarSats);
     
     % >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> TODO remove >>>>
 %     expOsrC = vecnorm(Config.STATION_POS_XYZ - satPos);
-%     expRxC = vecnorm(x0(1:3)- satPos);
-%     figure(); clf; hold on; 
+%     expRxC = vecnorm(refPos- satPos);
+%     figure(1); clf; hold on; 
 %     plot(expOsrC, 'o-'); plot([osrObs(:).C], 'o-');
 %     plot(expRxC, '^-'); plot([rxObs(:).C], '^-'); xticklabels(num2str([rxObs.prn]'));
 %     legend('OSR Exp', 'OSR Meas', 'RX Exp', 'RX Meas');
@@ -79,8 +78,8 @@ if numCommonSats > 1
 % %     legend('Exp', 'Meas');
 % %     title(['RX ' rxObs(1).constellation]);
 %     
-%     expSd = expOsrC - expRxC;
-%     figure(); clf; hold on; 
+%     expSd = (expOsrC - expRxC);
+%     figure(2); clf; hold on; 
 %     plot(expSd, 'o-'); plot(codeSd, '^-'); xticklabels(num2str([rxObs.prn]'));
 %     legend('Exp', 'Meas');
 %     title(['SD (stat-usr) ' rxObs(1).constellation]);
@@ -90,18 +89,23 @@ if numCommonSats > 1
 %     expSdSatRx = expRxC(idxPivSat) - expRxC(idxVarSats);
 %     codeSdSatRx = [rxObs(idxPivSat).C] - [rxObs(idxVarSats).C];
 %     
-%     figure(); clf; hold on;
+%     figure(3); clf; hold on;
 %     plot(expSdSatOsr, 'o-'); plot(codeSdSatOsr, 'o-');
 %     plot(expSdSatRx, '^-'); plot(codeSdSatRx, '^-'); 
 %     xticklabels(num2str([rxObs(idxVarSats).prn]'));
 %     legend('OSR Exp', 'OSR Meas', 'RX Exp', 'RX Meas');
-%     title(['SD (' num2str(rxObs(idxPivSat).prn) '-sat) ' rxObs(1).constellation]);
+%     title(['SD (SV' num2str(rxObs(idxPivSat).prn) '-SVi) ' rxObs(1).constellation]);
 %     
 %     expDDSat = expSd(idxPivSat) - expSd(idxVarSats);
-%     figure(); clf; hold on;
+%     figure(4); clf; hold on;
 %     plot(expDDSat, 'o-'); plot(dd.C, '^-'); xticklabels(num2str([rxObs(idxVarSats).prn]'));
 %     legend('Exp', 'Meas');
-%     title(['DD (' num2str(rxObs(idxPivSat).prn) '-sat) ' rxObs(1).constellation]);
+%     title(['DD (SV' num2str(rxObs(idxPivSat).prn) '-SVi) ' rxObs(1).constellation]);
+%     
+%     innov = [dd.C] - expDDSat;
+%     figure(5); clf; hold on;
+%     plot(innov, 'o-');xticklabels(num2str([rxObs(idxVarSats).prn]'));
+%     title(['Obs - Exp (SV' num2str(rxObs(idxPivSat).prn) '-SVi) ' rxObs(1).constellation]);
     % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 %     dd.DHz = dopSd(idxPivSat) - dopSd(idxVarSats);
@@ -178,7 +182,7 @@ gnssRx.tow = 0;
 satPos = repmat(obs.prn, 3, 1);
 satElDeg = [90 45 20 90 50 50 70 25];
 
-[doubleDifferences] = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg);
+[doubleDifferences] = computeDoubleDifferences(gnssOsr, gnssRx, satPos, satElDeg, [0 0 0]);
 assert(length(doubleDifferences) == 2, 'Test failed');
 %
 assert(doubleDifferences(1).C == -1, 'Test failed');
