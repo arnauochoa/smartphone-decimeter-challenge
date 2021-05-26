@@ -1,5 +1,5 @@
 function plotResults(ref, xEst, sigmaHist, prInnovations, prInnovationCovariances, ...
-    dopInnovations, dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist, refProc)
+    dopInnovations, dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist)
 %PLOTRESULTS Summary of this function goes here
 %   Detailed explanation goes here
 close all;
@@ -82,12 +82,12 @@ xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)
 figureWindowTitle(figures(end), 'Code innovations');
 
 %% % of rejected
-% figures = [figures figure]; subplot(2,1,1);plot(timelineSec, prRejectedHist)
-% xlabel('Time since start (s)'); ylabel('% rejected Code obs');
-% % subplot(2,1,2);
-% % plot(timelineSec, dopRejectedHist)
-% % xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
-% figureWindowTitle(figures(end), 'Outlier rejections');
+figures = [figures figure]; subplot(2,1,1);plot(timelineSec, prRejectedHist)
+xlabel('Time since start (s)'); ylabel('% rejected Code obs');
+% subplot(2,1,2);
+% plot(timelineSec, dopRejectedHist)
+% xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
+figureWindowTitle(figures(end), 'Outlier rejections');
 
 %% CDFs
 pctl = 95;

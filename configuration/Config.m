@@ -15,13 +15,10 @@ classdef Config < handle
         FILTER_RAW_MEAS         = true;
         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
         OSR_FILENAME            =  {'EAWD00XXX_R_20202192200_01H_01S_MO.rnx' 'EAWD00XXX_R_20202192300_01H_01S_MO.rnx'}; 
-            %{'EAWD00XXX_R_20202192200_01H_01S_MO.rnx' 'EAWD00XXX_R_20202192300_01H_01S_MO.rnx'};
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = [Config.dataPath 'other' filesep 'igs_data' filesep ...
 %                 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
-%         OBS_RINEX_PATH          = [Config.trainPath 'corrections' filesep 'OSR_v3.04' filesep '2020-08-06-US-MTV-2' filesep 'EAWD00XXX_R_20202192200_01H_01S_MO.rnx'];
-%         OBS_RINEX_REF_XYZ       = [-2705252.9380 -4281214.6105  3864271.5517];
         
         %% Operating mode
         OUTLIER_REJECTION       = true;
@@ -47,7 +44,8 @@ classdef Config < handle
         
         %% KF tuning parameters
         % Process noise covariance matrix - Q
-        SIGMA_VEL_NED           = [0.1 0.1 0.1]';  % std m/sqrt(s^3) of NED velocity
+        SIGMA_Q_POS               = 1e10;         % std of XYZ position
+%         SIGMA_VEL_NED           = [0.1 0.1 0.1]';  % std m/sqrt(s^3) of NED velocity
         % Measurement covariance matrix - R
         SIGMA_PR_M              = 1e1;          % Default std (m) for pseudorange meas (elevation-based model)
         SIGMA_DOP_MPS           = 1e0;          % Default std (m/s) for doppler meas (elevation-based model)
