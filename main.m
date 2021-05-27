@@ -18,11 +18,18 @@ osrRnx = interpOSR(osrRnx, phoneRnx);
 
 %% Navigate
 disp('Computing positions...');
-[xEst, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, dopInnovationCovariances, ...
-    utcSecondsHist, prRejectedHist, dopRejectedHist] = ...
+[xEst, sigmaHist, prInnovations, prInnovationCovariances, ...
+    utcSecondsHist, prRejectedHist] = ...
     navigate(phoneRnx, imuClean, nav, osrRnx, ref);
 
 %% Output
-disp('Navigation ended, plotting results...');
-plotResults(ref, xEst, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, ...
-    dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist);
+disp('Navigation ended, saving results...');
+estPosLla = saveResults(xEst, utcSecondsHist);
+disp('Plotting results...')
+plotResults(ref, estPosLla, xEst, sigmaHist, prInnovations, prInnovationCovariances, utcSecondsHist, prRejectedHist);
+
+
+
+
+
+

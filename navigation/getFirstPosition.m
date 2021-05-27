@@ -1,4 +1,4 @@
-function [x0, P0, utcSeconds0] = getFirstPosition(gnssRnx, nav)
+function [x0, P0, utcSeconds0] = getFirstPosition(phoneRnx, nav)
 % GETFIRSTPOSITION Computes the position using LS at the first epoch with
 % enough GNSS observations
 
@@ -9,25 +9,25 @@ thisUtcSeconds = 0;
 % Find the first epoch that has enough observations
 while ~firstValidEpoch
     % Obtain observations of next epoch
-    gnss = getNextGnss(thisUtcSeconds, gnssRnx);
-    thisUtcSeconds = gnss.utcSeconds;
+    phoneGnss = getNextGnss(thisUtcSeconds, phoneRnx);
+    thisUtcSeconds = phoneGnss.utcSeconds;
     
     % Get states of satellites selected in Config
     [satPos, satClkBias, ~, ~] = ...
-        compute_satellite_state_all(gnss.tow, gnss.obs, nav, Config.CONSTELLATIONS);
+        compute_satellite_state_all(phoneGnss.tow, phoneGnss.obs, nav, Config.CONSTELLATIONS);
     % check if ephemeris is available
-    [gnss.obs, satPos, satClkBias, ~] = ...
-        clean_obs_vector(gnss.obs, satPos, satClkBias);
+    [phoneGnss.obs, satPos, satClkBias, ~] = ...
+        clean_obs_vector(phoneGnss.obs, satPos, satClkBias);
     
     % determine if the first epoch contains enough valid measurements
     if length(Config.CONSTELLATIONS) == 1
-        firstValidEpoch = (length(unique([gnss.obs(:).prn])) >= 4);
+        firstValidEpoch = (length(unique([phoneGnss.obs(:).prn])) >= 4);
     else
         % check if there are enough satellite of a single constellation
         nSat = zeros(size(Config.CONSTELLATIONS));
         for idxConst = 1:length(Config.CONSTELLATIONS)
-            isConst = strfind([gnss.obs(:).constellation], Config.CONSTELLATIONS(idxConst));
-            nSat(idxConst) = length(unique([gnss.obs(isConst).prn]));
+            isConst = strfind([phoneGnss.obs(:).constellation], Config.CONSTELLATIONS(idxConst));
+            nSat(idxConst) = length(unique([phoneGnss.obs(isConst).prn]));
         end; clear ind_const
         % we can compute a solution if there is more than 1 GPS satellite and more than 3+N_const satellites
         firstValidEpoch = (nSat(1) > 0) * (sum(nSat)>3 + length(Config.CONSTELLATIONS));
@@ -36,17 +36,17 @@ while ~firstValidEpoch
     % if the current epoch is not valid, discard the corresponding observations from the observation matrix
     if ~firstValidEpoch
         % Indices of invalid observations in gnssRnx
-        idxInvalid = gnssRnx.utcSeconds == thisUtcSeconds;
-        disp(['Skipped epoch ' num2str(gnss.tow) ]);
-        gnssRnx.obs(idxInvalid,:) = [];
-        gnssRnx.utcSeconds(idxInvalid) = [];
+        idxInvalid = phoneRnx.utcSeconds == thisUtcSeconds;
+        disp(['Skipped epoch ' num2str(phoneGnss.tow) ]);
+        phoneRnx.obs(idxInvalid,:) = [];
+        phoneRnx.utcSeconds(idxInvalid) = [];
 %         gnssRnx.tow(idxInvalid) = [];
     end
 end
 % compute LS position
 % Approximate position is at lat = 0, lon = 0, alt = 0, clk = 0, interconstellation clk bias = 0
 xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, PVTUtils.getNumConstellations()-1)]';
-[xLS, PLS] = compute_spp_ls(gnss.obs, satPos, satClkBias, xLS, Config.CONSTELLATIONS);
+[xLS, PLS] = compute_spp_ls(phoneGnss.obs, satPos, satClkBias, xLS, Config.CONSTELLATIONS);
 
 % Fill ouptuts with LS estimates
 [x0, P0] = fillFullState(xLS, PLS);

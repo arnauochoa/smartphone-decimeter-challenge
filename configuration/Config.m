@@ -4,20 +4,24 @@ classdef Config < handle
     % the selected dataset
     
     % This code assumes that the data is structured as follows:
-    %   Observations:   {workspace_path}/data/training/datasets/{campaign_name}/{phone_name}_GnssLog.txt
-    %   Groundtruth:    {workspace_path}/data/training/datasets/{campaign_name}/SPAN_{phone_name}_10Hz.nmea
-    %   Navigation:     {workspace_path}/data/training/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
+    %   Observations:   {workspace_path}/data/train/datasets/{campaign_name}/{phone_name}_GnssLog.txt
+    %   Groundtruth:    {workspace_path}/data/train/datasets/{campaign_name}/SPAN_{phone_name}_10Hz.nmea
+    %   Navigation:     {workspace_path}/data/train/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
     
     properties (Constant)
+        %% Results
+        RES_FILENAME            = 'sample_result.csv';
+        
         %% Dataset selection
+        DATASET_TYPE            = 'train'; % 'train' 'test'
         CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';
         PHONE_NAME              = 'Mi8';
         FILTER_RAW_MEAS         = true;
         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
         OSR_FILENAME            =  {'EAWD00XXX_R_20202192200_01H_01S_MO.rnx' 'EAWD00XXX_R_20202192300_01H_01S_MO.rnx'}; 
         % OBSERVATION RINEX - Uncomment to use, path from workspace
-%         OBS_RINEX_PATH          = [Config.dataPath 'other' filesep 'igs_data' filesep ...
-%                 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
+%         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
+%             filesep 'igs_data' filesep 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
@@ -31,11 +35,11 @@ classdef Config < handle
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
         
         %% Navigation parameters
-        CONSTELLATIONS          = 'GE'
+        CONSTELLATIONS          = 'GEC'
         OBS_COMBINATION         = {'none', 'none'};
-        OBS_USED                = {'C1C', 'C1X+C5X'}; % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C', 'C1X+C5X'}; % PR Rinex code for OSR data
-        CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
+        OBS_USED                = {'C1C', 'C1X+C5X', 'C2X'}; % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C', 'C1X+C5X', 'C2X'}; % PR Rinex code for OSR data
+        CONST_COV_FACTORS       = [1 1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
         MEAS_COV_SRC            = 'elevation';    % among 'elevation' and 'uncertainty'
@@ -61,7 +65,7 @@ classdef Config < handle
         function [dirPath, fileName] = getObsDirFile()
             %GETOBSDIRFILE Returns the directory and the filename of the
             %observation file according to the selected configuration.
-            dirPath = [Config.trainPath 'datasets' filesep Config.CAMPAIGN_NAME filesep];
+            dirPath = [Config.dataPath 'datasets' filesep Config.CAMPAIGN_NAME filesep Config.PHONE_NAME filesep];
             fileName = [Config.PHONE_NAME '_GnssLog.txt'];
         end
         
@@ -71,16 +75,18 @@ classdef Config < handle
             %   Select the desired CONSTELLATIONSs and the date of the
             %   navigation file in the constant properties.
             filepaths = cell(1, length(Config.CONSTELLATIONS));
+            [year, month, day] = datevec(Config.CAMPAIGN_NAME(1:10), 'yyyy-mm-dd');
             for iConst = 1:length(Config.CONSTELLATIONS)
-                filepaths{iConst} = [Config.trainPath 'brdc' filesep Config.CAMPAIGN_NAME ...
-                    filesep 'BRDC00WRD_R_' Config.NAV_FILE_DATETIME '_01D_' ...
-                    Config.CONSTELLATIONS(iConst) 'N.rnx'];
+%                 filepaths{iConst} = [Config.dataPath 'brdc' filesep Config.CAMPAIGN_NAME ...
+%                     filesep 'BRDC00WRD_R_' Config.NAV_FILE_DATETIME '_01D_' ...
+%                     Config.CONSTELLATIONS(iConst) 'N.rnx'];
+                filepaths{iConst} = collectBrdc(year, month, day, Config.CONSTELLATIONS(iConst));
             end
         end
         
         function filepaths = getOSRFilepath()
             %GETOSRFILEPATH Returns the file path of the OSR file.
-            rootPath = [Config.trainPath 'corrections' filesep 'OSR_v3.04' ...
+            rootPath = [Config.dataPath 'corrections' filesep 'OSR_v3.04' ...
                 filesep Config.CAMPAIGN_NAME filesep];
             filepaths = cell(1, length(Config.OSR_FILENAME));
             for iOsr = 1:length(Config.OSR_FILENAME)
@@ -95,6 +101,7 @@ classdef Config < handle
             %GETREFDIRFILE Returns the directory and the filename of the
             %groundtruth file according to the selected configuration.
             [dirPath, ~] = Config.getObsDirFile();
+            dirPath = [dirPath 'supplemental' filesep];
             fileName = ['SPAN_' Config.PHONE_NAME '_10Hz.nmea'];
         end
         
@@ -111,14 +118,9 @@ classdef Config < handle
     
     %% Private methods
     methods (Static, Access = private)
-        function path = trainPath()
-            % TRAINPATH Returns the absolute path where all the training data is saved
-            path = [workspacePath 'data' filesep 'training' filesep];
-        end
-        
         function path = dataPath()
-            % DATAPATH Returns the absolute path where all the data is saved
-            path = [workspacePath 'data' filesep];
+            % TRAINPATH Returns the absolute path where all the training data is saved
+            path = [workspacePath 'data' filesep Config.DATASET_TYPE filesep];
         end
         
         function crx2rnx(filepath)

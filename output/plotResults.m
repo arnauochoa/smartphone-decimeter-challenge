@@ -1,59 +1,29 @@
-function plotResults(ref, xEst, sigmaHist, prInnovations, prInnovationCovariances, ...
-    dopInnovations, dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist)
+function plotResults(ref, estPosLla, xEst, sigmaHist, prInnovations, prInnovationCovariances, utcSecondsHist, prRejectedHist)
 %PLOTRESULTS Summary of this function goes here
 %   Detailed explanation goes here
 close all;
 
 % Initializations
-idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-% idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 timelineSec = (utcSecondsHist - utcSecondsHist(1));
 nEpochs = size(xEst, 2);
-
-% Estimated position in geodetic
-[posLat, posLon, posAlt] = ecef2geodetic(wgs84Ellipsoid, ...
-    xEst(idxStatePos(1), :)', ...
-    xEst(idxStatePos(2), :)', ...
-    xEst(idxStatePos(3), :)');
-
-% Interpolate groundtruth at the computed position's time
-refInterpLla = interp1(ref.utcSeconds, ref.posLla, utcSecondsHist);
-assert(size(refInterpLla, 1) == size(xEst, 2), 'Reference and computed position vectors are not the same size');
-
-nedError = Lla2Ned(refInterpLla, [posLat, posLon, posAlt]);
-hError = Lla2Hd(refInterpLla, [posLat, posLon, posAlt]);
-
-% % Groundtruth velocity
-% dtRef = diff(ref.tow);
-% [xRef, yRef, zRef] = geodetic2ecef(wgs84Ellipsoid, ref.posLla(:, 1), ref.posLla(:, 2), ref.posLla(:, 3));
-% refEcef = [xRef, yRef, zRef];
-% refVelEcef = diff(refEcef) ./ dtRef;
-% refVelTime = ref.utcSeconds(1:end-1) + dtRef/2;
-% refVelEcefInterp = interp1(refVelTime, refVelEcef, utcSecondsHist);
-% 
-% velErr = refVelEcefInterp - xEst(idxStateVel, :)';
-
 figures = [];
+basemap = 'none';
+
 %% State plots
 % Position
 figures = [figures figure];
-if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
-    geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'x', posLat, posLon, '.', 'LineWidth', 1);
+if strcmp(Config.DATASET_TYPE, 'test')
+    geoplot(estPosLla(:, 1), estPosLla(:, 2), '.-');
 else
-    geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', posLat, posLon, '.-');
+    if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
+        geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'x', estPosLla(:, 1), estPosLla(:, 2), '.', 'LineWidth', 1);
+    else
+        geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', estPosLla(:, 1), estPosLla(:, 2), '.-');
+    end
+    legend('Groundtruth', 'Computed');
 end
-geobasemap none
-legend('Groundtruth', 'Computed');
+geobasemap(basemap);
 figureWindowTitle(figures(end), 'Map');
-
-% Position error
-figures = [figures figure];
-plot(timelineSec, nedError)
-xlabel('Time since start (s)'); ylabel('Position error (m)');
-legend('N', 'E', 'D')
-title('Groundtruth - Estimation')
-grid on
-figureWindowTitle(figures(end), 'Position error');
 
 % % Velocity
 % figures = [figures figure];
@@ -61,15 +31,6 @@ figureWindowTitle(figures(end), 'Position error');
 % xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 % legend('X', 'Y', 'Z');
 % figureWindowTitle(figures(end), 'Velocity');
-% 
-% % Velocity error
-% figures = [figures figure];
-% plot(timelineSec, velErr)
-% xlabel('Time since start (s)'); ylabel('Velocity error (m)');
-% legend('X', 'Y', 'Z');
-% title('Groundtruth - Estimation')
-% grid on
-% figureWindowTitle(figures(end), 'Velocity error');
 
 %% Innovations
 figures = [figures figure];
@@ -81,7 +42,7 @@ plot(prInnovationCovariances', '.')
 xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
 figureWindowTitle(figures(end), 'Code innovations');
 
-%% % of rejected
+%% Rejected
 figures = [figures figure]; subplot(2,1,1);plot(timelineSec, prRejectedHist)
 xlabel('Time since start (s)'); ylabel('% rejected Code obs');
 % subplot(2,1,2);
@@ -89,51 +50,80 @@ xlabel('Time since start (s)'); ylabel('% rejected Code obs');
 % xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
 figureWindowTitle(figures(end), 'Outlier rejections');
 
-%% CDFs
-pctl = 95;
-% Horizontal
-hErrPctl = prctile(abs(hError),pctl);
-[hErrF,hEerrX] = ecdf(abs(hError));
 
-figures = [figures figure]; hold on;
-plot(hEerrX,hErrF,'LineWidth',2)
-plot([1;1]*hErrPctl, [0;1]*pctl/100, '--k')
-legend('CDF',sprintf('%d%% bound = %.2f', pctl, hErrPctl));
-xlabel('Horizontal error (m)'); ylabel('Frequency')
-title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
-figureWindowTitle(figures(end), 'Hor. pos. CDF');
- 
-% Vertical
-vErrPctl = prctile(abs(nedError(:,3)),pctl);
-[vErrF,vErrX] = ecdf(abs(nedError(:,3)));
-
-figures = [figures figure]; hold on;
-plot(vErrX,vErrF,'LineWidth',2)
-plot([1;1]*vErrPctl, [0;1]*pctl/100, '--k')
-legend('CDF',sprintf('%d%% bound = %.2f', pctl, vErrPctl));
-xlabel('Vertical error error (m)'); ylabel('Frequency')
-title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
-figureWindowTitle(figures(end), 'Ver. pos. CDF');
-
-% % Velocity
-% velErrPctl = prctile(abs(velErr),pctl);
-% for iDim = 1:3
-%     [velErrF{iDim}, velErrX{iDim}] = ecdf(abs(velErr(:, iDim)));
-% end
-% 
-% figures = [figures figure]; hold on;
-% colors = [0 0 1; 0 1 0; 1 0 0];
-% for iDim = 1:3
-%     plot(velErrX{iDim},velErrF{iDim},'LineWidth',2, 'Color', colors(iDim, :))
-%     plot([1;1]*velErrPctl(iDim), [0;1]*pctl/100, '--', 'Color', colors(iDim, :))
-% end
-% legend({'X',sprintf('%d%% bound = %.2f', pctl, velErrPctl(1)), ...
-%         'Y',sprintf('%d%% bound = %.2f', pctl, velErrPctl(2)), ...
-%         'Z',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
-%         'Location','northeastoutside');
-% xlabel('Velocity error error (m/s)'); ylabel('Frequency')
-% title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
-% figureWindowTitle(figures(end), 'Velocity CDF');
+%% Training plots
+if strcmp(Config.DATASET_TYPE, 'train')
+    % Interpolate groundtruth at the computed position's time
+    refInterpLla = interp1(ref.utcSeconds, ref.posLla, utcSecondsHist);
+    assert(size(refInterpLla, 1) == size(xEst, 2), 'Reference and computed position vectors are not the same size');
+    
+    nedError = Lla2Ned(refInterpLla, estPosLla);
+    hError = Lla2Hd(refInterpLla, estPosLla);
+    
+    % Position error
+    figures = [figures figure];
+    plot(timelineSec, nedError)
+    xlabel('Time since start (s)'); ylabel('Position error (m)');
+    legend('N', 'E', 'D')
+    title('Groundtruth - Estimation')
+    grid on
+    figureWindowTitle(figures(end), 'Position error');
+    
+    % % Velocity error
+    % figures = [figures figure];
+    % plot(timelineSec, velErr)
+    % xlabel('Time since start (s)'); ylabel('Velocity error (m)');
+    % legend('X', 'Y', 'Z');
+    % title('Groundtruth - Estimation')
+    % grid on
+    % figureWindowTitle(figures(end), 'Velocity error');
+    
+    %% CDFs
+    pctl = 95;
+    % Horizontal
+    hErrPctl = prctile(abs(hError),pctl);
+    [hErrF,hEerrX] = ecdf(abs(hError));
+    
+    figures = [figures figure]; hold on;
+    plot(hEerrX,hErrF,'LineWidth',2)
+    plot([1;1]*hErrPctl, [0;1]*pctl/100, '--k')
+    legend('CDF',sprintf('%d%% bound = %.2f', pctl, hErrPctl));
+    xlabel('Horizontal error (m)'); ylabel('Frequency')
+    title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
+    figureWindowTitle(figures(end), 'Hor. pos. CDF');
+    
+    % Vertical
+    vErrPctl = prctile(abs(nedError(:,3)),pctl);
+    [vErrF,vErrX] = ecdf(abs(nedError(:,3)));
+    
+    figures = [figures figure]; hold on;
+    plot(vErrX,vErrF,'LineWidth',2)
+    plot([1;1]*vErrPctl, [0;1]*pctl/100, '--k')
+    legend('CDF',sprintf('%d%% bound = %.2f', pctl, vErrPctl));
+    xlabel('Vertical error error (m)'); ylabel('Frequency')
+    title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
+    figureWindowTitle(figures(end), 'Ver. pos. CDF');
+    
+    % % Velocity
+    % velErrPctl = prctile(abs(velErr),pctl);
+    % for iDim = 1:3
+    %     [velErrF{iDim}, velErrX{iDim}] = ecdf(abs(velErr(:, iDim)));
+    % end
+    %
+    % figures = [figures figure]; hold on;
+    % colors = [0 0 1; 0 1 0; 1 0 0];
+    % for iDim = 1:3
+    %     plot(velErrX{iDim},velErrF{iDim},'LineWidth',2, 'Color', colors(iDim, :))
+    %     plot([1;1]*velErrPctl(iDim), [0;1]*pctl/100, '--', 'Color', colors(iDim, :))
+    % end
+    % legend({'X',sprintf('%d%% bound = %.2f', pctl, velErrPctl(1)), ...
+    %         'Y',sprintf('%d%% bound = %.2f', pctl, velErrPctl(2)), ...
+    %         'Z',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
+    %         'Location','northeastoutside');
+    % xlabel('Velocity error error (m/s)'); ylabel('Frequency')
+    % title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
+    % figureWindowTitle(figures(end), 'Velocity CDF');
+end
 
 
 %% Group plots

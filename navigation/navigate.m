@@ -1,5 +1,5 @@
-function [xEstHist, sigmaHist, prInnovations, prInnovationCovariances, dopInnovations, ...
-    dopInnovationCovariances, utcSecondsHist, prRejectedHist, dopRejectedHist] = ...
+function [xEstHist, sigmaHist, prInnovations, prInnovationCovariances, ...
+    utcSecondsHist, prRejectedHist] = ...
     navigate(phoneRnx, imuMeas, nav, osrRnx, ref)
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
@@ -33,10 +33,7 @@ hasEnded = isempty(phoneGnss); % TODO check imu
 % TODO: debugging variables, check which need to be kept
 prInnovations = nan(nSatellites, nGnssEpochs);
 prInnovationCovariances = nan(nSatellites, nGnssEpochs);
-dopInnovations = nan(nSatellites, nGnssEpochs);
-dopInnovationCovariances = nan(nSatellites, nGnssEpochs);
 prRejectedHist = zeros(1, nGnssEpochs);
-dopRejectedHist = zeros(1, nGnssEpochs);
 
 while ~hasEnded % while there are more observations/measurements
     idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove

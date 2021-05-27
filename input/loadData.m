@@ -59,7 +59,7 @@ else
     rmcVec = [ref_nmea.Rmc];
     ref.posLla = [[ggaVec.LatDeg]' [ggaVec.LonDeg]' [ggaVec.AltM]'];
     % Transform groundtruth's UTC time to GPS time
-    refGpsTime = Utc2Gps(datevec([rmcVec.Datenum]));
+    [refGpsTime, ref.gpsSeconds, ~]= Utc2Gps(datevec([rmcVec.Datenum]));
     ref.wNum = refGpsTime(:, 1);
     ref.tow = refGpsTime(:, 2);
     % Obtain groundtruth's UTC time
