@@ -1,0 +1,15 @@
+[submodule "android-measurements"]
+	path = android-measurements
+	url = https://github.com/arnauochoa/android-measurements.git
+[submodule "EKF"]
+	path = EKF
+	url = https://github.com/jtec/EKF.git
+[submodule "INS"]
+	path = INS
+	url = https://github.com/jtec/INS.git
+[submodule "magnitude"]
+	path = magnitude
+	url = ssh://git@git.recherche.enac.fr/signav/magnitude.git
+[submodule "gps-measurement-tools"]
+	path = gps-measurement-tools
+	url = https://github.com/google/gps-measurement-tools.git

@@ -6,3 +6,6 @@
 *.fig
 *.mat
 *.pos
+
+# Cache folders
+fcache/
