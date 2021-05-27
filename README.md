@@ -10,7 +10,7 @@ This code uses the following external packages:
     * [android-measurements](https://github.com/arnauochoa/android-measurements)
     * [gps-measurement-tools/NmeaUtils](https://github.com/google/gps-measurement-tools)
 * ___Yet not supported___
-    * [Orekit](http://www.orekit.org/download.html). See [this tutorial](https://www.orekit.org/site-orekit-tutorials-10.3/tutorials/integration-in-other-languages.html) on how to integrate Orekit within MATLAB. (This package is still not used yet).
+    * [Orekit](http://www.orekit.org/download.html). See [this tutorial](https://www.orekit.org/site-orekit-tutorials-10.3/tutorials/integration-in-other-languages.html) on how to integrate Orekit within MATLAB.
 
 ## Usage
 * Make sure you have the input data saved in your workspace with the following structure:
