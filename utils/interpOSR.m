@@ -1,6 +1,8 @@
 function osrRnxOut = interpOSR(osrRnxRaw, gnssRnx)
 % INTERPOSR Interpolates OSR data to match gnssRnx time
 
+config = Config.getInstance;
+
 rxWkNum = unique(gnssRnx.obs(:, GnssLogUtils.COL_WN));
 osrWkNum = unique(osrRnxRaw.obs(:, GnssLogUtils.COL_WN));
 
@@ -18,7 +20,7 @@ osrRnxAux = [];
 for iSat = 1:nOsrSats
     thisConstId = osrConstSat(iSat, 1);
     % Consider only constellations specified in Config
-    if any(thisConstId == GnssLogUtils.getIdsObsConstFromStr(Config.CONSTELLATIONS))
+    if any(thisConstId == GnssLogUtils.getIdsObsConstFromStr(config.CONSTELLATIONS))
         % Number of obs columns for current constellation
         nObsConst = osrRnxRaw.type(thisConstId).num_obs;
 
@@ -37,7 +39,7 @@ for iSat = 1:nOsrSats
                     thisSatRnx(:, GnssLogUtils.COL_TOW),        ... % OSR obs time
                     thisSatRnx(:, GnssLogUtils.COL_SVN + iObs), ... % OSR obs
                     rxTow,                                      ... % Interp time
-                    Config.MAX_OSR_INTERP_GAP_SEC,              ... % Max gap
+                    config.MAX_OSR_INTERP_GAP_SEC,              ... % Max gap
                     'spline',                                   ... % Type of interpolation
                     'extrap',nan);                                  % Do not extrapolate
             end

@@ -40,7 +40,8 @@ classdef PVTUtils < handle
         end
         
         function nConst = getNumConstellations()
-            nConst = length(Config.CONSTELLATIONS);
+            config = Config.getInstance;
+            nConst = length(config.CONSTELLATIONS);
         end
         
         function freqIdx = getConstelIdx(constellationLetter)

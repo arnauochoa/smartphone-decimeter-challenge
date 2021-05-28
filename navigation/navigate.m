@@ -1,10 +1,9 @@
-function [xEstHist, sigmaHist, prInnovations, prInnovationCovariances, ...
-    utcSecondsHist, prRejectedHist] = ...
-    navigate(phoneRnx, imuMeas, nav, osrRnx, ref)
+function [result] = navigate(phoneRnx, imuMeas, nav, osrRnx, ref)
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
 %% Initializations
+config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 % idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 nStates = PVTUtils.getNumStates();
@@ -13,39 +12,39 @@ gnssEpochs = unique(phoneRnx.utcSeconds);
 nGnssEpochs = length(gnssEpochs);
 % EKF:
 esekf = EKF.build(uint16(nStates));
-if ~Config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
+if ~config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
 
 %% Obtain first position
 [x0, esekf.P, esekf.tx] = getFirstPosition(phoneRnx, nav);
 esekf.x = zeros(PVTUtils.getNumStates, 1);
-esekf.x(idxStatePos) = x0(idxStatePos) - Config.STATION_POS_XYZ;
+esekf.x(idxStatePos) = x0(idxStatePos) - config.STATION_POS_XYZ;
 % Loop variables
 % thisUtcSeconds -> time ref for both IMU and GNSS.
 thisUtcSeconds = esekf.tx; % First time is from the first GNSS estimation
 idxEst = 1;
-xEstHist(:, 1) = x0; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
-sigmaHist = zeros(nStates, 1);
+result.xEst(:, 1) = x0; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
+result.sigmaHist = zeros(nStates, 1);
 
 % First gnss observations is the same as for the first approx position
 [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx, 'this');
 hasEnded = isempty(phoneGnss); % TODO check imu
 
 % TODO: debugging variables, check which need to be kept
-prInnovations = nan(nSatellites, nGnssEpochs);
-prInnovationCovariances = nan(nSatellites, nGnssEpochs);
-prRejectedHist = zeros(1, nGnssEpochs);
+result.prInnovations = nan(nSatellites, nGnssEpochs);
+result.prInnovationCovariances = nan(nSatellites, nGnssEpochs);
+result.prRejectedHist = zeros(1, nGnssEpochs);
 
 while ~hasEnded % while there are more observations/measurements
     idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove
     % First iteration: x0 is result from LS
-    if idxEst == 1,     x0 = xEstHist(:, 1);
-    else,               x0 = xEstHist(:, idxEst-1); end
+    if idxEst == 1,     x0 = result.xEst(:, 1);
+    else,               x0 = result.xEst(:, idxEst-1); end
     
     thisUtcSeconds = phoneGnss.utcSeconds; % TODO check imu time
 
     % Get states of satellites selected in Config
     [satPos, satClkBias, satClkDrift, satVel] = ...
-        compute_satellite_state_all(phoneGnss.tow, phoneGnss.obs, nav, Config.CONSTELLATIONS);
+        compute_satellite_state_all(phoneGnss.tow, phoneGnss.obs, nav, config.CONSTELLATIONS);
 
     % Remove invalid observations (no ephem, elevation mask)
     [phoneGnss.obs, satPos, ~, ~, ~] = ...
@@ -96,22 +95,22 @@ while ~hasEnded % while there are more observations/measurements
                 @hCodeObs, hArgs, ...
                 label);
 
-            prInnovations(idxSat, idxEst) = innovation;
-            prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-            prRejectedHist(idxEst) = prRejectedHist(idxEst) + rejected;
+            result.prInnovations(idxSat, idxEst) = innovation;
+            result.prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+            result.prRejectedHist(idxEst) = result.prRejectedHist(idxEst) + rejected;
 
             % TODO perform correction when using error-state
-            x0(idxStatePos) = Config.STATION_POS_XYZ + esekf.x(idxStatePos);
+            x0(idxStatePos) = config.STATION_POS_XYZ + esekf.x(idxStatePos);
 %                 x0(idxStateVel) = esekf.x(idxStateVel);
         end
             % Percentage of rejected code observations
-            prRejectedHist(idxEst) = 100*prRejectedHist(idxEst) / length(doubleDifferences);
+            result.prRejectedHist(idxEst) = 100*result.prRejectedHist(idxEst) / length(doubleDifferences);
     end
     
-    utcSecondsHist(idxEst) = thisUtcSeconds;
+    result.utcSeconds(idxEst) = thisUtcSeconds;
     
-    xEstHist(:, idxEst) = x0;
-    sigmaHist(:, idxEst) = sqrt(diag(esekf.P));
+    result.xEst(:, idxEst) = x0;
+    result.sigmaHist(:, idxEst) = sqrt(diag(esekf.P));
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
@@ -124,6 +123,7 @@ end
 % State transition function
 function [x2, F, Q] = fTransition(x1, t1, t2, fArgs)
 % Initializations
+config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 
 F = eye(PVTUtils.getNumStates);
@@ -132,24 +132,24 @@ F = eye(PVTUtils.getNumStates);
 x2 = F * x1;
 % Process noise covariance matrix
 Q = zeros(PVTUtils.getNumStates);
-Q(idxStatePos, idxStatePos) = Config.SIGMA_Q_POS*eye(3);
+Q(idxStatePos, idxStatePos) = config.SIGMA_Q_POS*eye(3);
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [z, y, H, R] = hRefObs(~, hArgs)
-
-idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-
-z = hArgs.obs;
-
-y = hArgs.x0(idxStatePos) - Config.STATION_POS_XYZ;
-
-% Jacobian matrix
-H = zeros(3, PVTUtils.getNumStates);
-H(idxStatePos,idxStatePos) = eye(3);
-
-R = diag(hArgs.sigmaObs);
-end
+% function [z, y, H, R] = hRefObs(~, hArgs)
+% 
+% idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+% 
+% z = hArgs.obs;
+% 
+% y = hArgs.x0(idxStatePos) - config.STATION_POS_XYZ;
+% 
+% % Jacobian matrix
+% H = zeros(3, PVTUtils.getNumStates);
+% H(idxStatePos,idxStatePos) = eye(3);
+% 
+% R = diag(hArgs.sigmaObs);
+% end
 
 
 function [z, y, H, R] = hCodeObs(~, hArgs)
@@ -157,6 +157,7 @@ function [z, y, H, R] = hCodeObs(~, hArgs)
 % observations
 
 % Initializations
+config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 rxPos = hArgs.x0(idxStatePos);
 
@@ -164,20 +165,18 @@ rxPos = hArgs.x0(idxStatePos);
 z = hArgs.obs;
 
 % Observation estimation
-y = norm(Config.STATION_POS_XYZ - hArgs.pivSatPos) - ... % |stat - sat1|
+y = norm(config.STATION_POS_XYZ - hArgs.pivSatPos) - ... % |stat - sat1|
     norm(rxPos - hArgs.pivSatPos) -                  ... % |user - sat1|
-    norm(Config.STATION_POS_XYZ - hArgs.varSatPos) + ... % |stat - sat2|
+    norm(config.STATION_POS_XYZ - hArgs.varSatPos) + ... % |stat - sat2|
     norm(rxPos - hArgs.varSatPos);                       % |user - sat2|
 
 % Difference between LOS vectors of satellites towards receiver
-% pivSatLosVec = unitVector(rxPos - hArgs.pivSatPos);
-% varSatLosVec = unitVector(rxPos - hArgs.varSatPos);
-pivSatLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.pivSatPos);
-varSatLosVec = unitVector(Config.STATION_POS_XYZ - hArgs.varSatPos);
-ddLosVec = (varSatLosVec - pivSatLosVec);
+pivSatLosVec = unitVector(config.STATION_POS_XYZ - hArgs.pivSatPos);
+varSatLosVec = unitVector(config.STATION_POS_XYZ - hArgs.varSatPos);
+ddLosVec = varSatLosVec - pivSatLosVec;
 
 % figure(1); clf; hold on
-% plot3(Config.STATION_POS_XYZ(1), Config.STATION_POS_XYZ(2), Config.STATION_POS_XYZ(3), '^')
+% plot3(config.STATION_POS_XYZ(1), config.STATION_POS_XYZ(2), config.STATION_POS_XYZ(3), '^')
 % plot3(rxPos(1), rxPos(2), rxPos(3), 'o')
 % plot3(hArgs.pivSatPos(1), hArgs.pivSatPos(2), hArgs.pivSatPos(3), 'v')
 % plot3(hArgs.varSatPos(1), hArgs.varSatPos(2), hArgs.varSatPos(3), 's')
@@ -190,7 +189,7 @@ H = zeros(1, PVTUtils.getNumStates);
 H(idxStatePos) = ddLosVec;
 
 % Measurement covariance matrix, consider DD sigmas
-R = Config.COV_FACTOR_C * computeRtkMeasCovariance(hArgs.satElDeg, ...
-    hArgs.sigmaObs, Config.SIGMA_PR_M, hArgs.obsConst);
+R = config.COV_FACTOR_C * computeRtkMeasCovariance(hArgs.satElDeg, ...
+    hArgs.sigmaObs, config.SIGMA_PR_M, hArgs.obsConst);
 end %end of function hCodeObs
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

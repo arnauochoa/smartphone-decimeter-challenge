@@ -1,21 +1,22 @@
-function plotResults(ref, estPosLla, xEst, sigmaHist, prInnovations, prInnovationCovariances, utcSecondsHist, prRejectedHist)
+function plotResults(ref, estPosLla, result)
 %PLOTRESULTS Summary of this function goes here
 %   Detailed explanation goes here
 close all;
 
 % Initializations
-timelineSec = (utcSecondsHist - utcSecondsHist(1));
-nEpochs = size(xEst, 2);
+config = Config.getInstance;
+timelineSec = (result.utcSeconds - result.utcSeconds(1));
+nEpochs = size(result.xEst, 2);
 figures = [];
 basemap = 'none';
 
 %% State plots
 % Position
 figures = [figures figure];
-if strcmp(Config.DATASET_TYPE, 'test')
+if strcmp(config.DATASET_TYPE, 'test')
     geoplot(estPosLla(:, 1), estPosLla(:, 2), '.-');
 else
-    if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
+    if isprop(config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
         geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'x', estPosLla(:, 1), estPosLla(:, 2), '.', 'LineWidth', 1);
     else
         geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', estPosLla(:, 1), estPosLla(:, 2), '.-');
@@ -27,7 +28,7 @@ figureWindowTitle(figures(end), 'Map');
 
 % % Velocity
 % figures = [figures figure];
-% plot(timelineSec(1:end-1), xEst(idxStateVel, 1:end-1))
+% plot(timelineSec(1:end-1), result.xEst(idxStateVel, 1:end-1))
 % xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 % legend('X', 'Y', 'Z');
 % figureWindowTitle(figures(end), 'Velocity');
@@ -35,15 +36,15 @@ figureWindowTitle(figures(end), 'Map');
 %% Innovations
 figures = [figures figure];
 subplot(2,1,1)
-plot(prInnovations', '.')
+plot(result.prInnovations', '.')
 xlabel('Time since start (s)'); ylabel('Pseudorange innovations (m)');
 subplot(2,1,2)
-plot(prInnovationCovariances', '.')
+plot(result.prInnovationCovariances', '.')
 xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
 figureWindowTitle(figures(end), 'Code innovations');
 
 %% Rejected
-figures = [figures figure]; subplot(2,1,1);plot(timelineSec, prRejectedHist)
+figures = [figures figure]; subplot(2,1,1);plot(timelineSec, result.prRejectedHist)
 xlabel('Time since start (s)'); ylabel('% rejected Code obs');
 % subplot(2,1,2);
 % plot(timelineSec, dopRejectedHist)
@@ -52,10 +53,10 @@ figureWindowTitle(figures(end), 'Outlier rejections');
 
 
 %% Training plots
-if strcmp(Config.DATASET_TYPE, 'train')
+if strcmp(config.DATASET_TYPE, 'train')
     % Interpolate groundtruth at the computed position's time
-    refInterpLla = interp1(ref.utcSeconds, ref.posLla, utcSecondsHist);
-    assert(size(refInterpLla, 1) == size(xEst, 2), 'Reference and computed position vectors are not the same size');
+    refInterpLla = interp1(ref.utcSeconds, ref.posLla, result.utcSeconds);
+    assert(size(refInterpLla, 1) == size(result.xEst, 2), 'Reference and computed position vectors are not the same size');
     
     nedError = Lla2Ned(refInterpLla, estPosLla);
     hError = Lla2Hd(refInterpLla, estPosLla);
@@ -89,7 +90,7 @@ if strcmp(Config.DATASET_TYPE, 'train')
     plot([1;1]*hErrPctl, [0;1]*pctl/100, '--k')
     legend('CDF',sprintf('%d%% bound = %.2f', pctl, hErrPctl));
     xlabel('Horizontal error (m)'); ylabel('Frequency')
-    title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
+    title([config.campaignName ' - ' config.phoneName], 'Interpreter', 'none');
     figureWindowTitle(figures(end), 'Hor. pos. CDF');
     
     % Vertical
@@ -101,7 +102,7 @@ if strcmp(Config.DATASET_TYPE, 'train')
     plot([1;1]*vErrPctl, [0;1]*pctl/100, '--k')
     legend('CDF',sprintf('%d%% bound = %.2f', pctl, vErrPctl));
     xlabel('Vertical error error (m)'); ylabel('Frequency')
-    title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
+    title([config.campaignName ' - ' config.phoneName], 'Interpreter', 'none');
     figureWindowTitle(figures(end), 'Ver. pos. CDF');
     
     % % Velocity
@@ -121,7 +122,7 @@ if strcmp(Config.DATASET_TYPE, 'train')
     %         'Z',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
     %         'Location','northeastoutside');
     % xlabel('Velocity error error (m/s)'); ylabel('Frequency')
-    % title([Config.CAMPAIGN_NAME ' - ' Config.PHONE_NAME], 'Interpreter', 'none');
+    % title([config.campaignName ' - ' config.phoneName], 'Interpreter', 'none');
     % figureWindowTitle(figures(end), 'Velocity CDF');
 end
 

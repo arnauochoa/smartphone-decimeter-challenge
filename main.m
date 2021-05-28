@@ -1,35 +1,33 @@
 clearvars -except
-close all; 
+close all;
 clc;
 % Script description
 
 % Change the configuration in Config class
+config = Config.getInstance;
+delete(config); % Delete previous instance of Config
+config = Config.getInstance;
 
-%% Input
-[phoneRnx, imuRaw, nav, ~, osrRnx, ref] = loadData();
-
-%% Compute geometry
-
-%% Pre-process IMU measurements
-imuClean = preprocessImu(imuRaw);
-
-%% Interpolate OSR data
-osrRnx = interpOSR(osrRnx, phoneRnx);
-
-%% Navigate
-disp('Computing positions...');
-[xEst, sigmaHist, prInnovations, prInnovationCovariances, ...
-    utcSecondsHist, prRejectedHist] = ...
-    navigate(phoneRnx, imuClean, nav, osrRnx, ref);
-
-%% Output
-disp('Navigation ended, saving results...');
-estPosLla = saveResults(xEst, utcSecondsHist);
-disp('Plotting results...')
-plotResults(ref, estPosLla, xEst, sigmaHist, prInnovations, prInnovationCovariances, utcSecondsHist, prRejectedHist);
-
-
-
-
-
-
+switch config.EVALUATE_DATASETS
+    case 'single'
+        [ref, estPosLla, result] = evaluateDataset();
+        disp('Plotting results...')
+        plotResults(ref, estPosLla, result);
+    case 'all'
+        datasetsPath = [config.dataPath 'datasets' filesep];
+        campaignNames = getValidDir(datasetsPath);
+        idxInvalid = strcmp(campaignNames, '.') | strcmp(campaignNames, '..');
+        campaignNames(idxInvalid) = [];
+        for iCampaign = 1:length(campaignNames)
+            config.campaignName = campaignNames{iCampaign};
+            campaignPath = [datasetsPath campaignNames{iCampaign} filesep];
+            phoneNames = getValidDir(campaignPath);
+            for iPhone = 1:length(phoneNames)
+                config.phoneName = phoneNames{iPhone};
+                fprintf('Evaluating %s/%s', config.campaignName, config.phoneName)
+                evaluateDataset();
+            end
+        end
+    otherwise
+        error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
+end

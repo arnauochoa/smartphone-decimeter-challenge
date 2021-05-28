@@ -1,4 +1,4 @@
-classdef Config < handle
+classdef (Sealed) Config < handle
     % CONFIG This class is used to select the desired configuration
     % parameters and to generate the different filepaths and directories of
     % the selected dataset
@@ -10,15 +10,16 @@ classdef Config < handle
     
     properties (Constant)
         %% Results
-        RES_FILENAME            = 'sample_result.csv';
+        RES_FILENAME            = 'sample_result';
         
         %% Dataset selection
-        DATASET_TYPE            = 'train'; % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';
-        PHONE_NAME              = 'Mi8';
+        EVALUATE_DATASETS       = 'single';     % 'single' 'all'
+        DATASET_TYPE            = 'train';      % 'train' 'test'
+        CAMPAIGN_NAME           = '2020-08-03-US-MTV-1';    % only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Mi8';                    % only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;
-        NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
-        OSR_FILENAME            =  {'EAWD00XXX_R_20202192200_01H_01S_MO.rnx' 'EAWD00XXX_R_20202192300_01H_01S_MO.rnx'}; 
+%         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
+        OSR_STATION_NAME        =  'EAWD'; 
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
 %             filesep 'igs_data' filesep 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
@@ -60,68 +61,92 @@ classdef Config < handle
         
     end
     
-    %% Public methods
+    properties
+        campaignName = Config.CAMPAIGN_NAME;
+        phoneName = Config.PHONE_NAME;
+    end
+    
+    %% Private constructor
+    methods (Access = private)
+      function obj = Config()
+      end
+    end
+    
+    %% Public methods 
     methods (Static)
-        function [dirPath, fileName] = getObsDirFile()
+        % Singleton instantiator        
+        function singleObj = getInstance()
+            persistent localObj
+             if isempty(localObj) || ~isvalid(localObj)
+                localObj = Config;
+             end
+             singleObj = localObj;
+        end
+    end
+    
+    
+    methods        
+        function [dirPath, fileName] = getObsDirFile(this)
             %GETOBSDIRFILE Returns the directory and the filename of the
             %observation file according to the selected configuration.
-            dirPath = [Config.dataPath 'datasets' filesep Config.CAMPAIGN_NAME filesep Config.PHONE_NAME filesep];
-            fileName = [Config.PHONE_NAME '_GnssLog.txt'];
+            dirPath = [this.dataPath 'datasets' filesep this.campaignName filesep this.phoneName filesep];
+            fileName = [this.phoneName '_GnssLog.txt'];
         end
         
-        function filepaths = getNavFilepaths()
+        function filepaths = getNavFilepaths(this)
             %GETNAVFILEPATH Returns the file path(s) of the navigation
             %file(s) according to the CONSTELLATIONSs selected.
             %   Select the desired CONSTELLATIONSs and the date of the
             %   navigation file in the constant properties.
-            filepaths = cell(1, length(Config.CONSTELLATIONS));
-            [year, month, day] = datevec(Config.CAMPAIGN_NAME(1:10), 'yyyy-mm-dd');
-            for iConst = 1:length(Config.CONSTELLATIONS)
-%                 filepaths{iConst} = [Config.dataPath 'brdc' filesep Config.CAMPAIGN_NAME ...
-%                     filesep 'BRDC00WRD_R_' Config.NAV_FILE_DATETIME '_01D_' ...
-%                     Config.CONSTELLATIONS(iConst) 'N.rnx'];
-                filepaths{iConst} = collectBrdc(year, month, day, Config.CONSTELLATIONS(iConst));
+            filepaths = cell(1, length(this.CONSTELLATIONS));
+            utcTimeVec = datevec(this.campaignName(1:10), 'yyyy-mm-dd');
+            for iConst = 1:length(this.CONSTELLATIONS)
+%                 filepaths{iConst} = [this.dataPath 'brdc' filesep this.campaignName ...
+%                     filesep 'BRDC00WRD_R_' this.NAV_FILE_DATETIME '_01D_' ...
+%                     this.CONSTELLATIONS(iConst) 'N.rnx'];
+                filepaths{iConst} = collectBrdc(utcTimeVec, this.CONSTELLATIONS(iConst));
             end
         end
         
-        function filepaths = getOSRFilepath()
+        function filepaths = getOSRFilepaths(this)
             %GETOSRFILEPATH Returns the file path of the OSR file.
-            rootPath = [Config.dataPath 'corrections' filesep 'OSR_v3.04' ...
-                filesep Config.CAMPAIGN_NAME filesep];
-            filepaths = cell(1, length(Config.OSR_FILENAME));
-            for iOsr = 1:length(Config.OSR_FILENAME)
-                if strcmp(Config.OSR_FILENAME{iOsr}(end-2:end), 'crx')
-                    Config.crx2rnx([rootPath Config.OSR_FILENAME{iOsr}]);
-                end
-                filepaths{iOsr} = [rootPath Config.OSR_FILENAME{iOsr}(1:end-3) 'rnx'];
+            rootPath = [this.dataPath 'corrections' filesep 'OSR_v3.04' ...
+                filesep this.campaignName filesep];
+            filesInPath = dir(rootPath);
+            idxStation = contains({filesInPath.name}, this.OSR_STATION_NAME);
+            fileNames = {filesInPath(idxStation).name};
+            filepaths = cell(1, length(fileNames));
+            for iOsr = 1:length(fileNames)
+                filepaths{iOsr} = [rootPath fileNames{iOsr}];
             end
         end
         
-        function [dirPath, fileName] = getRefDirFile()
+        function [dirPath, fileName] = getRefDirFile(this)
             %GETREFDIRFILE Returns the directory and the filename of the
             %groundtruth file according to the selected configuration.
-            [dirPath, ~] = Config.getObsDirFile();
+            [dirPath, ~] = this.getObsDirFile();
             dirPath = [dirPath 'supplemental' filesep];
-            fileName = ['SPAN_' Config.PHONE_NAME '_10Hz.nmea'];
+            fileName = ['SPAN_' this.phoneName '_10Hz.nmea'];
         end
         
-        function P0 = getP0()
-            P0 = diag([ Config.SIGMA_P0_POS_NED ...
-                Config.SIGMA_P0_VEL_NED ...
-                Config.SIGMA_P0_CLK_BIAS       ...
-                Config.SIGMA_P0_CLK_DRIFT      ...
-                Config.SIGMA_P0_CLK_INTERFREQ	...
-                Config.SIGMA_P0_CLK_INTERSYS]);
+        function path = dataPath(this)
+            % TRAINPATH Returns the absolute path where all the training data is saved
+            path = [workspacePath 'data' filesep this.DATASET_TYPE filesep];
         end
+        
+%         function P0 = getP0(this)
+%             P0 = diag([ this.SIGMA_P0_POS_NED ...
+%                 this.SIGMA_P0_VEL_NED ...
+%                 this.SIGMA_P0_CLK_BIAS       ...
+%                 this.SIGMA_P0_CLK_DRIFT      ...
+%                 this.SIGMA_P0_CLK_INTERFREQ	...
+%                 this.SIGMA_P0_CLK_INTERSYS]);
+%         end
         
     end
     
     %% Private methods
     methods (Static, Access = private)
-        function path = dataPath()
-            % TRAINPATH Returns the absolute path where all the training data is saved
-            path = [workspacePath 'data' filesep Config.DATASET_TYPE filesep];
-        end
         
         function crx2rnx(filepath)
             cmd = [projectPath 'lib' filesep 'RNXCMP_4.0.8' filesep 'bin' filesep 'CRX2RNX ' filepath];

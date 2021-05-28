@@ -1,12 +1,24 @@
 function estPosLla = saveResults(xEst, utcSecondsHist)
 %SAVERESULTS Summary of this function goes here
 %   Detailed explanation goes here
+
+config = Config.getInstance;
 nEpochs = length(utcSecondsHist);
 assert(size(xEst, 2) == nEpochs, 'Inputs do not have the same number of epochs');
 
 %% Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-resultsPath = [workspacePath 'data' filesep 'results' filesep Config.DATASET_TYPE filesep];
+resultsPath = [workspacePath 'data' filesep 'results' filesep config.DATASET_TYPE filesep];
+switch config.EVALUATE_DATASETS
+    case 'single'
+        resultsPath = [resultsPath config.campaignName filesep];
+        resultsFilename = [config.phoneName '_' config.RES_FILENAME '.csv'];
+    case 'all'
+        resultsPath = [resultsPath config.campaignName filesep];
+        resultsFilename = [config.RES_FILENAME '.csv'];
+    otherwise
+        error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
+end
 resultsHeader = 'phone,millisSinceGpsEpoch,latDeg,lngDeg\n';
 
 %% Data preparation
@@ -25,10 +37,10 @@ estPosLla = [posLat, posLon, posAlt];
 %% Write data to file
 % Check if folder exists, otherwise create it
 if ~exist(resultsPath, 'dir'), mkdir(resultsPath); end
-fid = fopen([resultsPath Config.RES_FILENAME], 'w');
+fid = fopen([resultsPath resultsFilename], 'w');
 fprintf(fid, resultsHeader);
 for iEpoch = 1:nEpochs
-    fprintf(fid, '%s_%s,', Config.CAMPAIGN_NAME, Config.PHONE_NAME);    % phone
+    fprintf(fid, '%s_%s,', config.campaignName, config.phoneName);    % phone
     fprintf(fid, '%d,', millisSinceGpsEpoch(iEpoch));                   % millisSinceGpsEpoch
     fprintf(fid, '%.15f,%.14f', estPosLla(iEpoch, 1), estPosLla(iEpoch, 2)); % latDeg,lngDeg
     fprintf(fid, '\n');

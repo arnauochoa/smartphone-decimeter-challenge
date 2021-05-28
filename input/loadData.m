@@ -2,24 +2,26 @@ function [phoneRnx, imuRaw, nav, iono, osrRnx, ref] = loadData()
 % LOADDATA Loads the GNSS observations, IMU measurements, navigation data
 % and groundtruth data
 
+config = Config.getInstance;
+
 %% GNSS observations and IMU measurements
-if isprop(Config, 'OBS_RINEX_PATH') % Use observations from rinex
-    [phoneRnx.obs, phoneRnx.type] = rinex_v3_obs_parser(Config.OBS_RINEX_PATH);
+if isprop(config, 'OBS_RINEX_PATH') % Use observations from rinex
+    [phoneRnx.obs, phoneRnx.type] = rinex_v3_obs_parser(config.OBS_RINEX_PATH);
     imuRaw.acc = [];
     imuRaw.gyr = [];
     imuRaw.mag = [];
     phoneRnx.utcSeconds = phoneRnx.obs(:, 2);
 else % Use observations from GnssLog
-    [obsDirPath, obsFileName] = Config.getObsDirFile();
+    [obsDirPath, obsFileName] = getObsDirFile(config);
     [phoneRnx.obs, phoneRnx.type, obsRinexUtcMillis, ~, ...   % GNSS data in Rinex-shaped matrix
         imuRaw.acc, imuRaw.gyr, imuRaw.mag, ~] = ...        % IMU data
-        getGnssLogObs(obsDirPath, obsFileName, Config.FILTER_RAW_MEAS);
+        getGnssLogObs(obsDirPath, obsFileName, config.FILTER_RAW_MEAS);
     
     phoneRnx.utcSeconds = obsRinexUtcMillis / 1e3;
 end
 
 %% Navigation data
-nav = rinex_v3_nav_parser(Config.getNavFilepaths);
+nav = rinex_v3_nav_parser(getNavFilepaths(config));
 
 %% Ionospheric data
 iono.alpha = [.4657E-08   .1490E-07  -.5960E-07  -.1192E-06]';
@@ -27,25 +29,26 @@ iono.beta = [.8192E+05   .9830E+05  -.6554E+05  -.5243E+06]';
 
 %% OSR data
 osrRnx.obs = [];
-for iOsr = 1:length(Config.getOSRFilepath)
-    [obs, type] = rinex_v3_obs_parser(Config.getOSRFilepath{iOsr});
+osrFilepaths = getOSRFilepaths(config);
+for iOsr = 1:length(osrFilepaths)
+    [obs, type] = rinex_v3_obs_parser(osrFilepaths{iOsr});
     osrRnx.obs = [osrRnx.obs; obs];
 end
 osrRnx.type = type;
 
 %% Groundtruth data
-if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
+if isprop(config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
     [ref.tow, idxUnq] = unique(phoneRnx.obs(:, 2));
     ref.wNum = phoneRnx.obs(idxUnq, 1);
     ref.utcSeconds = ref.tow;
     [refLat, refLon, refAlt] = ecef2geodetic(wgs84Ellipsoid, ...
-        Config.OBS_RINEX_REF_XYZ(1), ...
-        Config.OBS_RINEX_REF_XYZ(2), ...
-        Config.OBS_RINEX_REF_XYZ(3));
+        config.OBS_RINEX_REF_XYZ(1), ...
+        config.OBS_RINEX_REF_XYZ(2), ...
+        config.OBS_RINEX_REF_XYZ(3));
     ref.posLla = repelem([refLat, refLon, refAlt], length(ref.tow), 1);
 else
     disp('Reading groundtruth file...');
-    [refDirPath, refFileName] = Config.getRefDirFile();
+    [refDirPath, refFileName] = getRefDirFile(config);
     refCachePath = [refDirPath refFileName(1:end-5) '.mat'];
     if exist(refCachePath, 'file')
         load(refCachePath, 'ref_nmea');
