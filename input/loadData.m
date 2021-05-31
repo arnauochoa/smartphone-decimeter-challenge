@@ -31,26 +31,31 @@ iono.beta = [.8192E+05   .9830E+05  -.6554E+05  -.5243E+06]';
 
 %% OSR data
 osrRnx.obs = [];
-osrFilepaths = getOSRFilepaths(config);
-if isempty(osrFilepaths)
-    osrRnx.type = [];
-    osrRnx.statPos = [];
-else
-    statPos = nan(3, 1);
-    for iOsr = 1:length(osrFilepaths)
-        [obs, type, auxPos] = rinex_v3_obs_parser(osrFilepaths{iOsr});
-        osrFirstObsGPST = wntow2datetime(obs(1, 1), obs(1, 2));
-        osrLastObsGPST = wntow2datetime(obs(end, 1), obs(end, 2));
-        isValid = osrLastObsGPST > firstObsGPST && osrFirstObsGPST < lastObsGPST;
-        if isValid
-            osrRnx.obs = [osrRnx.obs; obs];
-            assert(all(isnan(statPos)) || all(statPos == auxPos), ...
-                'Station positions do not match between different OSR of the same campaign');
-            statPos = auxPos;
+idxOsrSrc = 0;
+% Use first OSR source with valid data
+while isempty(osrRnx.obs)
+    idxOsrSrc = idxOsrSrc + 1;
+    osrFilepaths = getOSRFilepaths(config, config.OSR_SOURCES{idxOsrSrc});
+    if isempty(osrFilepaths)
+        osrRnx.type = [];
+        osrRnx.statPos = [];
+    else
+        statPos = nan(3, 1);
+        for iOsr = 1:length(osrFilepaths)
+            [obs, type, auxPos] = rinex_v3_obs_parser(osrFilepaths{iOsr});
+            osrFirstObsGPST = wntow2datetime(obs(1, 1), obs(1, 2));
+            osrLastObsGPST = wntow2datetime(obs(end, 1), obs(end, 2));
+            isValid = osrLastObsGPST > firstObsGPST && osrFirstObsGPST < lastObsGPST;
+            if isValid
+                osrRnx.obs = [osrRnx.obs; obs];
+                assert(all(isnan(statPos)) || all(statPos == auxPos), ...
+                    'Station positions do not match between different OSR of the same campaign');
+                statPos = auxPos;
+            end
         end
+        osrRnx.type = type;
+        osrRnx.statPos = statPos;
     end
-    osrRnx.type = type;
-    osrRnx.statPos = statPos;
 end
 
 

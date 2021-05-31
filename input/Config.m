@@ -19,7 +19,7 @@ classdef (Sealed) Config < handle
         PHONE_NAME              = 'Pixel4';                    % only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;
 %         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
-        OSR_SRC                 = 'SwiftNav'     % 'Verizon' 'SwiftNav'
+        OSR_SOURCES             = {'SwiftNav', 'Verizon'}     % By order of preference
         OSR_STATION_NAME        = 'EAWD'; 
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
@@ -88,7 +88,6 @@ classdef (Sealed) Config < handle
         end
     end
     
-    
     methods        
         function [dirPath, fileName] = getObsDirFile(this)
             %GETOBSDIRFILE Returns the directory and the filename of the
@@ -111,27 +110,27 @@ classdef (Sealed) Config < handle
             end
         end
         
-        function filepaths = getOSRFilepaths(this)
+        function filepaths = getOSRFilepaths(this, osrSource)
             %GETOSRFILEPATH Returns the file path of the OSR file.
-            switch this.OSR_SRC
+            switch osrSource
                 case 'Verizon'
-                    rootPath = [Config.dataPath 'corrections' filesep this.OSR_SRC ...
+                    rootPath = [Config.dataPath 'corrections' filesep osrSource ...
                         filesep 'OSR' filesep this.campaignName filesep];
                     filesInPath = dir(rootPath);
                     idxStation = contains({filesInPath.name}, this.OSR_STATION_NAME);
                     fileNames = {filesInPath(idxStation).name};
                 case 'SwiftNav'
-                    rootPath = [Config.dataPath 'corrections' filesep this.OSR_SRC ...
+                    rootPath = [Config.dataPath 'corrections' filesep osrSource ...
                         filesep 'OSR' filesep];
                     osrFileNames = getValidDir(rootPath);
-                    campaignDateStr1 = Config.CAMPAIGN_NAME(1:10);
+                    campaignDateStr1 = this.campaignName(1:10);
                     campaignDateStr2 = erase(campaignDateStr1, '-');
                     idxFiles = contains(osrFileNames, '.obs') & ...
                         (contains(osrFileNames, campaignDateStr1) | ...
                         contains(osrFileNames, campaignDateStr2));
                     fileNames = osrFileNames(idxFiles); % TODO: test and extract from switch
                 otherwise
-                    error('Invalid Config.OSR_SRC');
+                    error('Invalid Config.OSR_SOURCES');
             end
             filepaths = cell(1, length(fileNames));
             for iOsr = 1:length(fileNames)
