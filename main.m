@@ -10,7 +10,7 @@ config = Config.getInstance;
 
 switch config.EVALUATE_DATASETS
     case 'single'
-        [ref, estPosLla, result] = evaluateDataset();
+        [err, ref, estPosLla, result] = evaluateDataset();
         disp('Plotting results...')
         plotResults(ref, estPosLla, result);
     case 'all'
@@ -24,8 +24,8 @@ switch config.EVALUATE_DATASETS
             phoneNames = getValidDir(campaignPath);
             for iPhone = 1:length(phoneNames)
                 config.phoneName = phoneNames{iPhone};
-                fprintf('Evaluating %s/%s', config.campaignName, config.phoneName)
-                evaluateDataset();
+                fprintf('Evaluating %s/%s \n', config.campaignName, config.phoneName)
+                err = evaluateDataset();
             end
         end
     otherwise

@@ -31,7 +31,7 @@ for iConst = 1:length(constels)
     end
 end
 % Convert from structure of arrays to array of structures
-doubleDifferences = soa2aos(doubleDifferences);
+doubleDifferences = soa2aos(doubleDifferences, 2);
 if nDiscarded > 0
     fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
 end

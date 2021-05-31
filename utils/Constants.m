@@ -19,6 +19,10 @@ classdef Constants < handle
         MAX_GPS_PRN = 100;
         MAX_GAL_PRN = 100;
         MAX_BDS_PRN = 100;
+        
+        % Error indicators
+        NO_ERR      = 0;
+        ERR_NO_OSR  = 1;
     end
     
 end

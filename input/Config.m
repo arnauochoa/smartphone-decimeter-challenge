@@ -15,8 +15,8 @@ classdef (Sealed) Config < handle
         %% Dataset selection
         EVALUATE_DATASETS       = 'single';     % 'single' 'all'
         DATASET_TYPE            = 'train';      % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-08-03-US-MTV-1';    % only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Mi8';                    % only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2020-05-14-US-MTV-1';    % only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Pixel4';                    % only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;
 %         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
         OSR_STATION_NAME        =  'EAWD'; 
@@ -36,11 +36,11 @@ classdef (Sealed) Config < handle
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
         
         %% Navigation parameters
-        CONSTELLATIONS          = 'GEC'
-        OBS_COMBINATION         = {'none', 'none'};
-        OBS_USED                = {'C1C', 'C1X+C5X', 'C2X'}; % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C', 'C1X+C5X', 'C2X'}; % PR Rinex code for OSR data
-        CONST_COV_FACTORS       = [1 1 1];            % Covariance factor for each constellation
+        CONSTELLATIONS          = 'GE'
+        OBS_COMBINATION         = {'none'};
+        OBS_USED                = {'C1C', 'C1X+C5X'}; % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C', 'C1X+C5X'}; % PR Rinex code for OSR data
+        CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
         MEAS_COV_SRC            = 'elevation';    % among 'elevation' and 'uncertainty'
@@ -64,11 +64,13 @@ classdef (Sealed) Config < handle
     properties
         campaignName = Config.CAMPAIGN_NAME;
         phoneName = Config.PHONE_NAME;
+        resFileTimestamp = '';
     end
     
     %% Private constructor
     methods (Access = private)
       function obj = Config()
+          obj.resFileTimestamp = datestr(datetime('now'), 'yyyymmdd_HHMMSS');
       end
     end
     

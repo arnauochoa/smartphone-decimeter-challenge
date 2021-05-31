@@ -30,17 +30,35 @@ else
     
     
     % Correct bias
-    accBodyMps2(:, 1) = imuRaw.acc.UncalAccelXMps2 - imuRaw.acc.BiasXMps2;
-    accBodyMps2(:, 2) = imuRaw.acc.UncalAccelYMps2 - imuRaw.acc.BiasYMps2;
-    accBodyMps2(:, 3) = imuRaw.acc.UncalAccelZMps2 - imuRaw.acc.BiasZMps2;
+    if isfield(imuRaw.acc, 'BiasXMps2')
+        accBodyMps2(:, 1) = imuRaw.acc.UncalAccelXMps2 - imuRaw.acc.BiasXMps2;
+        accBodyMps2(:, 2) = imuRaw.acc.UncalAccelYMps2 - imuRaw.acc.BiasYMps2;
+        accBodyMps2(:, 3) = imuRaw.acc.UncalAccelZMps2 - imuRaw.acc.BiasZMps2;
+    else
+        accBodyMps2(:, 1) = imuRaw.acc.UncalAccelXMps2; % TODO: find bias if not provided
+        accBodyMps2(:, 2) = imuRaw.acc.UncalAccelYMps2;
+        accBodyMps2(:, 3) = imuRaw.acc.UncalAccelZMps2;
+    end
     
-    gyrBodyRadPerSec(:, 1) = imuRaw.gyr.UncalGyroXRadPerSec - imuRaw.gyr.DriftXRadPerSec;
-    gyrBodyRadPerSec(:, 2) = imuRaw.gyr.UncalGyroYRadPerSec - imuRaw.gyr.DriftYRadPerSec;
-    gyrBodyRadPerSec(:, 3) = imuRaw.gyr.UncalGyroZRadPerSec - imuRaw.gyr.DriftZRadPerSec;
+    if isfield(imuRaw.gyr, 'DriftXRadPerSec')
+        gyrBodyRadPerSec(:, 1) = imuRaw.gyr.UncalGyroXRadPerSec - imuRaw.gyr.DriftXRadPerSec;
+        gyrBodyRadPerSec(:, 2) = imuRaw.gyr.UncalGyroYRadPerSec - imuRaw.gyr.DriftYRadPerSec;
+        gyrBodyRadPerSec(:, 3) = imuRaw.gyr.UncalGyroZRadPerSec - imuRaw.gyr.DriftZRadPerSec;
+    else
+        gyrBodyRadPerSec(:, 1) = imuRaw.gyr.UncalGyroXRadPerSec;
+        gyrBodyRadPerSec(:, 2) = imuRaw.gyr.UncalGyroYRadPerSec;
+        gyrBodyRadPerSec(:, 3) = imuRaw.gyr.UncalGyroZRadPerSec;
+    end
     
-    magBodyMicroT(:, 1) = imuRaw.mag.UncalMagXMicroT - imuRaw.mag.BiasXMicroT;
-    magBodyMicroT(:, 2) = imuRaw.mag.UncalMagYMicroT - imuRaw.mag.BiasYMicroT;
-    magBodyMicroT(:, 3) = imuRaw.mag.UncalMagZMicroT - imuRaw.mag.BiasZMicroT;
+    if isfield(imuRaw.mag, 'BiasXMicroT')
+        magBodyMicroT(:, 1) = imuRaw.mag.UncalMagXMicroT - imuRaw.mag.BiasXMicroT;
+        magBodyMicroT(:, 2) = imuRaw.mag.UncalMagYMicroT - imuRaw.mag.BiasYMicroT;
+        magBodyMicroT(:, 3) = imuRaw.mag.UncalMagZMicroT - imuRaw.mag.BiasZMicroT;
+    else
+        magBodyMicroT(:, 1) = imuRaw.mag.UncalMagXMicroT;
+        magBodyMicroT(:, 2) = imuRaw.mag.UncalMagYMicroT;
+        magBodyMicroT(:, 3) = imuRaw.mag.UncalMagZMicroT;
+    end
     
     
     % Set IMU time as the slowest sensor's so we always have all measurements

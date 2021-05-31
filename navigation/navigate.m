@@ -35,7 +35,7 @@ result.prInnovationCovariances = nan(nSatellites, nGnssEpochs);
 result.prRejectedHist = zeros(1, nGnssEpochs);
 
 while ~hasEnded % while there are more observations/measurements
-    idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove
+%     idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove
     % First iteration: x0 is result from LS
     if idxEst == 1,     x0 = result.xEst(:, 1);
     else,               x0 = result.xEst(:, idxEst-1); end
@@ -59,7 +59,7 @@ while ~hasEnded % while there are more observations/measurements
         fArgs.x0 = x0;
         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
     else
-        refPos = Lla2Xyz(ref.posLla(idxRef, :))'; % TODO: remove
+%         refPos = Lla2Xyz(ref.posLla(idxRef, :))'; % TODO: remove
         doubleDifferences = computeDoubleDifferences(osrGnss, phoneGnss, satPos, satElDeg);
 
         % Sequentally update with all observations

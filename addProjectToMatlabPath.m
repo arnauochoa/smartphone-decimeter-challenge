@@ -4,7 +4,6 @@ pathOfThisScript = mfilename('fullpath');
 [pathstr, ~, ~] = fileparts(pathOfThisScript);
 % Add folders in 'smartphone-decimeter-challenge' directory
 addpath([pathstr filesep 'android-measurements']);
-addpath([pathstr filesep 'configuration']);
 addpath([pathstr filesep 'EKF']);
 addEKFToMatlabPath;
 addpath([pathstr filesep 'gps-measurement-tools' filesep 'NmeaUtils']);

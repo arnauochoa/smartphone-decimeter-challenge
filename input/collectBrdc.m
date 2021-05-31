@@ -26,4 +26,4 @@ if ~exist(dataLocalFilepath, 'file')
     gunzip(gzLocalFilepath, targetFilepath);
     delete(gzLocalFilepath);
 end
-end
+end %urlwrite(strcat('ftp://igs.bkg.bund.de',), targetFilepath)

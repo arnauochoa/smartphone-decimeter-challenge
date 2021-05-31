@@ -53,7 +53,7 @@ figureWindowTitle(figures(end), 'Outlier rejections');
 
 
 %% Training plots
-if strcmp(config.DATASET_TYPE, 'train')
+if contains(config.DATASET_TYPE, 'train')
     % Interpolate groundtruth at the computed position's time
     refInterpLla = interp1(ref.utcSeconds, ref.posLla, result.utcSeconds);
     assert(size(refInterpLla, 1) == size(result.xEst, 2), 'Reference and computed position vectors are not the same size');
