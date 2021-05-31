@@ -1,15 +1,20 @@
-function gnss = getNextGnss(lastUtcSeconds, gnssRnx, whichObs)
+function [gnss, osr] = getNextGnss(lastUtcSeconds, gnssRnx, osrRnx, whichObs)
 % GETNEXTGNSS returns a structure with the next GNSS observations 
 %
-%   gnss = GETNEXTGNSS(lastUtcMillis, gnssRnx, [whichObs])
+%   gnss = GETNEXTGNSS(lastUtcMillis, gnssRnx, [osrRnx, whichObs])
 %
 %   This function returns a structure with the next GNSS observations 
 %   received at:
 %       - the epoch given by lastUtcSeconds (if whichObs = 'this'), or
 %       - the next epoch of lastUtcSeconds (if whichObs = 'next')
 
+config = Config.getInstance;
+
 if ~exist('whichObs', 'var')
     whichObs = 'next';
+end
+if ~exist('osrRnx', 'var')
+    osrRnx = [];
 end
 
 switch whichObs
@@ -26,15 +31,30 @@ if ~isempty(firstObsIdx) % If there are more observations
     nextTow = gnssRnx.obs(firstObsIdx, 2);
     % Obs vector of epoch to return
     gnss.obs = get_obs_vector(nextTow,  ... 
-        Config.CONSTELLATIONS,  ...
-        Config.OBS_USED,        ...
-        Config.OBS_COMBINATION, ...
+        config.CONSTELLATIONS,  ...
+        config.OBS_USED,        ...
+        config.OBS_COMBINATION, ...
         gnssRnx.obs,            ...
         gnssRnx.type);
     % Timestamps of epoch to return
     gnss.utcSeconds = gnssRnx.utcSeconds(firstObsIdx);
     gnss.tow = nextTow;
+    
+    if ~isempty(osrRnx)
+    % Obs vector of epoch to return
+    osr.obs = get_obs_vector(nextTow,  ... 
+        config.CONSTELLATIONS,  ...
+        config.OSR_OBS_USED,    ...
+        config.OBS_COMBINATION, ...
+        osrRnx.obs,             ...
+        osrRnx.type);
+    osr.utcSeconds = gnss.utcSeconds;
+    osr.tow = gnss.tow;
+    else
+        osr = [];
+    end
 else % If there aren't more observations
     gnss = [];
+    osr = [];
 end
 end

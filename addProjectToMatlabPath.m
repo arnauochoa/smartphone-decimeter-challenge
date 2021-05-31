@@ -3,13 +3,19 @@ function addProjectToMatlabPath()
 pathOfThisScript = mfilename('fullpath');
 [pathstr, ~, ~] = fileparts(pathOfThisScript);
 % Add folders in 'smartphone-decimeter-challenge' directory
-addpath(genpath([pathstr filesep 'configuration']));
-addpath(genpath([pathstr filesep 'gnss']));
-addpath(genpath([pathstr filesep 'imu']));
-addpath(genpath([pathstr filesep 'input']));
+addpath([pathstr filesep 'android-measurements']);
+addpath([pathstr filesep 'EKF']);
+addEKFToMatlabPath;
+addpath([pathstr filesep 'gps-measurement-tools' filesep 'NmeaUtils']);
+addpath([pathstr filesep 'imu']);
+addpath([pathstr filesep 'input']);
+addpath([pathstr filesep 'INS']);
+addINSToMatlabPath;
 addpath(genpath([pathstr filesep 'lib']));
-addpath(genpath([pathstr filesep 'navigation']));
-addpath(genpath([pathstr filesep 'output']));
-addpath(genpath([pathstr filesep 'utils']));
+addpath([pathstr filesep 'magnitude']);
+addMagnitudeToMatlabPath;
+addpath([pathstr filesep 'navigation']);
+addpath([pathstr filesep 'output']);
+addpath([pathstr filesep 'utils']);
 end
 
