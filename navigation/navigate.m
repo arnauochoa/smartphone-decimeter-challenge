@@ -17,7 +17,7 @@ if ~config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
 %% Obtain first position
 [x0, esekf.P, esekf.tx] = getFirstPosition(phoneRnx, nav);
 esekf.x = zeros(PVTUtils.getNumStates, 1);
-esekf.x(idxStatePos) = x0(idxStatePos) - config.STATION_POS_XYZ;
+esekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
 % Loop variables
 % thisUtcSeconds -> time ref for both IMU and GNSS.
 thisUtcSeconds = esekf.tx; % First time is from the first GNSS estimation
@@ -70,6 +70,7 @@ while ~hasEnded % while there are more observations/measurements
             % Pack arguments that are common for all observations
             fArgs.x0 = x0;
             hArgs.x0 = x0;
+            hArgs.statPos = osrRnx.statPos;
             hArgs.obsConst = doubleDifferences(iObs).constel;
             hArgs.pivSatPos = doubleDifferences(iObs).pivSatPos;
             hArgs.varSatPos = doubleDifferences(iObs).varSatPos;
@@ -100,7 +101,7 @@ while ~hasEnded % while there are more observations/measurements
             result.prRejectedHist(idxEst) = result.prRejectedHist(idxEst) + rejected;
 
             % TODO perform correction when using error-state
-            x0(idxStatePos) = config.STATION_POS_XYZ + esekf.x(idxStatePos);
+            x0(idxStatePos) = osrRnx.statPos + esekf.x(idxStatePos);
 %                 x0(idxStateVel) = esekf.x(idxStateVel);
         end
             % Percentage of rejected code observations
@@ -142,7 +143,7 @@ end %end of function fTransition
 % 
 % z = hArgs.obs;
 % 
-% y = hArgs.x0(idxStatePos) - config.STATION_POS_XYZ;
+% y = hArgs.x0(idxStatePos) - osrRnx.statPos;
 % 
 % % Jacobian matrix
 % H = zeros(3, PVTUtils.getNumStates);
@@ -165,18 +166,18 @@ rxPos = hArgs.x0(idxStatePos);
 z = hArgs.obs;
 
 % Observation estimation
-y = norm(config.STATION_POS_XYZ - hArgs.pivSatPos) - ... % |stat - sat1|
+y = norm(hArgs.statPos - hArgs.pivSatPos) - ... % |stat - sat1|
     norm(rxPos - hArgs.pivSatPos) -                  ... % |user - sat1|
-    norm(config.STATION_POS_XYZ - hArgs.varSatPos) + ... % |stat - sat2|
+    norm(hArgs.statPos - hArgs.varSatPos) + ... % |stat - sat2|
     norm(rxPos - hArgs.varSatPos);                       % |user - sat2|
 
 % Difference between LOS vectors of satellites towards receiver
-pivSatLosVec = unitVector(config.STATION_POS_XYZ - hArgs.pivSatPos);
-varSatLosVec = unitVector(config.STATION_POS_XYZ - hArgs.varSatPos);
+pivSatLosVec = unitVector(hArgs.statPos - hArgs.pivSatPos);
+varSatLosVec = unitVector(hArgs.statPos - hArgs.varSatPos);
 ddLosVec = varSatLosVec - pivSatLosVec;
 
 % figure(1); clf; hold on
-% plot3(config.STATION_POS_XYZ(1), config.STATION_POS_XYZ(2), config.STATION_POS_XYZ(3), '^')
+% plot3(osrRnx.statPos(1), osrRnx.statPos(2), osrRnx.statPos(3), '^')
 % plot3(rxPos(1), rxPos(2), rxPos(3), 'o')
 % plot3(hArgs.pivSatPos(1), hArgs.pivSatPos(2), hArgs.pivSatPos(3), 'v')
 % plot3(hArgs.varSatPos(1), hArgs.varSatPos(2), hArgs.varSatPos(3), 's')

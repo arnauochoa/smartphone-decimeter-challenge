@@ -19,6 +19,8 @@ else % Use observations from GnssLog
     
     phoneRnx.utcSeconds = obsRinexUtcMillis / 1e3;
 end
+firstObsGPST = wntow2datetime(phoneRnx.obs(1, 1), phoneRnx.obs(1, 2));
+lastObsGPST = wntow2datetime(phoneRnx.obs(end, 1), phoneRnx.obs(end, 2));
 
 %% Navigation data
 nav = rinex_v3_nav_parser(getNavFilepaths(config));
@@ -32,12 +34,23 @@ osrRnx.obs = [];
 osrFilepaths = getOSRFilepaths(config);
 if isempty(osrFilepaths)
     osrRnx.type = [];
+    osrRnx.statPos = [];
 else
+    statPos = nan(3, 1);
     for iOsr = 1:length(osrFilepaths)
-        [obs, type] = rinex_v3_obs_parser(osrFilepaths{iOsr});
-        osrRnx.obs = [osrRnx.obs; obs];
+        [obs, type, auxPos] = rinex_v3_obs_parser(osrFilepaths{iOsr});
+        osrFirstObsGPST = wntow2datetime(obs(1, 1), obs(1, 2));
+        osrLastObsGPST = wntow2datetime(obs(end, 1), obs(end, 2));
+        isValid = osrLastObsGPST > firstObsGPST && osrFirstObsGPST < lastObsGPST;
+        if isValid
+            osrRnx.obs = [osrRnx.obs; obs];
+            assert(all(isnan(statPos)) || all(statPos == auxPos), ...
+                'Station positions do not match between different OSR of the same campaign');
+            statPos = auxPos;
+        end
     end
     osrRnx.type = type;
+    osrRnx.statPos = statPos;
 end
 
 

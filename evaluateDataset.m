@@ -1,4 +1,6 @@
 function [err, ref, estPosLla, result] = evaluateDataset()
+    config = Config.getInstance;
+    
     %% Input
     [phoneRnx, imuRaw, nav, ~, osrRnx, ref] = loadData();
 
@@ -8,9 +10,10 @@ function [err, ref, estPosLla, result] = evaluateDataset()
 %     imuClean = preprocessImu(imuRaw);
     imuClean = [];
     
-    %% Interpolate OSR data
-    osrRnx = interpOSR(osrRnx, phoneRnx);
     if ~isempty(osrRnx.obs)
+        %% Interpolate OSR data
+        osrRnx = interpOSR(osrRnx, phoneRnx);
+        
         %% Navigate
         disp('Computing positions...');
         result = navigate(phoneRnx, imuClean, nav, osrRnx, ref);

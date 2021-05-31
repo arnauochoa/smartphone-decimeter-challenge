@@ -13,13 +13,14 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'sample_result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'single';     % 'single' 'all'
-        DATASET_TYPE            = 'train';      % 'train' 'test'
+        EVALUATE_DATASETS       = 'all';     % 'single' 'all'
+        DATASET_TYPE            = 'test';      % 'train' 'test'
         CAMPAIGN_NAME           = '2020-05-14-US-MTV-1';    % only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                    % only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;
 %         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
-        OSR_STATION_NAME        =  'EAWD'; 
+        OSR_SRC                 = 'SwiftNav'     % 'Verizon' 'SwiftNav'
+        OSR_STATION_NAME        = 'EAWD'; 
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
 %             filesep 'igs_data' filesep 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
@@ -30,7 +31,8 @@ classdef (Sealed) Config < handle
         
         %% RTK parameters
         MAX_OSR_INTERP_GAP_SEC  = 15;
-        STATION_POS_XYZ         = [-2705252.9380 -4281214.6105  3864271.5517]';
+%         STATION_POS_XYZ         = [-2726442.2395 -4347315.8851  3775193.6898]';
+           % EAWD: [-2705252.9380 -4281214.6105  3864271.5517]';
 
         %% IMU parameters
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
@@ -38,8 +40,8 @@ classdef (Sealed) Config < handle
         %% Navigation parameters
         CONSTELLATIONS          = 'GE'
         OBS_COMBINATION         = {'none'};
-        OBS_USED                = {'C1C', 'C1X+C5X'}; % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C', 'C1X+C5X'}; % PR Rinex code for OSR data
+        OBS_USED                = {'C1C+C5X', 'C1X+C5X'}; % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C+C5I', 'C1B+C5I'}; % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
         IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
         ELEVATION_MASK          = 10;
@@ -91,7 +93,7 @@ classdef (Sealed) Config < handle
         function [dirPath, fileName] = getObsDirFile(this)
             %GETOBSDIRFILE Returns the directory and the filename of the
             %observation file according to the selected configuration.
-            dirPath = [this.dataPath 'datasets' filesep this.campaignName filesep this.phoneName filesep];
+            dirPath = [this.obsDataPath this.campaignName filesep this.phoneName filesep];
             fileName = [this.phoneName '_GnssLog.txt'];
         end
         
@@ -102,21 +104,35 @@ classdef (Sealed) Config < handle
             %   navigation file in the constant properties.
             filepaths = cell(1, length(this.CONSTELLATIONS));
             utcTimeVec = datevec(this.campaignName(1:10), 'yyyy-mm-dd');
+            targetFilepath = [Config.dataPath 'brdc' filesep this.campaignName filesep];
             for iConst = 1:length(this.CONSTELLATIONS)
-%                 filepaths{iConst} = [this.dataPath 'brdc' filesep this.campaignName ...
-%                     filesep 'BRDC00WRD_R_' this.NAV_FILE_DATETIME '_01D_' ...
-%                     this.CONSTELLATIONS(iConst) 'N.rnx'];
-                filepaths{iConst} = collectBrdc(utcTimeVec, this.CONSTELLATIONS(iConst));
+                filepaths{iConst} = collectBrdc(utcTimeVec, ...
+                    this.CONSTELLATIONS(iConst), targetFilepath);
             end
         end
         
         function filepaths = getOSRFilepaths(this)
             %GETOSRFILEPATH Returns the file path of the OSR file.
-            rootPath = [this.dataPath 'corrections' filesep 'OSR_v3.04' ...
-                filesep this.campaignName filesep];
-            filesInPath = dir(rootPath);
-            idxStation = contains({filesInPath.name}, this.OSR_STATION_NAME);
-            fileNames = {filesInPath(idxStation).name};
+            switch this.OSR_SRC
+                case 'Verizon'
+                    rootPath = [Config.dataPath 'corrections' filesep this.OSR_SRC ...
+                        filesep 'OSR' filesep this.campaignName filesep];
+                    filesInPath = dir(rootPath);
+                    idxStation = contains({filesInPath.name}, this.OSR_STATION_NAME);
+                    fileNames = {filesInPath(idxStation).name};
+                case 'SwiftNav'
+                    rootPath = [Config.dataPath 'corrections' filesep this.OSR_SRC ...
+                        filesep 'OSR' filesep];
+                    osrFileNames = getValidDir(rootPath);
+                    campaignDateStr1 = Config.CAMPAIGN_NAME(1:10);
+                    campaignDateStr2 = erase(campaignDateStr1, '-');
+                    idxFiles = contains(osrFileNames, '.obs') & ...
+                        (contains(osrFileNames, campaignDateStr1) | ...
+                        contains(osrFileNames, campaignDateStr2));
+                    fileNames = osrFileNames(idxFiles); % TODO: test and extract from switch
+                otherwise
+                    error('Invalid Config.OSR_SRC');
+            end
             filepaths = cell(1, length(fileNames));
             for iOsr = 1:length(fileNames)
                 filepaths{iOsr} = [rootPath fileNames{iOsr}];
@@ -131,24 +147,19 @@ classdef (Sealed) Config < handle
             fileName = ['SPAN_' this.phoneName '_10Hz.nmea'];
         end
         
-        function path = dataPath(this)
-            % TRAINPATH Returns the absolute path where all the training data is saved
-            path = [workspacePath 'data' filesep this.DATASET_TYPE filesep];
+        function path = obsDataPath(this)
+            % TRAINPATH Returns the absolute path where the obs data is saved
+            path = [Config.dataPath this.DATASET_TYPE filesep];
         end
-        
-%         function P0 = getP0(this)
-%             P0 = diag([ this.SIGMA_P0_POS_NED ...
-%                 this.SIGMA_P0_VEL_NED ...
-%                 this.SIGMA_P0_CLK_BIAS       ...
-%                 this.SIGMA_P0_CLK_DRIFT      ...
-%                 this.SIGMA_P0_CLK_INTERFREQ	...
-%                 this.SIGMA_P0_CLK_INTERSYS]);
-%         end
         
     end
     
     %% Private methods
     methods (Static, Access = private)
+        function path = dataPath()
+            % TRAINPATH Returns the absolute path where the obs data is saved
+            path = [workspacePath 'data' filesep 'sdc-data' filesep];
+        end
         
         function crx2rnx(filepath)
             cmd = [projectPath 'lib' filesep 'RNXCMP_4.0.8' filesep 'bin' filesep 'CRX2RNX ' filepath];

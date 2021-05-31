@@ -51,7 +51,8 @@ for iSat = 1:nOsrSats
     end
 end
 
+% Copy all fields but obs matrix
+osrRnxOut = osrRnxRaw;
 % Save osrRnx sorted by time, then const, then sat
 osrRnxOut.obs = sortrows(osrRnxAux, [GnssLogUtils.COL_WN GnssLogUtils.COL_TOW GnssLogUtils.COL_CONST GnssLogUtils.COL_SVN]);
-osrRnxOut.type = osrRnxRaw.type;
 end

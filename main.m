@@ -14,13 +14,12 @@ switch config.EVALUATE_DATASETS
         disp('Plotting results...')
         plotResults(ref, estPosLla, result);
     case 'all'
-        datasetsPath = [config.dataPath 'datasets' filesep];
-        campaignNames = getValidDir(datasetsPath);
+        campaignNames = getValidDir(config.obsDataPath);
         idxInvalid = strcmp(campaignNames, '.') | strcmp(campaignNames, '..');
         campaignNames(idxInvalid) = [];
         for iCampaign = 1:length(campaignNames)
             config.campaignName = campaignNames{iCampaign};
-            campaignPath = [datasetsPath campaignNames{iCampaign} filesep];
+            campaignPath = [config.obsDataPath campaignNames{iCampaign} filesep];
             phoneNames = getValidDir(campaignPath);
             for iPhone = 1:length(phoneNames)
                 config.phoneName = phoneNames{iPhone};

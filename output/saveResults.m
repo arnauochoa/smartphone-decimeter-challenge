@@ -23,7 +23,7 @@ resultsHeader = 'phone,millisSinceGpsEpoch,latDeg,lngDeg\n';
 
 %% Data preparation
 % Convert UTC (sec) timestamp to GPS (millis)
-utcDateVec = datevec(Constants.DAYS_TO_UTC+utcSecondsHist/Constants.SECONDS_IN_DAY);
+utcDateVec = utcSeconds2datevec(utcSecondsHist);
 [~, secondsSinceGpsEpoch, ~] = Utc2Gps(utcDateVec);
 millisSinceGpsEpoch = secondsSinceGpsEpoch * 1e3;
 
