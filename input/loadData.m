@@ -47,6 +47,9 @@ while isempty(osrRnx.obs)
             osrLastObsGPST = wntow2datetime(obs(end, 1), obs(end, 2));
             isValid = osrLastObsGPST > firstObsGPST && osrFirstObsGPST < lastObsGPST;
             if isValid
+                if isempty(osrRnx.obs) % Display only first time
+                    fprintf('Using OSR data from %s\n', config.OSR_SOURCES{idxOsrSrc});
+                end
                 osrRnx.obs = [osrRnx.obs; obs];
                 assert(all(isnan(statPos)) || all(statPos == auxPos), ...
                     'Station positions do not match between different OSR of the same campaign');
