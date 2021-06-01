@@ -109,6 +109,8 @@ while ~hasEnded % while there are more observations/measurements
     end
     
     result.utcSeconds(idxEst) = thisUtcSeconds;
+    result.gpsWeekN(idxEst) = phoneGnss.weekN;
+    result.gpsTow(idxEst) = phoneGnss.tow;
     
     result.xEst(:, idxEst) = x0;
     result.sigmaHist(:, idxEst) = sqrt(diag(esekf.P));

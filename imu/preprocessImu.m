@@ -71,6 +71,8 @@ else
     imuClean.utcSeconds = imuRaw.(imuSensorNames{indMin}).utcTimeMillis / 1e3;
     
     % Interpolate measurements at imuTime
+    [imuRaw.acc.utcTimeMillis, accBodyMps2] = ...
+        cleanRepeatedSamplePts(imuRaw.acc.utcTimeMillis, accBodyMps2);
     for iCoord = 1:3
         imuClean.accBodyMps2(:, iCoord) = interp1gap(   ...
             imuRaw.acc.utcTimeMillis / 1e3,             ...
@@ -81,6 +83,8 @@ else
             'extrap',nan);
     end
     
+    [imuRaw.gyr.utcTimeMillis, gyrBodyRadPerSec] = ...
+        cleanRepeatedSamplePts(imuRaw.gyr.utcTimeMillis, gyrBodyRadPerSec);
     for iCoord = 1:3
         imuClean.gyrBodyRadPerSec(:, iCoord) = interp1gap(  ...
             imuRaw.gyr.utcTimeMillis / 1e3,                 ...
@@ -91,6 +95,8 @@ else
             'extrap',nan);
     end
     
+    [imuRaw.mag.utcTimeMillis, magBodyMicroT] = ...
+        cleanRepeatedSamplePts(imuRaw.mag.utcTimeMillis, magBodyMicroT);
     for iCoord = 1:3
         imuClean.magBodyMicroT(:, iCoord) = interp1gap( ...
             imuRaw.mag.utcTimeMillis / 1e3,             ...
@@ -112,6 +118,4 @@ end
 % figure; plot(imuRaw.acc.utcTimeMillis, [imuRaw.acc.UncalAccelXMps2 imuRaw.acc.UncalAccelYMps2 imuRaw.acc.UncalAccelZMps2], '.')
 % figure; plot(imuRaw.gyr.utcTimeMillis, [imuRaw.gyr.UncalGyroXRadPerSec imuRaw.gyr.UncalGyroYRadPerSec imuRaw.gyr.UncalGyroZRadPerSec], '.')
 % figure; plot(imuRaw.mag.utcTimeMillis, [imuRaw.mag.UncalMagXMicroT imuRaw.mag.UncalMagYMicroT imuRaw.mag.UncalMagZMicroT], '.')
-
 end
-

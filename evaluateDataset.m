@@ -3,14 +3,14 @@ function [err, ref, estPosLla, result] = evaluateDataset()
     
     %% Input
     [phoneRnx, imuRaw, nav, ~, osrRnx, ref] = loadData();
-
-    %% Compute geometry
-
-    %% Pre-process IMU measurements
-%     imuClean = preprocessImu(imuRaw);
-    imuClean = [];
     
     if ~isempty(osrRnx.obs)
+        %% Compute geometry
+
+        %% Pre-process IMU measurements
+        imuClean = preprocessImu(imuRaw);
+%         imuClean = [];
+    
         %% Interpolate OSR data
         osrRnx = interpOSR(osrRnx, phoneRnx);
         
@@ -20,7 +20,7 @@ function [err, ref, estPosLla, result] = evaluateDataset()
 
         %% Output
         disp('Navigation ended, saving results...');
-        estPosLla = saveResults(result.xEst, result.utcSeconds);
+        estPosLla = saveResults(result);
         err = Constants.NO_ERR;
     else
         err = Constants.ERR_NO_OSR;

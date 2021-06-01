@@ -38,6 +38,7 @@ if ~isempty(firstObsIdx) % If there are more observations
         gnssRnx.type);
     % Timestamps of epoch to return
     gnss.utcSeconds = gnssRnx.utcSeconds(firstObsIdx);
+    gnss.weekN = gnssRnx.obs(firstObsIdx, 1);
     gnss.tow = nextTow;
     
     if ~isempty(osrRnx)
@@ -49,6 +50,7 @@ if ~isempty(firstObsIdx) % If there are more observations
         osrRnx.obs,             ...
         osrRnx.type);
     osr.utcSeconds = gnss.utcSeconds;
+    osr.weekN = gnss.weekN;
     osr.tow = gnss.tow;
     else
         osr = [];
