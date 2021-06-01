@@ -50,7 +50,7 @@ numCommonSats = length(commonSats);
 % Num of observations not found in OSR data
 nDiscard = length(rxObs) - length(commonSats);
 
-if numCommonSats > 1
+if numCommonSats > 1 && ~isempty([osrObs(:).C]) && ~isempty([osrObs(:).L])
     % Keep only common satellites
     rxObs = rxObs(iRxObs);
     satPos = satPos(:, iRxObs);

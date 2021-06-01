@@ -1,12 +1,12 @@
 function [dataLocalFilepath] = collectBrdc(utcTimeVec, const, targetFilepath)
 
-config = Config.getInstance;
+% config = Config.getInstance;
 
 year = utcTimeVec(1);
 
 ftpFilepath = strcat('IGS/BRDC/',string(year), '/');
 
-dayNumber = string(DayOfYear(utcTimeVec));
+dayNumber = num2str(DayOfYear(utcTimeVec), '%03d');
 
 ftpFilepath = strcat(ftpFilepath, dayNumber, '/');
 

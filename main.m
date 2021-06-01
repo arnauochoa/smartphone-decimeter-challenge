@@ -15,8 +15,6 @@ switch config.EVALUATE_DATASETS
         plotResults(ref, estPosLla, result);
     case 'all'
         campaignNames = getValidDir(config.obsDataPath);
-        idxInvalid = strcmp(campaignNames, '.') | strcmp(campaignNames, '..');
-        campaignNames(idxInvalid) = [];
         for iCampaign = 1:length(campaignNames)
             config.campaignName = campaignNames{iCampaign};
             campaignPath = [config.obsDataPath campaignNames{iCampaign} filesep];

@@ -33,7 +33,7 @@ iono.beta = [.8192E+05   .9830E+05  -.6554E+05  -.5243E+06]';
 osrRnx.obs = [];
 idxOsrSrc = 0;
 % Use first OSR source with valid data
-while isempty(osrRnx.obs)
+while isempty(osrRnx.obs) && idxOsrSrc < length(config.OSR_SOURCES)
     idxOsrSrc = idxOsrSrc + 1;
     osrFilepaths = getOSRFilepaths(config, config.OSR_SOURCES{idxOsrSrc});
     if isempty(osrFilepaths)

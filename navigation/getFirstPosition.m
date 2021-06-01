@@ -46,8 +46,9 @@ while ~firstValidEpoch
 end
 % compute LS position
 % Approximate position is at lat = 0, lon = 0, alt = 0, clk = 0, interconstellation clk bias = 0
-xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, PVTUtils.getNumConstellations()-1)]';
-[xLS, PLS] = compute_spp_ls(phoneGnss.obs, satPos, satClkBias, xLS, config.CONSTELLATIONS);
+obsConstel = intersect(Config.CONSTELLATIONS, unique([phoneGnss.obs.constellation]), 'stable');
+xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, length(obsConstel)-1)]';
+[xLS, PLS] = compute_spp_ls(phoneGnss.obs, satPos, satClkBias, xLS, obsConstel);
 
 % Fill ouptuts with LS estimates
 [x0, P0] = fillFullState(xLS, PLS);
