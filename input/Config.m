@@ -10,7 +10,7 @@ classdef (Sealed) Config < handle
     
     properties (Constant)
         %% Results
-        RES_FILENAME            = 'sample_result';
+        RES_FILENAME            = 'result';
         
         %% Dataset selection
         EVALUATE_DATASETS       = 'all';     % 'single' 'all'

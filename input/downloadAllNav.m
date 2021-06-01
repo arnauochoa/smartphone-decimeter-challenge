@@ -7,6 +7,6 @@ for iCampaign = 1:length(campaignNames)
     phoneNames = getValidDir(campaignPath);
     for iPhone = 1:length(phoneNames)
         config.phoneName = phoneNames{iPhone};
-        getNavFilepaths(config)
+        getNavFilepaths(config);
     end
 end
