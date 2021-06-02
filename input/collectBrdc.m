@@ -1,6 +1,4 @@
-function [dataLocalFilepath] = collectBrdc(utcTimeVec, const, targetFilepath, rnxType)
-
-% config = Config.getInstance;
+function [dataLocalFilepath] = collectBrdc(utcTimeVec, const, targetFilepath)
 
 year = utcTimeVec(1);
 
@@ -10,14 +8,7 @@ dayNumber = num2str(DayOfYear(utcTimeVec), '%03d');
 
 ftpFilepath = strcat(ftpFilepath, dayNumber, '/');
 
-switch rnxType
-    case 'nav'
-        dataFilename = strcat('BRDC00WRD_R_', string(year), dayNumber, '0000_01D_', const, 'N.rnx');
-    case 'obs'
-        
-    otherwise 
-        error('Invalid value for rnxType');
-end
+dataFilename = strcat('BRDC00WRD_R_', string(year), dayNumber, '0000_01D_', const, 'N.rnx');
 
 dataLocalFilepath = strcat(targetFilepath, dataFilename);
 gzFilename = strcat(dataFilename, '.gz');

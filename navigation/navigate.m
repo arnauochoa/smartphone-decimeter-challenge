@@ -53,7 +53,7 @@ while ~hasEnded % while there are more observations/measurements
     % Obtain satellite elevations
     [~, satElDeg, ~] = getSatAzEl(satPos, x0(idxStatePos));
 
-    if length([phoneGnss.obs(:).C]) < 4 + PVTUtils.getNumFrequencies + PVTUtils.getNumConstellations
+    if isempty(phoneGnss.obs)
         warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', phoneGnss.tow);
         % Initial estimate for the transition model
         fArgs.x0 = x0;

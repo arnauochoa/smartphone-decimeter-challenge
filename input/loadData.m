@@ -18,9 +18,16 @@ else % Use observations from GnssLog
         getGnssLogObs(obsDirPath, obsFileName, config.FILTER_RAW_MEAS);
     
     phoneRnx.utcSeconds = obsRinexUtcMillis / 1e3;
+    % Correct GPS week number (wrong in some campaigns)
+    gpst = Utc2Gps(utcSeconds2datevec(phoneRnx.utcSeconds));
+    phoneRnx.obs(:, 1) = gpst(:, 1);
 end
 firstObsGPST = wntow2datetime(phoneRnx.obs(1, 1), phoneRnx.obs(1, 2));
 lastObsGPST = wntow2datetime(phoneRnx.obs(end, 1), phoneRnx.obs(end, 2));
+% firstObsGPST = Utc2Gps(utcSeconds2datevec(phoneRnx.utcSeconds(1)));
+% firstObsGPST = wntow2datetime(firstObsGPST(1), firstObsGPST(2));
+% lastObsGPST = Utc2Gps(utcSeconds2datevec(phoneRnx.utcSeconds(end)));
+% lastObsGPST = wntow2datetime(lastObsGPST(1), lastObsGPST(2));
 
 %% Navigation data
 nav = rinex_v3_nav_parser(getNavFilepaths(config));

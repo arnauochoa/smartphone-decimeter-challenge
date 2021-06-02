@@ -15,11 +15,11 @@ classdef (Sealed) Config < handle
         %% Dataset selection
         EVALUATE_DATASETS       = 'all';     % 'single' 'all'
         DATASET_TYPE            = 'test';      % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-05-15-US-MTV-1';    % only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2020-06-10-US-MTV-1';    % only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                    % only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;
 %         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
-        OSR_SOURCES             = {'SwiftNav', 'Verizon'}     % By order of preference
+        OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}     % By order of preference
         OSR_STATION_NAME        = 'EAWD'; 
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
@@ -116,9 +116,9 @@ classdef (Sealed) Config < handle
                 case 'Verizon'
                     rootPath = [Config.dataPath 'corrections' filesep osrSource ...
                         filesep 'OSR' filesep this.campaignName filesep];
-                    filesInPath = dir(rootPath);
-                    idxStation = contains({filesInPath.name}, this.OSR_STATION_NAME);
-                    fileNames = {filesInPath(idxStation).name};
+                    filesInPath = getValidDir(rootPath);
+                    idxStation = contains(filesInPath, this.OSR_STATION_NAME);
+                    fileNames = filesInPath(idxStation);
                 case 'SwiftNav'
                     rootPath = [Config.dataPath 'corrections' filesep osrSource ...
                         filesep 'OSR' filesep];
@@ -129,6 +129,12 @@ classdef (Sealed) Config < handle
                         (contains(osrFileNames, campaignDateStr1) | ...
                         contains(osrFileNames, campaignDateStr2));
                     fileNames = osrFileNames(idxFiles); % TODO: test and extract from switch
+                case 'IGS'
+                    rootPath = [Config.dataPath 'corrections' filesep osrSource ...
+                        filesep 'OSR' filesep this.campaignName(1:10) filesep];
+                    if ~exist(rootPath, 'dir'), mkdir(rootPath); end
+                    utcTimeVec = datevec(this.campaignName(1:10), 'yyyy-mm-dd');
+                    fileNames = collectOsrIGS(utcTimeVec, rootPath);
                 otherwise
                     error('Invalid Config.OSR_SOURCES');
             end

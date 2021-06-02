@@ -1,6 +1,6 @@
 % Compare our file with sample submission provided by Google
 
-ourFilePath = 'data/results/test/all/sample_result_20210601_162041.csv';
+ourFilePath = 'data/results/test/all/result_20210602_160144.csv';
 
 refTable = readtable('data/sample_submission.csv');
 ourTable = readtable(ourFilePath);
