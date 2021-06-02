@@ -13,9 +13,9 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'all';     % 'single' 'all'
+        EVALUATE_DATASETS       = 'single';     % 'single' 'all'
         DATASET_TYPE            = 'test';      % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-06-10-US-MTV-1';    % only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2020-05-28-US-MTV-1';    % only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                    % only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;
 %         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename

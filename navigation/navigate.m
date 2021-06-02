@@ -54,10 +54,14 @@ while ~hasEnded % while there are more observations/measurements
     [~, satElDeg, ~] = getSatAzEl(satPos, x0(idxStatePos));
 
     if isempty(phoneGnss.obs)
-        warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', phoneGnss.tow);
-        % Initial estimate for the transition model
-        fArgs.x0 = x0;
-        esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
+%         warning('TOW = %d - Not enough observations to estimate a potition. Propagating state.', phoneGnss.tow);
+%         % Initial estimate for the transition model
+%         fArgs.x0 = x0;
+%         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
+        fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.', phoneGnss.tow);
+        [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
+        hasEnded = isempty(phoneGnss); % TODO check imu
+        continue
     else
 %         refPos = Lla2Xyz(ref.posLla(idxRef, :))'; % TODO: remove
         doubleDifferences = computeDoubleDifferences(osrGnss, phoneGnss, satPos, satElDeg);

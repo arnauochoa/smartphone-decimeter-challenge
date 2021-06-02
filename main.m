@@ -10,7 +10,7 @@ config = Config.getInstance;
 
 switch config.EVALUATE_DATASETS
     case 'single'
-        [err, ref, estPosLla, result] = evaluateDataset();
+        [err, ref, estPosLla, result, ~] = evaluateDataset();
         disp('Plotting results...')
         plotResults(ref, estPosLla, result);
     case 'all'
@@ -22,8 +22,11 @@ switch config.EVALUATE_DATASETS
             for iPhone = 1:length(phoneNames)
                 config.phoneName = phoneNames{iPhone};
                 fprintf('Evaluating %s/%s \n', config.campaignName, config.phoneName)
-                err = evaluateDataset();
+                [err, ~, ~, ~, resultsFilePath] = evaluateDataset();
             end
+        end
+        if strcmp(config.DATASET_TYPE, 'test')
+            checkOutputFile(resultsFilePath);
         end
     otherwise
         error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');

@@ -1,4 +1,4 @@
-function estPosLla = saveResults(result)
+function [estPosLla, resultsFilePath] = saveResults(result)
 %SAVERESULTS Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -8,13 +8,13 @@ assert(size(result.xEst, 2) == nEpochs, 'Inputs do not have the same number of e
 
 %% Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-resultsPath = [workspacePath 'data' filesep 'results' filesep config.DATASET_TYPE filesep];
+resultsDir = [workspacePath 'data' filesep 'results' filesep config.DATASET_TYPE filesep];
 switch config.EVALUATE_DATASETS
     case 'single'
-        resultsPath = [resultsPath config.campaignName filesep];
+        resultsDir = [resultsDir config.campaignName filesep];
         resultsFilename = [config.phoneName '_' config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
     case 'all'
-        resultsPath = [resultsPath 'all' filesep];
+        resultsDir = [resultsDir 'all' filesep];
         resultsFilename = [config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
     otherwise
         error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
@@ -41,11 +41,12 @@ estPosLla = [posLat, posLon, posAlt];
 
 %% Write data to file
 % Check if folder exists, otherwise create it
-if ~exist(resultsPath, 'dir'), mkdir(resultsPath); end
+if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
+resultsFilePath = [resultsDir resultsFilename];
 % Flag to write header if file does not exist
-writeHeader = ~exist([resultsPath resultsFilename], 'file');
+writeHeader = ~exist(resultsFilePath, 'file');
 % Open file in append mode
-fid = fopen([resultsPath resultsFilename], 'a');
+fid = fopen(resultsFilePath, 'a');
 % Write header if necessary
 if writeHeader, fprintf(fid, resultsHeader); end
 for iEpoch = 1:nEpochs

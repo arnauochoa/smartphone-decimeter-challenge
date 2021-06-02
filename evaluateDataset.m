@@ -1,4 +1,4 @@
-function [err, ref, estPosLla, result] = evaluateDataset()
+function [err, ref, estPosLla, result, resultsFilePath] = evaluateDataset()
     config = Config.getInstance;
     
     %% Input
@@ -20,7 +20,7 @@ function [err, ref, estPosLla, result] = evaluateDataset()
 
         %% Output
         disp('Navigation ended, saving results...');
-        estPosLla = saveResults(result);
+        [estPosLla, resultsFilePath] = saveResults(result);
         err = Constants.NO_ERR;
     else
         err = Constants.ERR_NO_OSR;
