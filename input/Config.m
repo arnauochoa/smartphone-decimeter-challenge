@@ -13,14 +13,14 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'all';     % 'single' 'all'
-        DATASET_TYPE            = 'test';      % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-05-28-US-MTV-1';    % only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Pixel4';                    % only if EVALUATE_DATASETS = single
-        FILTER_RAW_MEAS         = true;
-%         NAV_FILE_DATETIME       = '20202190000'; % Date in broadcasted obs RINEX filename
-        OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}     % By order of preference
-        OSR_STATION_NAME        = 'EAWD'; 
+        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
+        DATASET_TYPE            = 'train';                                  % 'train' 'test'
+        CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
+        FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
+        OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}            % By order of preference
+        OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
+        
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
 %             filesep 'igs_data' filesep 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
@@ -36,20 +36,19 @@ classdef (Sealed) Config < handle
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
         
         %% Navigation parameters
-        CONSTELLATIONS          = 'GE'
+        CONSTELLATIONS          = 'GEC'
         OBS_COMBINATION         = {'none'};
-        OBS_USED                = {'C1C+C5X', 'C1X+C5X'}; % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C+C5I', 'C1B+C5I'}; % PR Rinex code for OSR data
-        CONST_COV_FACTORS       = [1 1];            % Covariance factor for each constellation
-        IONO_CORRECTION         = 'Klobuchar';      % among 'none' and 'Klobuchar'
-        ELEVATION_MASK          = 10;
-        MEAS_COV_SRC            = 'elevation';    % among 'elevation' and 'uncertainty'
-        MAX_DOPPLER_MEAS        = 6e3;          % Maximum doppler measurement
-        MAX_DOPPLER_UNCERT      = 10;
+        OBS_USED                = {'C1C+C5X', 'C1X+C5X', 'C2X'};            % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C+C5I', 'C1B+C5I', 'C2X'};            % PR Rinex code for OSR data
+        CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
+        ELEVATION_MASK          = 10;                                       % Elevation mask in degrees
+        MEAS_COV_SRC            = 'uncertainty';                            % Among 'elevation' and 'uncertainty'
+%         MAX_DOPPLER_MEAS        = 6e3;                                      % Maximum doppler measurement 
+%         MAX_DOPPLER_UNCERT      = 10;                                       % Maximum doppler uncertainty
         
         %% KF tuning parameters
         % Process noise covariance matrix - Q
-        SIGMA_Q_POS               = 1e10;         % std of XYZ position
+        SIGMA_Q_POS             = 1e10;         % std of XYZ position
 %         SIGMA_VEL_NED           = [0.1 0.1 0.1]';  % std m/sqrt(s^3) of NED velocity
         % Measurement covariance matrix - R
         SIGMA_PR_M              = 1e1;          % Default std (m) for pseudorange meas (elevation-based model)

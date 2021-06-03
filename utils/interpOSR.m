@@ -32,7 +32,8 @@ for iSat = 1:nOsrSats
         thisSatObsInterp = nan(length(rxTow), nObsConst);
 
         for iObs = 1:nObsConst
-            if all(isnan(thisSatRnx(:, GnssLogUtils.COL_SVN + iObs)))
+            % Interpolate only if there are at least two points
+            if sum(~isnan(thisSatRnx(:, GnssLogUtils.COL_SVN + iObs))) < 2
                 thisSatObsInterp(:, iObs) = nan(size(rxTow));
             else
                 thisSatObsInterp(:, iObs) = interp1gap(         ...
