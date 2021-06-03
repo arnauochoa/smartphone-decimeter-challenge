@@ -58,7 +58,7 @@ while ~hasEnded % while there are more observations/measurements
 %         % Initial estimate for the transition model
 %         fArgs.x0 = x0;
 %         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
-        fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.', phoneGnss.tow);
+        fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);
         [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
         hasEnded = isempty(phoneGnss); % TODO check imu
         continue

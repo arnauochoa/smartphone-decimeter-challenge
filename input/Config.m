@@ -13,7 +13,7 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'single';     % 'single' 'all'
+        EVALUATE_DATASETS       = 'all';     % 'single' 'all'
         DATASET_TYPE            = 'test';      % 'train' 'test'
         CAMPAIGN_NAME           = '2020-05-28-US-MTV-1';    % only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                    % only if EVALUATE_DATASETS = single
@@ -31,8 +31,6 @@ classdef (Sealed) Config < handle
         
         %% RTK parameters
         MAX_OSR_INTERP_GAP_SEC  = 15;
-%         STATION_POS_XYZ         = [-2726442.2395 -4347315.8851  3775193.6898]';
-           % EAWD: [-2705252.9380 -4281214.6105  3864271.5517]';
 
         %% IMU parameters
         MAX_IMU_INTERP_GAP_SEC  = 0.02;

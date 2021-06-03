@@ -36,5 +36,8 @@ for iCamp = 1:length(refTableCampaigns)
     end
 end
 end
-
 % figure; plot([refTableCamp{3}.millisSinceGpsEpoch; refTableCamp{3}.millisSinceGpsEpoch(end)*[1;1;1]] - ourTableCamp{3}.millisSinceGpsEpoch)
+% dtRef = diff(refTableCamp{4}.millisSinceGpsEpoch);
+% dtOur = diff(ourTableCamp{4}.millisSinceGpsEpoch);
+% figure; plot(dtRef)
+% figure; plot(dtOur)

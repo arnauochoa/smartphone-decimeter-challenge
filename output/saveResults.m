@@ -3,8 +3,7 @@ function [estPosLla, resultsFilePath] = saveResults(result)
 %   Detailed explanation goes here
 
 config = Config.getInstance;
-nEpochs = length(result.utcSeconds);
-assert(size(result.xEst, 2) == nEpochs, 'Inputs do not have the same number of epochs');
+assert(size(result.xEst, 2) == length(result.utcSeconds), 'Inputs do not have the same number of epochs');
 
 %% Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
@@ -19,7 +18,6 @@ switch config.EVALUATE_DATASETS
     otherwise
         error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
 end
-resultsHeader = 'phone,millisSinceGpsEpoch,latDeg,lngDeg\n';
 
 %% Data preparation
 % Convert UTC (sec) timestamp to GPS (millis)
@@ -40,6 +38,24 @@ millisSinceGpsEpoch = secondsSinceGpsEpoch * 1e3;
 estPosLla = [posLat, posLon, posAlt];
 
 %% Write data to file
+resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla);
+
+%% Interpolate to match sample submission time
+if strcmp(config.EVALUATE_DATASETS, 'all') && strcmp(config.DATASET_TYPE, 'test')
+    resultsFilename = [config.RES_FILENAME '_interp_' config.resFileTimestamp '.csv'];
+    refTable = readtable('data/sample_submission.csv');
+    refTableThis = refTable(strcmp(refTable.phone, [config.campaignName '_' config.phoneName]), :);
+
+    estPosLlaInt = interp1(millisSinceGpsEpoch, estPosLla, refTableThis.millisSinceGpsEpoch, 'spline', 'extrap');
+    writeResult(resultsDir, resultsFilename, refTableThis.millisSinceGpsEpoch, estPosLlaInt);
+end
+end
+
+
+function resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla)
+config = Config.getInstance;
+resultsHeader = 'phone,millisSinceGpsEpoch,latDeg,lngDeg\n';
+
 % Check if folder exists, otherwise create it
 if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
 resultsFilePath = [resultsDir resultsFilename];
@@ -49,7 +65,7 @@ writeHeader = ~exist(resultsFilePath, 'file');
 fid = fopen(resultsFilePath, 'a');
 % Write header if necessary
 if writeHeader, fprintf(fid, resultsHeader); end
-for iEpoch = 1:nEpochs
+for iEpoch = 1:length(millisSinceGpsEpoch)
     fprintf(fid, '%s_%s,', config.campaignName, config.phoneName);      % phone
     fprintf(fid, '%d,', millisSinceGpsEpoch(iEpoch));                   % millisSinceGpsEpoch
     fprintf(fid, '%.15f,%.14f', estPosLla(iEpoch, 1), estPosLla(iEpoch, 2)); % latDeg,lngDeg
@@ -57,4 +73,3 @@ for iEpoch = 1:nEpochs
 end
 fclose(fid);
 end
-
