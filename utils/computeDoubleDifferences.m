@@ -36,12 +36,16 @@ if isempty(fieldnames(doubleDifferences))
     doubleDifferences = [];
 end
 if nDiscarded > 0 && ~strcmp(Config.EVALUATE_DATASETS, 'all')
-    fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
+%     fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
 end
 end
 
 function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg)
 % GETDD Computes the DD of the two given sets of observations
+
+% Discard nan values from OSR
+idxNan = isnan([osrObs(:).C]);
+osrObs(idxNan) = [];
 
 % Common satellites between receiver and OSR station
 [commonSats, iRxObs, iOsrObs] = intersect([rxObs.prn], [osrObs.prn]);
@@ -56,6 +60,7 @@ if numCommonSats > 1 && ~isempty([osrObs(:).C]) && ~isempty([osrObs(:).L])
     satPos = satPos(:, iRxObs);
     satElDeg = satElDeg(iRxObs);
     osrObs = osrObs(iOsrObs);
+    
     
     % Single differences for each satellite
     codeSd = [osrObs(:).C] - [rxObs(:).C];

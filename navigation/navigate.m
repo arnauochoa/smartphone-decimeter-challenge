@@ -12,6 +12,7 @@ gnssEpochs = unique(phoneRnx.utcSeconds);
 nGnssEpochs = length(gnssEpochs);
 % EKF:
 esekf = EKF.build(uint16(nStates));
+esekf.probabilityOfFalseOutlierRejection = 1e-2;
 if ~config.OUTLIER_REJECTION, esekf.probabilityOfFalseOutlierRejection = 0; end
 
 % TODO: debugging variables, check which need to be kept
@@ -109,6 +110,7 @@ for iObs = 1:length(doubleDifferences)
     
     % Pack arguments that are common for all DDs
     fArgs.x0 = x0;
+    fArgs.statPos = osrRnx.statPos;
     hArgs.x0 = x0;
     hArgs.statPos = osrRnx.statPos;
     hArgs.obsConst = doubleDifferences(iObs).constel;
@@ -162,9 +164,10 @@ idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
 for iObs = 1:length(phoneGnss.obs)
     thisObs = phoneGnss.obs(iObs);
     idxSat = PVTUtils.getSatelliteIndex(thisObs.prn, thisObs.constellation);
-    if ~isempty(thisObs.D_Hz)
+    if ~isempty(thisObs.D_Hz) && ~isnan(thisObs.D_Hz)
         % Pack arguments that are common for all observations
         fArgs.x0 = x0;
+        fArgs.statPos = osrRnx.statPos;
         hArgs.x0 = x0;
         hArgs.satPos = sat.pos(:, iObs);
         hArgs.satVel = sat.vel(:, iObs);
@@ -208,6 +211,7 @@ function [x2, F, Q] = fTransition(x1, t1, t2, fArgs)
 config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
 
 % Transition time step
 dt = t2 - t1;
@@ -223,6 +227,7 @@ x2 = F * x1;
 % Process noise covariance matrix
 Q = zeros(PVTUtils.getNumStates);
 Q(idxStateVel, idxStateVel) = diag(config.SIGMA_Q_VEL_XYZ.^2);
+Q(idxStateClkDrift, idxStateClkDrift) = config.SIGMA_P0_CLK_DRIFT.^2;
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

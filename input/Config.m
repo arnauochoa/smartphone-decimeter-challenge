@@ -13,9 +13,9 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
-        DATASET_TYPE            = 'train';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
+        DATASET_TYPE            = 'test';                                  % 'train' 'test'
+        CAMPAIGN_NAME           = '2020-06-10-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}            % By order of preference
@@ -42,7 +42,7 @@ classdef (Sealed) Config < handle
         OSR_OBS_USED            = {'C1C+C5I', 'C1B+C5I', 'C2X'};            % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
         ELEVATION_MASK          = 10;                                       % Elevation mask in degrees
-        MEAS_COV_SRC            = 'uncertainty';                            % Among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC            = 'elevation';                            % Among 'elevation' and 'uncertainty'
 %         MAX_DOPPLER_MEAS        = 6e3;                                      % Maximum doppler measurement 
 %         MAX_DOPPLER_UNCERT      = 10;                                       % Maximum doppler uncertainty
         
@@ -56,8 +56,8 @@ classdef (Sealed) Config < handle
         COV_FACTOR_C            = 1e2;              % Covariance factor for pseudorange meas
         COV_FACTOR_D            = 1e4;              % Covariance factor for Doppler meas
         % State covariance matrix initialization - P0
-        SIGMA_P0_VEL_XYZ        = [10 10 10];          % std m/sqrt(s^3) of initial XYZ velocity
-        SIGMA_P0_CLK_DRIFT      = 100;               % std m/sqrt(s^3) of initial clock drift
+        SIGMA_P0_VEL_XYZ        = [1e1 1e1 1e1];          % std m/sqrt(s^3) of initial XYZ velocity
+        SIGMA_P0_CLK_DRIFT      = 1e2;               % std m/sqrt(s^3) of initial clock drift
         
     end
     

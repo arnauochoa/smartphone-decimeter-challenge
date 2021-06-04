@@ -7,7 +7,7 @@ clc;
 config = Config.getInstance;
 delete(config); % Delete previous instance of Config
 config = Config.getInstance;
-
+tic
 switch config.EVALUATE_DATASETS
     case 'single'
         [err, ref, estPosLla, result, ~] = evaluateDataset();
@@ -31,3 +31,4 @@ switch config.EVALUATE_DATASETS
     otherwise
         error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
 end
+toc
