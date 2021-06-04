@@ -48,15 +48,16 @@ classdef (Sealed) Config < handle
         
         %% KF tuning parameters
         % Process noise covariance matrix - Q
-        SIGMA_Q_POS             = 1e10;         % std of XYZ position
-%         SIGMA_VEL_NED           = [0.1 0.1 0.1]';  % std m/sqrt(s^3) of NED velocity
+        SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
+        SIGMA_Q_CLK_DRIFT       = 0.5;              % std m/sqrt(s^3) of clock drift
         % Measurement covariance matrix - R
-        SIGMA_PR_M              = 1e1;          % Default std (m) for pseudorange meas (elevation-based model)
-        SIGMA_DOP_MPS           = 1e0;          % Default std (m/s) for doppler meas (elevation-based model)
-        COV_FACTOR_C            = 1e2;          % Covariance factor for pseudorange meas
-        COV_FACTOR_D            = 1e4;          % Covariance factor for Doppler meas
+        SIGMA_PR_M              = 1e1;              % Default std (m) for pseudorange meas (elevation-based model)
+        SIGMA_DOP_MPS           = 1e0;              % Default std (m/s) for doppler meas (elevation-based model)
+        COV_FACTOR_C            = 1e2;              % Covariance factor for pseudorange meas
+        COV_FACTOR_D            = 1e4;              % Covariance factor for Doppler meas
         % State covariance matrix initialization - P0
-        SIGMA_P0_VEL_XYZ        = [10 10 10];   % std m/sqrt(s^3) of initial velocity
+        SIGMA_P0_VEL_XYZ        = [10 10 10];          % std m/sqrt(s^3) of initial XYZ velocity
+        SIGMA_P0_CLK_DRIFT      = 100;               % std m/sqrt(s^3) of initial clock drift
         
     end
     

@@ -5,10 +5,7 @@ classdef PVTUtils < handle
     properties (Constant)
         ID_POS = 1;
         ID_VEL = 2;
-        ID_CLK_BIAS = 3;
-        ID_CLK_DRIFT = 4;
-        ID_INTER_FREQ_BIAS = 5;
-        ID_INTER_SYS_BIAS = 6;
+        ID_CLK_DRIFT = 3;
         
         % Map from RINEX code to frequency
         FREQUENCIES_MAP = containers.Map(...
@@ -21,21 +18,24 @@ classdef PVTUtils < handle
         
         function nStates = getNumStates()
             % GETNUMSTATES Returns the number of states in the state vector
-            % 3D pos, 3D vel
-            nStates = 3; % TODO check
+            % 3D pos, 3D vel, clk drift
+            nStates = 7; % TODO check
         end
         
-        function idx = getStateIndex(unknownID)
+        function idx = getStateIndex(stateID)
             %GETSTATEINDEX Returns the index in the state vector of the
             %given unknown.
-            switch unknownID
+            switch stateID
                 case PVTUtils.ID_POS
                     idx = 1:3;
-%                 case PVTUtils.ID_VEL
-%                     prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-%                     idx = prevIdx(end) + (1:3);
+                case PVTUtils.ID_VEL
+                    prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+                    idx = prevIdx(end) + (1:3);
+                case PVTUtils.ID_CLK_DRIFT
+                    prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+                    idx = prevIdx(end) + 1;
                 otherwise
-                    error('Invalid unknown ID')
+                    error('Invalid state ID')
             end
         end
         
