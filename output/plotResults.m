@@ -6,6 +6,8 @@ close all;
 % Initializations
 config = Config.getInstance;
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
+idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
 timelineSec = (result.utcSeconds - result.utcSeconds(1));
 % nEpochs = size(result.xEst, 2);
 figures = [];
@@ -29,29 +31,61 @@ figureWindowTitle(figures(end), 'Map');
 
 % Velocity
 figures = [figures figure];
-plot(timelineSec(1:end), result.xEst(idxStateVel, 1:end))
+plot(timelineSec, result.xEst(idxStateVel, :))
 xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 legend('X', 'Y', 'Z');
 figureWindowTitle(figures(end), 'Velocity');
+
+% Rx clock drift
+figures = [figures figure];
+plot(timelineSec, result.xEst(idxStateClkDrift, :))
+xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
+figureWindowTitle(figures(end), 'Rx clock drift');
+
+% Velocity
+figures = [figures figure];
+plot(timelineSec, result.xEst(idxStateAllSdAmb, :))
+xlabel('Time since start (s)'); ylabel('Ambiguities (cyc)');
+% legend('X', 'Y', 'Z');
+figureWindowTitle(figures(end), 'Ambiguities');
 
 %% Innovations
 figures = [figures figure];
 subplot(2,1,1)
 plot(result.prInnovations', '.')
-xlabel('Time since start (s)'); ylabel('Pseudorange innovations (m)');
+xlabel('Time since start (s)'); ylabel('Code DD innovations (m)');
 subplot(2,1,2)
 plot(result.prInnovationCovariances', '.')
-xlabel('Time since start (s)'); ylabel('Pseudorange innovation covariances (m²)');
-figureWindowTitle(figures(end), 'Code innovations');
+xlabel('Time since start (s)'); ylabel('Code DD innovation covariances (m²)');
+figureWindowTitle(figures(end), 'Code DD innovations');
+
+figures = [figures figure];
+subplot(2,1,1)
+plot(result.phsInnovations', '.')
+xlabel('Time since start (s)'); ylabel('Phase DD innovations (m)');
+subplot(2,1,2)
+plot(result.phsInnovationCovariances', '.')
+xlabel('Time since start (s)'); ylabel('Phase DD innovation covariances (m²)');
+figureWindowTitle(figures(end), 'Phase DD innovations');
+
+figures = [figures figure];
+subplot(2,1,1)
+plot(result.dopInnovations', '.')
+xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
+subplot(2,1,2)
+plot(result.dopInnovationCovariances', '.')
+xlabel('Time since start (s)'); ylabel('Doppler innovation covariances (m²/s²)');
+figureWindowTitle(figures(end), 'Doppler innovations');
 
 %% Rejected
-figures = [figures figure]; subplot(2,1,1);plot(timelineSec, result.prRejectedHist)
+figures = [figures figure]; 
+subplot(3,1,1); plot(timelineSec, result.prRejectedHist)
 xlabel('Time since start (s)'); ylabel('% rejected Code obs');
-subplot(2,1,2);
-plot(timelineSec, result.dopRejectedHist)
+subplot(3,1,2); plot(timelineSec, result.phsRejectedHist)
+xlabel('Time since start (s)'); ylabel('% rejected Phase obs');
+subplot(3,1,3); plot(timelineSec, result.dopRejectedHist)
 xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
 figureWindowTitle(figures(end), 'Outlier rejections');
-
 
 %% Training plots
 if contains(config.DATASET_TYPE, 'train')

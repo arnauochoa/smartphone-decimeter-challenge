@@ -15,11 +15,6 @@ classdef Constants < handle
         % GNSS
         GPS_L1_HZ = 1575.42e6;      % Hz
         
-        % Data structures
-        MAX_GPS_PRN = 100;
-        MAX_GAL_PRN = 100;
-        MAX_BDS_PRN = 100;
-        
         % Error indicators
         NO_ERR      = 0;
         ERR_NO_OSR  = 1;

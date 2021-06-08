@@ -63,11 +63,13 @@ config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
+idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
 
 % Initialize state vector and cov matrix
 nStates = PVTUtils.getNumStates();
 x0 = zeros(nStates, 1);
-P0 = zeros(nStates); % TODO set diagonal terms of velocity and others
+x0(idxStateAllSdAmb) = nan; % All ambiguities to nan to account for sats never in view
+P0 = zeros(nStates);
 
 % Fill parameters estimated by LS
 x0(idxStatePos) = xLS(1:3);
@@ -76,4 +78,5 @@ P0(idxStatePos, idxStatePos) = PLS(1:3,1:3);
 % Fill the rest with the Config values
 P0(idxStateVel, idxStateVel) = diag(config.SIGMA_P0_VEL_XYZ.^2);
 P0(idxStateClkDrift, idxStateClkDrift) = diag(config.SIGMA_P0_CLK_DRIFT.^2);
+P0(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_P0_SD_AMBIG.^2) * eye(PVTUtils.getNumSatelliteIndices);
 end

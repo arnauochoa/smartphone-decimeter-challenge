@@ -6,6 +6,12 @@ classdef PVTUtils < handle
         ID_POS = 1;
         ID_VEL = 2;
         ID_CLK_DRIFT = 3;
+        ID_SD_AMBIGUITY = 4;
+        
+        % Data structures
+        MAX_GPS_PRN = 100;
+        MAX_GAL_PRN = 100;
+        MAX_BDS_PRN = 100;
         
         % Map from RINEX code to frequency
         FREQUENCIES_MAP = containers.Map(...
@@ -14,17 +20,24 @@ classdef PVTUtils < handle
         
     end
     
+    %% Public methods
     methods (Static)
-        
         function nStates = getNumStates()
             % GETNUMSTATES Returns the number of states in the state vector
-            % 3D pos, 3D vel, clk drift
-            nStates = 7; % TODO check
+            % 3D pos, 3D vel, clk drift, SD ambiguities
+            nStates = 7 + PVTUtils.getNumSatelliteIndices();
         end
         
-        function idx = getStateIndex(stateID)
+        function idx = getStateIndex(stateID, prn, constellationLetter)
             %GETSTATEINDEX Returns the index in the state vector of the
             %given unknown.
+            %   idx = GETSTATEINDEX(stateID, [prn], [constellationLetter])
+            % For stateID = ID_SD_AMBIGUITY:
+            %   - If no prn and constellation are given, all SD ambiguity
+            %   indices are returned.
+            %   - If prn and constellation are given, the index for the SD
+            %   ambiguity of the requested satellite is provided
+            
             switch stateID
                 case PVTUtils.ID_POS
                     idx = 1:3;
@@ -34,6 +47,15 @@ classdef PVTUtils < handle
                 case PVTUtils.ID_CLK_DRIFT
                     prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
                     idx = prevIdx(end) + 1;
+                case PVTUtils.ID_SD_AMBIGUITY
+                    prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
+                    if nargin == 1
+                        idx = prevIdx(end) + (1:PVTUtils.getNumSatelliteIndices);
+                    elseif nargin < 3
+                        error('Both PRN and CONST must be provided.');
+                    else
+                        idx = prevIdx(end) + PVTUtils.getSatelliteIndex(prn, constellationLetter);
+                    end
                 otherwise
                     error('Invalid state ID')
             end
@@ -76,6 +98,7 @@ classdef PVTUtils < handle
         
     end
     
+    %% Private methods
     methods (Static, Access = private)
         function freqsHz = getUniqueFreqsHz()
             frequencies = [];
@@ -90,11 +113,11 @@ classdef PVTUtils < handle
         function nSatsConstellation = getTotalNumSatsConstellation(constellationLetter)
             switch constellationLetter
                 case 'G'
-                    nSatsConstellation = Constants.MAX_GPS_PRN;
+                    nSatsConstellation = PVTUtils.MAX_GPS_PRN;
                 case 'E'
-                    nSatsConstellation = Constants.MAX_GAL_PRN;
+                    nSatsConstellation = PVTUtils.MAX_GAL_PRN;
                 case 'C'
-                    nSatsConstellation = Constants.MAX_BDS_PRN;
+                    nSatsConstellation = PVTUtils.MAX_BDS_PRN;
                 otherwise
                     error('Constellation %c is not supported.', Config.CONSTELLATIONS(iConst));
             end

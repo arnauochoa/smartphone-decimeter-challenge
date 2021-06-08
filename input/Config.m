@@ -13,9 +13,9 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
-        DATASET_TYPE            = 'test';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-06-10-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
+        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
+        DATASET_TYPE            = 'train';                                  % 'train' 'test'
+        CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}            % By order of preference
@@ -27,7 +27,7 @@ classdef (Sealed) Config < handle
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        OUTLIER_REJECTION       = true;
+        P_FALSE_OUTLIER_REJECT  = 1e-4; % Probability of false outlier rejection
         
         %% RTK parameters
         MAX_OSR_INTERP_GAP_SEC  = 15;
@@ -39,7 +39,7 @@ classdef (Sealed) Config < handle
         CONSTELLATIONS          = 'GEC'
         OBS_COMBINATION         = {'none'};
         OBS_USED                = {'C1C+C5X', 'C1X+C5X', 'C2X'};            % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C+C5I', 'C1B+C5I', 'C2X'};            % PR Rinex code for OSR data
+        OSR_OBS_USED            = {'C1C+C5I', 'C1X+C5X', 'C2X'};            % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
         ELEVATION_MASK          = 10;                                       % Elevation mask in degrees
         MEAS_COV_SRC            = 'elevation';                            % Among 'elevation' and 'uncertainty'
@@ -50,14 +50,18 @@ classdef (Sealed) Config < handle
         % Process noise covariance matrix - Q
         SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
         SIGMA_Q_CLK_DRIFT       = 0.5;              % std m/sqrt(s^3) of clock drift
+        SIGMA_Q_SD_AMBIG        = 1e0;              % std m of SD phase ambiguity
         % Measurement covariance matrix - R
-        SIGMA_PR_M              = 1e1;              % Default std (m) for pseudorange meas (elevation-based model)
-        SIGMA_DOP_MPS           = 1e0;              % Default std (m/s) for doppler meas (elevation-based model)
-        COV_FACTOR_C            = 1e2;              % Covariance factor for pseudorange meas
+        SIGMA_C_M               = 1e1;              % Default std (m) for pseudorange meas (elevation-based model)
+        SIGMA_L_M               = 1e0;              % Default std (m) for pseudorange meas (elevation-based model)
+        SIGMA_D_MPS             = 1e0;              % Default std (m/s) for doppler meas (elevation-based model)
+        COV_FACTOR_C            = 1e2;              % Covariance factor for code pseudorange meas
+        COV_FACTOR_L            = 1e0;              % Covariance factor for carrier phase meas
         COV_FACTOR_D            = 1e4;              % Covariance factor for Doppler meas
         % State covariance matrix initialization - P0
-        SIGMA_P0_VEL_XYZ        = [1e1 1e1 1e1];          % std m/sqrt(s^3) of initial XYZ velocity
-        SIGMA_P0_CLK_DRIFT      = 1e2;               % std m/sqrt(s^3) of initial clock drift
+        SIGMA_P0_VEL_XYZ        = [1e1 1e1 1e1];    % std m/sqrt(s^3) of initial XYZ velocity
+        SIGMA_P0_CLK_DRIFT      = 1e2;              % std m/sqrt(s^3) of initial clock drift
+        SIGMA_P0_SD_AMBIG       = 1e3;              % std m of initial SD phase ambiguity
         
     end
     
