@@ -27,11 +27,12 @@ result.dopRejectedHist = zeros(1, nGnssEpochs);
 
 %% Obtain first position
 [x0, ekf.P, ekf.tx] = getFirstPosition(phoneRnx, nav);
- % TODO remove >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+% (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+%  Use ref position as first position
 % idxRef = find(ref.utcSeconds > ekf.tx, 1, 'first');
 % [x, y, z] = geodetic2ecef(wgs84Ellipsoid, ref.posLla(idxRef, 1), ref.posLla(idxRef, 2), ref.posLla(idxRef, 3));
 % x0(idxStatePos) = [x y z]';
-% <<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+% <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 ekf.x = zeros(PVTUtils.getNumStates, 1);
 ekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
 
@@ -88,10 +89,13 @@ while ~hasEnded % while there are more observations/measurements
         % Initial estimate for the transition model
         fArgs.x0 = x0;
         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
+        % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        % Skip epochs with missing obs
 %         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);
 %         [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
 %         hasEnded = isempty(phoneGnss); % TODO check imu
 %         continue
+        % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     else
         doubleDifferences = computeDoubleDifferences(osrGnss, phoneGnss, sat.pos, sat.elDeg);
         [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, osrRnx, doubleDifferences, result);
@@ -202,7 +206,7 @@ for iObs = 1:length(doubleDifferences)
         % Update total-state with absolute position
         x0 = updateTotalState(ekf.x, osrRnx.statPos);
     else
-        pause;
+%         a=1;
     end
 end
 % Percentage of rejected code observations
