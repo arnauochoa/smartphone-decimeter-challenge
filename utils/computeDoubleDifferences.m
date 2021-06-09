@@ -32,13 +32,20 @@ for iConst = 1:length(constels)
 end
 % Convert from structure of arrays to array of structures
 doubleDifferences = soa2aos(doubleDifferences, 2);
-if nDiscarded > 0
+if isempty(fieldnames(doubleDifferences))
+    doubleDifferences = [];
+end
+if nDiscarded > 0 && ~strcmp(Config.EVALUATE_DATASETS, 'all')
     fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
 end
 end
 
 function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg)
 % GETDD Computes the DD of the two given sets of observations
+
+% Discard nan values from OSR
+idxNan = isnan([osrObs(:).C]);
+osrObs(idxNan) = [];
 
 % Common satellites between receiver and OSR station
 [commonSats, iRxObs, iOsrObs] = intersect([rxObs.prn], [osrObs.prn]);
@@ -47,7 +54,7 @@ numCommonSats = length(commonSats);
 % Num of observations not found in OSR data
 nDiscard = length(rxObs) - length(commonSats);
 
-if numCommonSats > 1
+if numCommonSats > 1 && ~isempty([osrObs(:).C]) && ~isempty([osrObs(:).L])
     % Keep only common satellites
     rxObs = rxObs(iRxObs);
     satPos = satPos(:, iRxObs);
@@ -57,10 +64,16 @@ if numCommonSats > 1
     % Single differences for each satellite
     codeSd = [osrObs(:).C] - [rxObs(:).C];
     phaseSd = [osrObs(:).L] - [rxObs(:).L];
+    % Set L meas with LLI activated as nan
+    isLLI = [rxObs(:).LLI] ~= 0;
+    phaseSd(isLLI) = nan;
 %     dopSd = [osrObs(:).D_Hz] - [rxObs(:).D_Hz];
+
+    % Code-Minus-Carrier of SD
+    cmcSd = codeSd - phaseSd;
     
     % Find indices of pivot and varying satellites
-    [idxPivSat, idxVarSats] = choosePivotSat(satElDeg);
+    [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI);
     
     % Double differences
     dd.C = (codeSd(idxPivSat) - codeSd(idxVarSats));
@@ -74,6 +87,7 @@ if numCommonSats > 1
     dd.pivSatPrn = repmat(rxObs(idxPivSat).prn, 1, nDD); 
     dd.pivSatPos = repmat(satPos(:, idxPivSat), 1, nDD);
     dd.pivSatElDeg = repmat(satElDeg(idxPivSat), 1, nDD);
+    dd.pivSatCmcSd = repmat(cmcSd(idxPivSat), 1, nDD);
     dd.pivSatSigmaC = repmat(rxObs(idxPivSat).C_sigma, 1, nDD);
     dd.pivSatSigmaL = repmat(rxObs(idxPivSat).L_sigma, 1, nDD);
     dd.pivSatSigmaD = repmat(rxObs(idxPivSat).D_sigma, 1, nDD);
@@ -81,6 +95,7 @@ if numCommonSats > 1
     dd.varSatPrn = [rxObs(idxVarSats).prn];
     dd.varSatPos = satPos(:, idxVarSats);
     dd.varSatElDeg = satElDeg(idxVarSats);
+    dd.varSatCmcSd = cmcSd(idxVarSats);
     dd.varSatSigmaC = [rxObs(idxVarSats).C_sigma];
     dd.varSatSigmaL = [rxObs(idxVarSats).L_sigma];
     dd.varSatSigmaD = [rxObs(idxVarSats).D_sigma];
@@ -93,6 +108,7 @@ else
     dd.pivSatPrn = [];
     dd.pivSatPos = [];
     dd.pivSatElDeg = [];
+    dd.pivSatCmcSd = [];
     dd.pivSatSigmaC = [];
     dd.pivSatSigmaL = [];
     dd.pivSatSigmaD = [];
@@ -100,13 +116,17 @@ else
     dd.varSatPrn = [];
     dd.varSatPos = [];
     dd.varSatElDeg = [];
+    dd.varSatCmcSd = [];
     dd.varSatSigmaC = [];
     dd.varSatSigmaL = [];
     dd.varSatSigmaD = [];
 end
 end
 
-function [idxPivSat, idxVarSats] = choosePivotSat(satElDeg)
+function [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI)
+    % Set satellites with LLI on as elev 0 so they are not selected as pivot
+    satElDeg(isLLI) = 0;
+    % Find sat with max elevation and select it as pivot
     satIndices = 1:length(satElDeg);
     [~, idxPivSat] = max(satElDeg);
     idxVarSats = satIndices(satIndices ~= idxPivSat); % All except pivot sat

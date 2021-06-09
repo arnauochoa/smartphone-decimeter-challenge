@@ -15,20 +15,22 @@ This code uses the following external packages:
 ## Usage
 * Make sure you have the input data saved in your workspace with the following structure:
 ```bash
-Observations:   {workspace_path}/data/train/datasets/{campaign_name}/{phone_name}_GnssLog.txt
-Groundtruth:    {workspace_path}/data/train/datasets/{campaign_name}/SPAN_{phone_name}_10Hz.nmea
-Navigation:     {workspace_path}/data/train/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
-OSR:            {workspace_path}/data/train/corrections/OSR_v3.04/{campaign_name}/{OSR_filename}.rnx
+Observations:   {workspace_path}/data/sdc-data/{train or test}/{campaign_name}/{phone_name}_GnssLog.txt
+Groundtruth:    {workspace_path}/data/sdc-data/train/{campaign_name}/SPAN_{phone_name}_10Hz.nmea
+Navigation:     {workspace_path}/data/sdc-data/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
+Verizon OSR:    {workspace_path}/data/sdc-data/corrections/Verizon/OSR/{campaign_name}/{OSR_filename}.rnx
+SwiftNav OSR:   {workspace_path}/data/sdc-data/corrections/SwiftNav/OSR/{OSR_filename}.obs
 ```
-> :warning: &nbsp; **Make sure to have the OSR RINEX files in version 3.04.**
-* Set your workspace as the parent directory that contains this project. Your workspace should looks like the following:
+> :warning: &nbsp; **Make sure to have the OSR RINEX files in version 3.03 or above.**
+* Set your workspace as the parent directory that contains this project. Your workspace should look like the following:
 ```bash
 /some/directory/
         |-- data/
-                |-- train/
+                |-- sdc-data/
                         |-- brdc
                         |-- corrections
-                        |-- datasets
+                        |-- train
+                        |-- test
         |-- smartphone-decimeter-challenge/
 ```
 * Select the desired configuration in the class `Config`.

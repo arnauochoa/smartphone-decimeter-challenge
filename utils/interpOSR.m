@@ -32,7 +32,8 @@ for iSat = 1:nOsrSats
         thisSatObsInterp = nan(length(rxTow), nObsConst);
 
         for iObs = 1:nObsConst
-            if all(isnan(thisSatRnx(:, GnssLogUtils.COL_SVN + iObs)))
+            % Interpolate only if there are at least two points
+            if sum(~isnan(thisSatRnx(:, GnssLogUtils.COL_SVN + iObs))) < 2
                 thisSatObsInterp(:, iObs) = nan(size(rxTow));
             else
                 thisSatObsInterp(:, iObs) = interp1gap(         ...
@@ -51,7 +52,8 @@ for iSat = 1:nOsrSats
     end
 end
 
+% Copy all fields but obs matrix
+osrRnxOut = osrRnxRaw;
 % Save osrRnx sorted by time, then const, then sat
 osrRnxOut.obs = sortrows(osrRnxAux, [GnssLogUtils.COL_WN GnssLogUtils.COL_TOW GnssLogUtils.COL_CONST GnssLogUtils.COL_SVN]);
-osrRnxOut.type = osrRnxRaw.type;
 end

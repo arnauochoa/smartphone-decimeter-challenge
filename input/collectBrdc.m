@@ -1,19 +1,15 @@
-function [dataLocalFilepath] = collectBrdc(utcTimeVec, const)
-
-config = Config.getInstance;
+function [dataLocalFilepath] = collectBrdc(utcTimeVec, const, targetFilepath)
 
 year = utcTimeVec(1);
 
-targetFilepath = [workspacePath 'data' filesep config.DATASET_TYPE ...
-    filesep 'brdc' filesep config.campaignName filesep];
-
 ftpFilepath = strcat('IGS/BRDC/',string(year), '/');
 
-dayNumber = string(DayOfYear(utcTimeVec));
+dayNumber = num2str(DayOfYear(utcTimeVec), '%03d');
 
 ftpFilepath = strcat(ftpFilepath, dayNumber, '/');
 
 dataFilename = strcat('BRDC00WRD_R_', string(year), dayNumber, '0000_01D_', const, 'N.rnx');
+
 dataLocalFilepath = strcat(targetFilepath, dataFilename);
 gzFilename = strcat(dataFilename, '.gz');
 gzLocalFilepath = strcat(targetFilepath, gzFilename);
@@ -26,4 +22,4 @@ if ~exist(dataLocalFilepath, 'file')
     gunzip(gzLocalFilepath, targetFilepath);
     delete(gzLocalFilepath);
 end
-end %urlwrite(strcat('ftp://igs.bkg.bund.de',), targetFilepath)
+end

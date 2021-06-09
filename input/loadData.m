@@ -18,7 +18,16 @@ else % Use observations from GnssLog
         getGnssLogObs(obsDirPath, obsFileName, config.FILTER_RAW_MEAS);
     
     phoneRnx.utcSeconds = obsRinexUtcMillis / 1e3;
+    % Correct GPS week number (wrong in some campaigns)
+    gpst = Utc2Gps(utcSeconds2datevec(phoneRnx.utcSeconds));
+    phoneRnx.obs(:, 1) = gpst(:, 1);
 end
+firstObsGPST = wntow2datetime(phoneRnx.obs(1, 1), phoneRnx.obs(1, 2));
+lastObsGPST = wntow2datetime(phoneRnx.obs(end, 1), phoneRnx.obs(end, 2));
+% firstObsGPST = Utc2Gps(utcSeconds2datevec(phoneRnx.utcSeconds(1)));
+% firstObsGPST = wntow2datetime(firstObsGPST(1), firstObsGPST(2));
+% lastObsGPST = Utc2Gps(utcSeconds2datevec(phoneRnx.utcSeconds(end)));
+% lastObsGPST = wntow2datetime(lastObsGPST(1), lastObsGPST(2));
 
 %% Navigation data
 nav = rinex_v3_nav_parser(getNavFilepaths(config));
@@ -29,15 +38,34 @@ iono.beta = [.8192E+05   .9830E+05  -.6554E+05  -.5243E+06]';
 
 %% OSR data
 osrRnx.obs = [];
-osrFilepaths = getOSRFilepaths(config);
-if isempty(osrFilepaths)
-    osrRnx.type = [];
-else
-    for iOsr = 1:length(osrFilepaths)
-        [obs, type] = rinex_v3_obs_parser(osrFilepaths{iOsr});
-        osrRnx.obs = [osrRnx.obs; obs];
+idxOsrSrc = 0;
+% Use first OSR source with valid data
+while isempty(osrRnx.obs) && idxOsrSrc < length(config.OSR_SOURCES)
+    idxOsrSrc = idxOsrSrc + 1;
+    osrFilepaths = getOSRFilepaths(config, config.OSR_SOURCES{idxOsrSrc});
+    if isempty(osrFilepaths)
+        osrRnx.type = [];
+        osrRnx.statPos = [];
+    else
+        statPos = nan(3, 1);
+        for iOsr = 1:length(osrFilepaths)
+            [obs, type, auxPos] = rinex_v3_obs_parser(osrFilepaths{iOsr});
+            osrFirstObsGPST = wntow2datetime(obs(1, 1), obs(1, 2));
+            osrLastObsGPST = wntow2datetime(obs(end, 1), obs(end, 2));
+            isValid = osrLastObsGPST > firstObsGPST && osrFirstObsGPST < lastObsGPST;
+            if isValid
+                if isempty(osrRnx.obs) % Display only first time
+                    fprintf('Using OSR data from %s\n', config.OSR_SOURCES{idxOsrSrc});
+                end
+                osrRnx.obs = [osrRnx.obs; obs];
+                assert(all(isnan(statPos)) || all(statPos == auxPos), ...
+                    'Station positions do not match between different OSR of the same campaign');
+                statPos = auxPos;
+            end
+        end
+        osrRnx.type = type;
+        osrRnx.statPos = statPos;
     end
-    osrRnx.type = type;
 end
 
 
