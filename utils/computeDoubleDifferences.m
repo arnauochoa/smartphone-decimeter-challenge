@@ -64,13 +64,16 @@ if numCommonSats > 1 && ~isempty([osrObs(:).C]) && ~isempty([osrObs(:).L])
     % Single differences for each satellite
     codeSd = [osrObs(:).C] - [rxObs(:).C];
     phaseSd = [osrObs(:).L] - [rxObs(:).L];
+    % Set L meas with LLI activated as nan
+    isLLI = [rxObs(:).LLI] ~= 0;
+    phaseSd(isLLI) = nan;
 %     dopSd = [osrObs(:).D_Hz] - [rxObs(:).D_Hz];
 
     % Code-Minus-Carrier of SD
     cmcSd = codeSd - phaseSd;
     
     % Find indices of pivot and varying satellites
-    [idxPivSat, idxVarSats] = choosePivotSat(satElDeg);
+    [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI);
     
     % Double differences
     dd.C = (codeSd(idxPivSat) - codeSd(idxVarSats));
@@ -120,7 +123,10 @@ else
 end
 end
 
-function [idxPivSat, idxVarSats] = choosePivotSat(satElDeg)
+function [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI)
+    % Set satellites with LLI on as elev 0 so they are not selected as pivot
+    satElDeg(isLLI) = 0;
+    % Find sat with max elevation and select it as pivot
     satIndices = 1:length(satElDeg);
     [~, idxPivSat] = max(satElDeg);
     idxVarSats = satIndices(satIndices ~= idxPivSat); % All except pivot sat
