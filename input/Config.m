@@ -4,10 +4,14 @@ classdef (Sealed) Config < handle
     % the selected dataset
     
     % This code assumes that the data is structured as follows:
-    %   Observations:   {workspace_path}/data/train/datasets/{campaign_name}/{phone_name}_GnssLog.txt
-    %   Groundtruth:    {workspace_path}/data/train/datasets/{campaign_name}/SPAN_{phone_name}_10Hz.nmea
-    %   Navigation:     {workspace_path}/data/train/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
-    
+    %   Observations:   
+    %       {workspace_path}/data/sdc-data/{train or test}/{campaign_name}/{phone_name}/{phone_name}_GnssLog.txt
+    %   Groundtruth:    
+    %       {workspace_path}/data/sdc-data/{train or test}/{campaign_name}/{phone_name}/supplemental/SPAN_{phone_name}_10Hz.nmea
+    %   Navigation:     
+    %       {workspace_path}/data/sdc-data/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
+    %   OSR:
+    %       {workspace_path}/data/sdc-data/corrections/{source_name}/OSR/[see getOSRFilepaths]
     properties (Constant)
         %% Results
         RES_FILENAME            = 'result';
@@ -27,7 +31,7 @@ classdef (Sealed) Config < handle
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        P_FALSE_OUTLIER_REJECT  = 1e-4; % Probability of false outlier rejection
+        P_FALSE_OUTLIER_REJECT  = 0; % Probability of false outlier rejection
         
         %% RTK parameters
         MAX_OSR_INTERP_GAP_SEC  = 15;
@@ -36,33 +40,32 @@ classdef (Sealed) Config < handle
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
         
         %% Navigation parameters
-        CONSTELLATIONS          = 'GEC'
-        OBS_COMBINATION         = {'none'};
-        OBS_USED                = {'C1C+C5X', 'C1X+C5X', 'C2X'};            % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C+C5I', 'C1X+C5X', 'C2X'};            % PR Rinex code for OSR data
-        CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
+        CONSTELLATIONS          = 'G';%'GEC'
+        OBS_COMBINATION         = {'none'};%{'none', 'none', 'none'};
+        OBS_USED                = {'C1C+C5X'};%{'C1C+C5X', 'C1X+C5X', 'C2X'};            % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C+C5I'};%{'C1C+C5I', 'C1X+C5X', 'C2X'};            % PR Rinex code for OSR data
+        CONST_COV_FACTORS       = [1];%[1 1 2];                                  % Covariance factor for each constellation
         ELEVATION_MASK          = 10;                                       % Elevation mask in degrees
-        MEAS_COV_SRC            = 'elevation';                            % Among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC            = 'uncertainty';                            % Among 'elevation' and 'uncertainty'
 %         MAX_DOPPLER_MEAS        = 6e3;                                      % Maximum doppler measurement 
 %         MAX_DOPPLER_UNCERT      = 10;                                       % Maximum doppler uncertainty
         
         %% KF tuning parameters
         % Process noise covariance matrix - Q
         SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
-        SIGMA_Q_CLK_DRIFT       = 0.5;              % std m/sqrt(s^3) of clock drift
-        SIGMA_Q_SD_AMBIG        = 1e0;              % std m of SD phase ambiguity
+        SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
+        SIGMA_Q_SD_AMBIG        = 1e3;              % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
-        SIGMA_C_M               = 1e1;              % Default std (m) for pseudorange meas (elevation-based model)
-        SIGMA_L_M               = 1e0;              % Default std (m) for pseudorange meas (elevation-based model)
-        SIGMA_D_MPS             = 1e0;              % Default std (m/s) for doppler meas (elevation-based model)
-        COV_FACTOR_C            = 1e2;              % Covariance factor for code pseudorange meas
-        COV_FACTOR_L            = 1e0;              % Covariance factor for carrier phase meas
-        COV_FACTOR_D            = 1e4;              % Covariance factor for Doppler meas
+        SIGMA_C_M               = 1e1;              % Default std (m) for pseudorange meas          (only for elevation-based model)
+        SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")
+        SIGMA_D_MPS             = 1e-1;              % Default std (m/s) for doppler meas            ("")
+        COV_FACTOR_C            = 1;                % Covariance factor for code pseudorange meas   (useful for weighting uncertainties coming from GnssLog)
+        COV_FACTOR_L            = 1;                % Covariance factor for carrier phase meas      ("")
+        COV_FACTOR_D            = 1;                % Covariance factor for Doppler meas            ("")
         % State covariance matrix initialization - P0
-        SIGMA_P0_VEL_XYZ        = [1e1 1e1 1e1];    % std m/sqrt(s^3) of initial XYZ velocity
+        SIGMA_P0_VEL_XYZ        = [1e2 1e2 1e2];    % std m/sqrt(s^3) of initial XYZ velocity
         SIGMA_P0_CLK_DRIFT      = 1e2;              % std m/sqrt(s^3) of initial clock drift
-        SIGMA_P0_SD_AMBIG       = 1e3;              % std m of initial SD phase ambiguity
-        
+        SIGMA_P0_SD_AMBIG       = 1e7;              % std cyc of initial SD phase ambiguity
     end
     
     properties
@@ -115,13 +118,13 @@ classdef (Sealed) Config < handle
         function filepaths = getOSRFilepaths(this, osrSource)
             %GETOSRFILEPATH Returns the file path of the OSR file.
             switch osrSource
-                case 'Verizon'
+                case 'Verizon'  % Structure: [...]/Verizon/OSR/{campaign_name}/{filename}.rnx
                     rootPath = [Config.dataPath 'corrections' filesep osrSource ...
                         filesep 'OSR' filesep this.campaignName filesep];
                     filesInPath = getValidDir(rootPath);
                     idxStation = contains(filesInPath, this.OSR_STATION_NAME);
                     fileNames = filesInPath(idxStation);
-                case 'SwiftNav'
+                case 'SwiftNav' % Structure: [...]/SwiftNav/OSR/{campaign_name or startdate-enddate}.obs
                     rootPath = [Config.dataPath 'corrections' filesep osrSource ...
                         filesep 'OSR' filesep];
                     osrFileNames = getValidDir(rootPath);
@@ -130,8 +133,8 @@ classdef (Sealed) Config < handle
                     idxFiles = contains(osrFileNames, '.obs') & ...
                         (contains(osrFileNames, campaignDateStr1) | ...
                         contains(osrFileNames, campaignDateStr2));
-                    fileNames = osrFileNames(idxFiles); % TODO: test and extract from switch
-                case 'IGS'
+                    fileNames = osrFileNames(idxFiles);
+                case 'IGS'      % Structure: [...]/Verizon/IGS/{date}/{filename}.rnx
                     rootPath = [Config.dataPath 'corrections' filesep osrSource ...
                         filesep 'OSR' filesep this.campaignName(1:10) filesep];
                     if ~exist(rootPath, 'dir'), mkdir(rootPath); end

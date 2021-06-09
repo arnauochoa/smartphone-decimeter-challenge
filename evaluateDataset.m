@@ -9,7 +9,6 @@ function [err, ref, estPosLla, result, resultsFilePath] = evaluateDataset()
 
         %% Pre-process IMU measurements
         imuClean = preprocessImu(imuRaw);
-%         imuClean = [];
     
         %% Interpolate OSR data
         osrRnx = interpOSR(osrRnx, phoneRnx);

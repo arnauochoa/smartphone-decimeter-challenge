@@ -42,9 +42,9 @@ plot(timelineSec, result.xEst(idxStateClkDrift, :))
 xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
 figureWindowTitle(figures(end), 'Rx clock drift');
 
-% Velocity
+% Ambiguities
 figures = [figures figure];
-plot(timelineSec, result.xEst(idxStateAllSdAmb, :))
+plot(timelineSec, result.xEst(idxStateAllSdAmb, :), '.')
 xlabel('Time since start (s)'); ylabel('Ambiguities (cyc)');
 % legend('X', 'Y', 'Z');
 figureWindowTitle(figures(end), 'Ambiguities');
@@ -84,7 +84,7 @@ xlabel('Time since start (s)'); ylabel('% rejected Code obs');
 subplot(3,1,2); plot(timelineSec, result.phsRejectedHist)
 xlabel('Time since start (s)'); ylabel('% rejected Phase obs');
 subplot(3,1,3); plot(timelineSec, result.dopRejectedHist)
-xlabel('Time since start (s)'); ylabel('# rejected Doppler obs');
+xlabel('Time since start (s)'); ylabel('% rejected Doppler obs');
 figureWindowTitle(figures(end), 'Outlier rejections');
 
 %% Training plots

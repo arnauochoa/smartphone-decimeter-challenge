@@ -1,15 +1,17 @@
 classdef PVTUtils < handle
-    %PVTUTILS Summary of this class goes here
-    %   Detailed explanation goes here
+    %PVTUTILS Utilities class for the PVT engine
+    %   This class contains functions related to the state vector,
+    %   constellations, satellites, etc.
     
     properties (Constant)
+        % State-vector id's
         ID_POS = 1;
         ID_VEL = 2;
         ID_CLK_DRIFT = 3;
         ID_SD_AMBIGUITY = 4;
         
         % Data structures
-        MAX_GPS_PRN = 100;
+        MAX_GPS_PRN = 35;
         MAX_GAL_PRN = 100;
         MAX_BDS_PRN = 100;
         
@@ -62,23 +64,31 @@ classdef PVTUtils < handle
         end
         
         function nConst = getNumConstellations()
+            % GETNUMCONSTELLATIONS Returns the total number of 
+            % constellations selected in the configuration
             config = Config.getInstance;
             nConst = length(config.CONSTELLATIONS);
         end
         
-        function freqIdx = getConstelIdx(constellationLetter)
-            freqIdx = strfind(Config.CONSTELLATIONS, constellationLetter);
+        function constIdx = getConstelIdx(constellationLetter)
+            % GETCONSTELIDX Returns the index of the constellation provided
+            constIdx = strfind(Config.CONSTELLATIONS, constellationLetter);
         end
         
         function nFreq = getNumFrequencies()
+            % GETNUMFREQUENCIES Returns the total number of different
+            % frequencies selected in the configuration
             nFreq = length(PVTUtils.getUniqueFreqsHz);
         end
         
         function freqIdx = getFreqIdx(freqHz)
+            % GETFREQIDX Returns the index of the frequency provided
             freqIdx = find(PVTUtils.getUniqueFreqsHz == freqHz);
         end
         
         function numSatellites = getNumSatelliteIndices()
+            % GETNUMSATELLITEINDICES Returns the total number of unique
+            % satellite indices
             numSatellites = 0;
             for iConst = 1:length(Config.CONSTELLATIONS)
                 numSatellites = numSatellites + ...
@@ -87,6 +97,8 @@ classdef PVTUtils < handle
         end
         
         function satIdx = getSatelliteIndex(prn, constellationLetter)
+            % GETSATELLITEINDEX Returns the index of the selected satellite
+            % given by its prn and constellation
             prevConstLetters = Config.CONSTELLATIONS(1:strfind(Config.CONSTELLATIONS, constellationLetter)-1);
             satIdx = 0;
             for iConst = 1:length(prevConstLetters)
@@ -101,6 +113,9 @@ classdef PVTUtils < handle
     %% Private methods
     methods (Static, Access = private)
         function freqsHz = getUniqueFreqsHz()
+            % GETUNIQUEFREQSHZ Returns a vector with the unique frequencies
+            % from the codes and constellations selected in the
+            % configuration
             frequencies = [];
             for iConst = 1:length(Config.OBS_USED)
                 obs = split(Config.OBS_USED{iConst}, '+')';
@@ -111,6 +126,8 @@ classdef PVTUtils < handle
         end
         
         function nSatsConstellation = getTotalNumSatsConstellation(constellationLetter)
+            % GETTOTALNUMSATSCONSTELLATION Returns the maximum number of 
+            % satellites for the given constellation
             switch constellationLetter
                 case 'G'
                     nSatsConstellation = PVTUtils.MAX_GPS_PRN;
