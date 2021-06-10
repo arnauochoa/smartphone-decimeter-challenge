@@ -11,7 +11,7 @@ nDatasets = length(datasetResults);
 figures = [];
 basemap = 'none';
 
-idxCampaignsToPlot = [1:10];
+idxCampaignsToPlot = [nDatasets-5:nDatasets]; % [1:5] [nDatasets-5:nDatasets]
 
 %% Score computation
 if isTrain

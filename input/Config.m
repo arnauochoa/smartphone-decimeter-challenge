@@ -17,7 +17,7 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
+        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
@@ -31,7 +31,7 @@ classdef (Sealed) Config < handle
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        P_FALSE_OUTLIER_REJECT  = 0; % Probability of false outlier rejection
+        P_FALSE_OUTLIER_REJECT  = 0.01; % Probability of false outlier rejection
         
         %% RTK parameters
         MAX_OSR_INTERP_GAP_SEC  = 15;
