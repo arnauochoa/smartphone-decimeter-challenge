@@ -17,7 +17,7 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
+        EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single

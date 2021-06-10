@@ -49,7 +49,7 @@ result.sigmaHist = zeros(nStates, 1);
 hasEnded = isempty(phoneGnss); % TODO check imu
 
 while ~hasEnded % while there are more observations/measurements
-    idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove
+%     idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove
     % First iteration: x0 is result from LS
     if idxEst == 1, x0 = result.xEst(:, 1);
     else,           x0 = result.xEst(:, idxEst-1); end
@@ -88,7 +88,7 @@ while ~hasEnded % while there are more observations/measurements
         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Propagating state.\n', phoneGnss.tow);
         % Initial estimate for the transition model
         fArgs.x0 = x0;
-        esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
+        ekf = EKF.propagateState(ekf, thisUtcSeconds, @fTransition, fArgs);
         % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         % Skip epochs with missing obs
 %         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);

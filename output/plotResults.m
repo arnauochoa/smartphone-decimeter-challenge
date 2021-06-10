@@ -96,6 +96,11 @@ if contains(config.DATASET_TYPE, 'train')
     nedError = Lla2Ned(refInterpLla, estPosLla);
     hError = Lla2Hd(refInterpLla, estPosLla);
     
+    % Compute score
+    hErr95 = prctile(abs(hError),95);
+    hErr50 = prctile(abs(hError),50);
+    fprintf('\n ==== Score: %.4f ====\n', mean([hErr95, hErr50]));
+    
     % Groundtruth velocity
     dtRef = diff(ref.tow);
     [xRef, yRef, zRef] = geodetic2ecef(wgs84Ellipsoid, ref.posLla(:, 1), ref.posLla(:, 2), ref.posLla(:, 3));
@@ -171,7 +176,6 @@ if contains(config.DATASET_TYPE, 'train')
     figureWindowTitle(figures(end), 'Velocity CDF');
 end
 
-
 %% Group plots
 navi = [];
 if ~isfield(navi, 'nav_report_group')
@@ -181,23 +185,5 @@ if ~isfield(navi, 'nav_report_group')
         warning(['Exception while grouping plots: ' e.message]);
     end
 end
-end
-
-function navi = groupPlots(figures, navi)
-desktop = com.mathworks.mde.desk.MLDesktop.getInstance;
-navi.nav_report_group = desktop.addGroup('Navigation report');
-desktop.setGroupDocked('Navigation report', 0);
-myDim   = java.awt.Dimension(length(figures), 1);   % columns, rows
-desktop.setDocumentArrangement('Navigation report', 1, myDim)
-bakWarn = warning('off','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
-warning('off')
-for k=1:length(figures)
-    figures(k).WindowStyle = 'docked';
-    drawnow;
-    pause(0.02);  % Magic, reduces rendering errors
-    set(get(handle(figures(k)), 'javaframe'), 'GroupName', 'Navigation report');
-end
-warning('on')
-warning(bakWarn);
 end
 

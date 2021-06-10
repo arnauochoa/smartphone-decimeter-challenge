@@ -47,7 +47,7 @@ if strcmp(config.EVALUATE_DATASETS, 'all') && strcmp(config.DATASET_TYPE, 'test'
     refTableThis = refTable(strcmp(refTable.phone, [config.campaignName '_' config.phoneName]), :);
 
     estPosLlaInt = interp1(millisSinceGpsEpoch, estPosLla, refTableThis.millisSinceGpsEpoch, 'spline', 'extrap');
-    writeResult(resultsDir, resultsFilename, refTableThis.millisSinceGpsEpoch, estPosLlaInt);
+    resultsFilePath = writeResult(resultsDir, resultsFilename, refTableThis.millisSinceGpsEpoch, estPosLlaInt);
 end
 end
 
