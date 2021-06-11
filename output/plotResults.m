@@ -1,10 +1,11 @@
-function plotResults(ref, estPosLla, result)
+function plotResults(ref, result)
 %PLOTRESULTS Summary of this function goes here
 %   Detailed explanation goes here
 close all;
 
-% Initializations
+%% Initializations
 config = Config.getInstance;
+idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
@@ -13,18 +14,31 @@ timelineSec = (result.utcSeconds - result.utcSeconds(1));
 figures = [];
 basemap = 'none';
 
+%% RTK estimation
+estPosLla = ecef2geodeticVector(result.xEst(idxStatePos, :)');
+
+%% WLS estimation
+estPosWLSLla = ecef2geodeticVector(result.xWLS(1:3, :)');
+
 %% State plots
 % Position
 figures = [figures figure];
 if strcmp(config.DATASET_TYPE, 'test')
-    geoplot(estPosLla(:, 1), estPosLla(:, 2), '.-');
+    geoplot(estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.-', ...
+        estPosLla(:, 1), estPosLla(:, 2), '.-');
+    legend('WLS', 'RTK');
 else
     if isprop(config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
-        geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'x', estPosLla(:, 1), estPosLla(:, 2), '.', 'LineWidth', 1);
+        geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'x', ...
+            estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.', ...
+            estPosLla(:, 1), estPosLla(:, 2), '.', ...
+            'LineWidth', 1);
     else
-        geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', estPosLla(:, 1), estPosLla(:, 2), '.-');
+        geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', ...
+            estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.-', ...
+            estPosLla(:, 1), estPosLla(:, 2), '.-');
     end
-    legend('Groundtruth', 'Computed');
+    legend('Groundtruth', 'WLS', 'RTK');
 end
 geobasemap(basemap);
 figureWindowTitle(figures(end), 'Map');

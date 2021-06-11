@@ -1,4 +1,4 @@
-function [x0, P0, utcSeconds0] = getFirstPosition(phoneRnx, nav)
+function [x0, P0, utcSeconds0, xWLS] = getFirstPosition(phoneRnx, nav)
 % GETFIRSTPOSITION Computes the position using LS at the first epoch with
 % enough GNSS observations
 
@@ -49,9 +49,13 @@ end
 obsConstel = intersect(Config.CONSTELLATIONS, unique([phoneGnss.obs.constellation]), 'stable');
 xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, length(obsConstel)-1)]';
 [xLS, PLS] = compute_spp_ls(phoneGnss.obs, satPos, satClkBias, xLS, obsConstel);
+% Obtain satellite elevations
+[~, satElDeg, ~] = getSatAzEl(satPos, xLS);
+R = computeMeasCovariance(satElDeg, [phoneGnss.obs(:).C_sigma], Config.SIGMA_D_MPS, [phoneGnss.obs(:).constellation]);
+[xWLS, ~, PWLS, ~, ~] = compute_spp_wls([phoneGnss.obs(:).C]', [phoneGnss.obs(:).constellation], satPos, satClkBias, xLS, R, obsConstel);
 
 % Fill ouptuts with LS estimates
-[x0, P0] = fillFullState(xLS, PLS);
+[x0, P0] = fillFullState(xWLS, PWLS);
 utcSeconds0 = thisUtcSeconds;
 end %end of function getFirstPosition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

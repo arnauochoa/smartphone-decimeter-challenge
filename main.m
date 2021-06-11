@@ -14,9 +14,9 @@ iDataset = 0;
 tic
 switch config.EVALUATE_DATASETS
     case 'single'
-        [ref, estPosLla, result, ~] = evaluateDataset();
+        [err, ref, result, ~] = evaluateDataset();
         disp('Plotting results...')
-        plotResults(ref, estPosLla, result);
+        plotResults(ref, result);
     case 'all'
         campaignNames = getValidDir(config.obsDataPath);
         for iCampaign = 1:length(campaignNames)
@@ -27,8 +27,7 @@ switch config.EVALUATE_DATASETS
                 config.phoneName = phoneNames{iPhone};
                 fprintf('Evaluating %s/%s \n', config.campaignName, config.phoneName)
                 iDataset = iDataset + 1;
-                [datasetResults(iDataset).ref, datasetResults(iDataset).estPosLla, ...
-                    datasetResults(iDataset).result, resultsFilePath] ...
+                [datasetResults(iDataset).ref, datasetResults(iDataset).result, resultsFilePath] ...
                     = evaluateDataset();
                 datasetResults(iDataset).campaignName = campaignNames{iCampaign};
                 datasetResults(iDataset).phoneName = phoneNames{iPhone};

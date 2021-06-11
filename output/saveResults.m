@@ -1,4 +1,4 @@
-function [estPosLla, resultsFilePath] = saveResults(result)
+function [resultsFilePath] = saveResults(result)
 %SAVERESULTS Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -31,11 +31,7 @@ millisSinceGpsEpoch = secondsSinceGpsEpoch * 1e3;
 % dif2 = millisSinceGpsEpoch2 - ref;
 
 % Convert estimated positions from ECEF to Geodetic
-[posLat, posLon, posAlt] = ecef2geodetic(wgs84Ellipsoid, ...
-    result.xEst(idxStatePos(1), :)', ...
-    result.xEst(idxStatePos(2), :)', ...
-    result.xEst(idxStatePos(3), :)');
-estPosLla = [posLat, posLon, posAlt];
+estPosLla = ecef2geodeticVector(result.xEst(idxStatePos, :)');
 
 %% Write data to file
 resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla);

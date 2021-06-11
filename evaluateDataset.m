@@ -1,4 +1,4 @@
-function [ref, estPosLla, result, resultsFilePath] = evaluateDataset()
+function [err, ref, result, resultsFilePath] = evaluateDataset()
     config = Config.getInstance;
     
     %% Input
@@ -19,9 +19,11 @@ function [ref, estPosLla, result, resultsFilePath] = evaluateDataset()
 
         %% Output
         disp('Navigation ended, saving results...');
-        [estPosLla, resultsFilePath] = saveResults(result);
+        resultsFilePath = saveResults(result);
+        err = Constants.NO_ERR;
     else
-        ref = []; estPosLla = []; result = [];
+        err = Constants.ERR_NO_OSR;
+        ref = []; result = [];
         warning('The campaing ''%s'' does not have OSR data available', config.campaignName);
     end
 end

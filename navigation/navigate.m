@@ -26,7 +26,7 @@ result.dopInnovationCovariances = nan(nSatellites, nGnssEpochs);
 result.dopRejectedHist = zeros(1, nGnssEpochs);
 
 %% Obtain first position
-[x0, ekf.P, ekf.tx] = getFirstPosition(phoneRnx, nav);
+[x0, ekf.P, ekf.tx, x0WLS] = getFirstPosition(phoneRnx, nav);
 % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 %  Use ref position as first position
 % idxRef = find(ref.utcSeconds > ekf.tx, 1, 'first');
@@ -41,7 +41,12 @@ ekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
 thisUtcSeconds = ekf.tx; % First time is from the first GNSS estimation
 idxEst = 1;
 result.xEst(:, 1) = x0; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
-result.sigmaHist = zeros(nStates, 1);
+result.sigmaHist(:, 1) = zeros(nStates, 1);
+
+% WLS solution
+nStatesWLS = 4 + PVTUtils.getNumConstellations - 1;
+result.xWLS(:, 1) = x0WLS; % TODO prealocate if num pos is known (= groundtruth?)
+result.sigmaWLS(:, 1) = zeros(nStatesWLS, 1);
 
 %% Evaluate all trajectory
 % First gnss observations is the same as for the first approx position
@@ -49,10 +54,12 @@ result.sigmaHist = zeros(nStates, 1);
 hasEnded = isempty(phoneGnss); % TODO check imu
 
 while ~hasEnded % while there are more observations/measurements
-%     idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first'); % TODO remove
-    % First iteration: x0 is result from LS
-    if idxEst == 1, x0 = result.xEst(:, 1);
-    else,           x0 = result.xEst(:, idxEst-1); end
+    % First iteration: x0 from getFirstPosition (WLS estimation)
+    % Following iterations: x0 from previous iteration
+    if idxEst > 1
+        x0 = result.xEst(:, idxEst-1); 
+        x0WLS = result.xWLS(:, idxEst-1); 
+    end
     
     thisUtcSeconds = phoneGnss.utcSeconds; % TODO check imu time
     
@@ -63,11 +70,14 @@ while ~hasEnded % while there are more observations/measurements
     % Remove invalid observations (no ephem, elevation mask)
     [phoneGnss.obs, sat] = ...
         filterObs(phoneGnss.obs, satPos, satClkBias, satClkDrift, satVel, x0(idxStatePos));
+    clear satPos satClkBias satClkDrift satVel
     
     % Obtain satellite elevations
     [sat.azDeg, sat.elDeg, ~] = getSatAzEl(sat.pos, x0(idxStatePos));
     
     %% Ref observation
+% (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+%     idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first');
 %     fArgs.x0 = x0;
 %     hArgs.x0 = x0;
 %     hArgs.statPos = osrRnx.statPos;
@@ -80,6 +90,7 @@ while ~hasEnded % while there are more observations/measurements
 %         @hRefObs, hArgs,                                        ...
 %         label);
 %     x0 = updateTotalState(ekf.x, osrRnx.statPos);
+% <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     result.utcSeconds(idxEst) = thisUtcSeconds;
     result.gpsWeekN(idxEst) = phoneGnss.weekN;
@@ -97,6 +108,21 @@ while ~hasEnded % while there are more observations/measurements
 %         continue
         % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     else
+        if length([phoneGnss.obs(:).C]) >= nStatesWLS
+            %% WLS estimation
+            obsConstel = intersect(Config.CONSTELLATIONS, unique([phoneGnss.obs.constellation]), 'stable');
+            R = computeMeasCovariance(sat.elDeg, [phoneGnss.obs(:).C_sigma], ...
+                Config.SIGMA_D_MPS, [phoneGnss.obs(:).constellation]);
+            [result.xWLS(:, idxEst), ~, PWLS, ~, ~] = compute_spp_wls([phoneGnss.obs(:).C]', ...
+                [phoneGnss.obs(:).constellation], sat.pos, sat.clkBias, x0WLS, R, obsConstel);
+            result.sigmaWLS(:, idxEst) = sqrt(diag(PWLS));
+            clear PWLS
+        else
+            result.xWLS(:, idxEst) = result.xWLS(:, idxEst-1);
+            result.sigmaWLS(:, idxEst) = result.sigmaWLS(:, idxEst-1);
+        end
+        
+        %% RTK estimation
         doubleDifferences = computeDoubleDifferences(osrGnss, phoneGnss, sat.pos, sat.elDeg);
         [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, osrRnx, doubleDifferences, result);
         
