@@ -13,6 +13,24 @@ basemap = 'none';
 
 idxCampaignsToPlot = [nDatasets-5:nDatasets]; % [1:5] [nDatasets-5:nDatasets]
 
+%% Map plots
+for iSet = nDatasets    
+    if any(iSet == idxCampaignsToPlot)
+        figures = [figures figure];
+        if isTrain
+            % Map plot
+            geoplot(datasetResults(iSet).ref.posLla(:, 1), datasetResults(iSet).ref.posLla(:, 2), '.-', ...
+                datasetResults(iSet).estPosLla(:, 1), datasetResults(iSet).estPosLla(:, 2), '.-');
+            legend('Groundtruth', 'Computed');
+        else
+            geoplot(datasetResults(iSet).estPosLla(:, 1), datasetResults(iSet).estPosLla(:, 2), '.-');
+        end
+        geobasemap(basemap);
+        title = strcat(num2str(iSet), '_', datasetResults(iSet).campaignName, '_', datasetResults(iSet).phoneName);
+        figureWindowTitle(figures(end), title);
+    end
+end
+
 %% Score computation
 if isTrain
     hErr95 = nan(nDatasets, 1);
@@ -34,21 +52,6 @@ if isTrain
         fprintf(' - %c: %.4f \n', title, score(iSet));
     end
     fprintf('\n ==== FINAL SCORE: %.4f ====\n', mean(score));
-end
-
-%% Map plots
-for iSet = idxCampaignsToPlot
-    figures = [figures figure];
-    if isTrain
-        geoplot(datasetResults(iSet).ref.posLla(:, 1), datasetResults(iSet).ref.posLla(:, 2), '.-', ...
-            datasetResults(iSet).estPosLla(:, 1), datasetResults(iSet).estPosLla(:, 2), '.-');
-        legend('Groundtruth', 'Computed');
-    else
-        geoplot(datasetResults(iSet).estPosLla(:, 1), datasetResults(iSet).estPosLla(:, 2), '.-');
-    end
-    geobasemap(basemap);
-    title = strcat(num2str(iSet), '_', datasetResults(iSet).campaignName, '_', datasetResults(iSet).phoneName);
-    figureWindowTitle(figures(end), title);
 end
 
 %% Group plots

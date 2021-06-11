@@ -46,14 +46,21 @@ while ~firstValidEpoch
 end
 % compute LS position
 % Approximate position is at lat = 0, lon = 0, alt = 0, clk = 0, interconstellation clk bias = 0
-obsConstel = intersect(Config.CONSTELLATIONS, unique([phoneGnss.obs.constellation]), 'stable');
+[obsConstel, idxObsConst] = intersect(Config.CONSTELLATIONS, unique([phoneGnss.obs.constellation]), 'stable');
 xLS = [Constants.EARTH_RADIUS 0 0 0 zeros(1, length(obsConstel)-1)]';
 [xLS, PLS] = compute_spp_ls(phoneGnss.obs, satPos, satClkBias, xLS, obsConstel);
 % Obtain satellite elevations
 [~, satElDeg, ~] = getSatAzEl(satPos, xLS);
 R = computeMeasCovariance(satElDeg, [phoneGnss.obs(:).C_sigma], Config.SIGMA_D_MPS, [phoneGnss.obs(:).constellation]);
-[xWLS, ~, PWLS, ~, ~] = compute_spp_wls([phoneGnss.obs(:).C]', [phoneGnss.obs(:).constellation], satPos, satClkBias, xLS, R, obsConstel);
-
+[xWLSaux, ~, PWLSaux, ~, ~] = compute_spp_wls([phoneGnss.obs(:).C]', [phoneGnss.obs(:).constellation], satPos, satClkBias, xLS, R, obsConstel);
+% Save all states including missing constellations
+nStatesWLS = 4 + PVTUtils.getNumConstellations - 1;
+idxComputedStates = [1:4, 4+idxObsConst(2:end)'-1]; % pos, clock, inter-const bias
+xWLS = zeros(nStatesWLS, 1);
+PWLS = zeros(nStatesWLS);
+xWLS(idxComputedStates) = xWLSaux;
+PWLS(idxComputedStates, idxComputedStates) = PWLSaux;
+            
 % Fill ouptuts with LS estimates
 [x0, P0] = fillFullState(xWLS, PWLS);
 utcSeconds0 = thisUtcSeconds;

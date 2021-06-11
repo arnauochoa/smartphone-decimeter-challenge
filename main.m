@@ -14,7 +14,7 @@ iDataset = 0;
 tic
 switch config.EVALUATE_DATASETS
     case 'single'
-        [err, ref, result, ~] = evaluateDataset();
+        [ref, result, ~] = evaluateDataset();
         disp('Plotting results...')
         plotResults(ref, result);
     case 'all'
@@ -31,6 +31,12 @@ switch config.EVALUATE_DATASETS
                     = evaluateDataset();
                 datasetResults(iDataset).campaignName = campaignNames{iCampaign};
                 datasetResults(iDataset).phoneName = phoneNames{iPhone};
+                % RTK and WLS estimations to Geodetic
+                idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+                datasetResults(iDataset).result.estPosLla = ...
+                    ecef2geodeticVector(datasetResults(iDataset).result.xEst(idxStatePos, :)');
+                datasetResults(iDataset).result.estPosWLSLla = ...
+                    ecef2geodeticVector(datasetResults(iDataset).result.xWLS(1:3, :)');
             end
         end
         % Compare output file with sample submission

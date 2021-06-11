@@ -100,6 +100,8 @@ while ~hasEnded % while there are more observations/measurements
         % Initial estimate for the transition model
         fArgs.x0 = x0;
         ekf = EKF.propagateState(ekf, thisUtcSeconds, @fTransition, fArgs);
+        result.xWLS(:, idxEst) = result.xWLS(:, idxEst-1);
+        result.sigmaWLS(:, idxEst) = result.sigmaWLS(:, idxEst-1);
         % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         % Skip epochs with missing obs
 %         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);
@@ -110,13 +112,18 @@ while ~hasEnded % while there are more observations/measurements
     else
         if length([phoneGnss.obs(:).C]) >= nStatesWLS
             %% WLS estimation
-            obsConstel = intersect(Config.CONSTELLATIONS, unique([phoneGnss.obs.constellation]), 'stable');
+            [obsConstel, idxObsConst] = intersect(Config.CONSTELLATIONS, unique([phoneGnss.obs.constellation]), 'stable');
+            idxComputedStates = [1:4, 4+idxObsConst(2:end)'-1]; % pos, clock, inter-const bias
             R = computeMeasCovariance(sat.elDeg, [phoneGnss.obs(:).C_sigma], ...
                 Config.SIGMA_D_MPS, [phoneGnss.obs(:).constellation]);
-            [result.xWLS(:, idxEst), ~, PWLS, ~, ~] = compute_spp_wls([phoneGnss.obs(:).C]', ...
-                [phoneGnss.obs(:).constellation], sat.pos, sat.clkBias, x0WLS, R, obsConstel);
-            result.sigmaWLS(:, idxEst) = sqrt(diag(PWLS));
-            clear PWLS
+            [xWLS, ~, PWLS, ~, ~] = compute_spp_wls([phoneGnss.obs(:).C]', ...
+                [phoneGnss.obs(:).constellation], sat.pos, sat.clkBias, x0WLS(idxComputedStates), R, obsConstel);
+            % Save all states including missing constellations
+            result.xWLS(:, idxEst) = zeros(nStatesWLS, 1);
+            result.sigmaWLS(:, idxEst) = zeros(nStatesWLS, 1);
+            result.xWLS(idxComputedStates, idxEst) = xWLS;
+            result.sigmaWLS(idxComputedStates, idxEst) = sqrt(diag(PWLS));
+            clear xWLS PWLS idxObsConst
         else
             result.xWLS(:, idxEst) = result.xWLS(:, idxEst-1);
             result.sigmaWLS(:, idxEst) = result.sigmaWLS(:, idxEst-1);
