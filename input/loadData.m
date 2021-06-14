@@ -58,7 +58,7 @@ while isempty(osrRnx.obs) && idxOsrSrc < length(config.OSR_SOURCES)
                     fprintf('Using OSR data from %s\n', config.OSR_SOURCES{idxOsrSrc});
                 end
                 osrRnx.obs = [osrRnx.obs; obs];
-                assert(all(isnan(statPos)) || all(statPos == auxPos), ...
+                assert(all(isnan(statPos)) || all(abs(statPos - auxPos) < 1), ...
                     'Station positions do not match between different OSR of the same campaign');
                 statPos = auxPos;
             end

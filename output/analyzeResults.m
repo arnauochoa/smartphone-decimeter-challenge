@@ -6,28 +6,34 @@ end
 load(matFilePath, 'datasetResults');
 
 %% Initializations
+idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 isTrain = ~isempty(datasetResults(1).ref);
 nDatasets = length(datasetResults);
 figures = [];
 basemap = 'none';
 
-idxCampaignsToPlot = [nDatasets-5:nDatasets]; % [1:5] [nDatasets-5:nDatasets]
+idxCampaignsToPlot = [1:5]; % [1:5] [nDatasets-5:nDatasets]
 
 %% Map plots
 for iSet = idxCampaignsToPlot    
     figures = [figures figure];
     if isTrain
-        % Map plot
-        geoplot(datasetResults(iSet).ref.posLla(:, 1), datasetResults(iSet).ref.posLla(:, 2), '.-', ...
-            datasetResults(iSet).result.estPosWLSLla(:, 1), datasetResults(iSet).result.estPosWLSLla(:, 2), '.-',...
-            datasetResults(iSet).result.estPosLla(:, 1), datasetResults(iSet).result.estPosLla(:, 2), '.-');
-        legend('Groundtruth', 'WLS', 'RTK');
+        geoplot(datasetResults(iSet).ref.posLla(:, 1), datasetResults(iSet).ref.posLla(:, 2), '.-k', ...
+            datasetResults(iSet).result.estPosWLSLla(:, 1), datasetResults(iSet).result.estPosWLSLla(:, 2), '.b');
     else
-        geoplot(datasetResults(iSet).result.estPosWLSLla(:, 1), datasetResults(iSet).result.estPosWLSLla(:, 2), '.-',...
-            datasetResults(iSet).result.estPosLla(:, 1), datasetResults(iSet).result.estPosLla(:, 2), '.-');
-        legend('WLS', 'RTK');
+        geoplot(datasetResults(iSet).result.estPosWLSLla(:, 1), datasetResults(iSet).result.estPosWLSLla(:, 2), '.b');
     end
     geobasemap(basemap);
+    % Plot estimation with color depending on covariance
+    stdPos = datasetResults(iSet).result.sigmaHist(idxStatePos, :);
+    stdNed = ecef2geodeticVector(stdPos');
+    stdHor = Lla2Hd(stdNed, zeros(size(stdPos')));
+    hold on; colormap summer;
+    geoscatter(datasetResults(iSet).result.estPosLla(:, 1), datasetResults(iSet).result.estPosLla(:, 2), 5, stdHor, 'fill'); 
+    c = colorbar; 
+    c.Label.String = 'Horizontal position STD (m)';
+    if isTrain, legend('Groundtruth', 'WLS', 'RTK');
+    else, legend('WLS', 'RTK'); end
     title = strcat(num2str(iSet), '_', datasetResults(iSet).campaignName, '_', datasetResults(iSet).phoneName);
     figureWindowTitle(figures(end), title);
 end
@@ -40,7 +46,7 @@ if isTrain
     for iSet = 1:nDatasets
         % Interpolate groundtruth at the computed position's time
         refInterpLla = interp1(datasetResults(iSet).ref.utcSeconds, datasetResults(iSet).ref.posLla, datasetResults(iSet).result.utcSeconds);
-        assert(size(refInterpLla, 1) == size(datasetResults(iSet).result.xEst, 2), ...
+        assert(size(refInterpLla, 1) == size(datasetResults(iSet).result.xRTK, 2), ...
             'Reference and computed position vectors are not the same size');
         % Position error
         hError = Lla2Hd(refInterpLla, datasetResults(iSet).result.estPosLla);

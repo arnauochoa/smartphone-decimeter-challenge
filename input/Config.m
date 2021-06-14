@@ -17,9 +17,9 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
-        DATASET_TYPE            = 'test';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        EVALUATE_DATASETS       = 'single';                                    % 'single' 'all'
+        DATASET_TYPE            = 'train';                                  % 'train' 'test'
+        CAMPAIGN_NAME           = '2021-01-04-US-RWC-2';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}            % By order of preference
@@ -41,7 +41,7 @@ classdef (Sealed) Config < handle
         
         %% Navigation parameters
         CONSTELLATIONS          = 'GEC';
-        OBS_COMBINATION         = {'none', 'none'};	
+%         OBS_COMBINATION         = {'none', 'none'};	
         OBS_USED                = {'C1C+C5X', 'C1X+C5X', 'C2X'};            % PR Rinex code for observations
         OSR_OBS_USED            = {'C1C+C5I', 'C1X+C5X', 'C2X'};            % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
@@ -63,6 +63,7 @@ classdef (Sealed) Config < handle
         COV_FACTOR_L            = 1;                % Covariance factor for carrier phase meas      ("")
         COV_FACTOR_D            = 1;                % Covariance factor for Doppler meas            ("")
         % State covariance matrix initialization - P0
+        FACTOR_P0_POS           = 1e5;              % Factor that mupliplies P0 obtained from WLS
         SIGMA_P0_VEL_XYZ        = [1e2 1e2 1e2];    % std m/sqrt(s^3) of initial XYZ velocity
         SIGMA_P0_CLK_DRIFT      = 1e2;              % std m/sqrt(s^3) of initial clock drift
         SIGMA_P0_SD_AMBIG       = 1e7;              % std cyc of initial SD phase ambiguity
@@ -160,6 +161,18 @@ classdef (Sealed) Config < handle
         function path = obsDataPath(this)
             % TRAINPATH Returns the absolute path where the obs data is saved
             path = [Config.dataPath this.DATASET_TYPE filesep];
+        end
+        
+        function resultsDir = getResultsDir(this)
+            resultsDir = [workspacePath 'data' filesep 'results' filesep this.DATASET_TYPE filesep];
+            switch this.EVALUATE_DATASETS
+                case 'single'
+                    resultsDir = [resultsDir this.campaignName filesep];
+                case 'all'
+                    resultsDir = [resultsDir 'all' filesep];
+                otherwise
+                    error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
+            end
         end
         
     end

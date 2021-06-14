@@ -36,9 +36,15 @@ for iSat = 1:nOsrSats
             if sum(~isnan(thisSatRnx(:, GnssLogUtils.COL_SVN + iObs))) < 2
                 thisSatObsInterp(:, iObs) = nan(size(rxTow));
             else
+                % Some sample points may be repeated due to concatenation
+                % of RINEX files
+                [towVec, obsVec] = ...
+                    cleanRepeatedSamplePts(thisSatRnx(:, GnssLogUtils.COL_TOW), ...
+                    thisSatRnx(:, GnssLogUtils.COL_SVN + iObs));
+                
                 thisSatObsInterp(:, iObs) = interp1gap(         ...
-                    thisSatRnx(:, GnssLogUtils.COL_TOW),        ... % OSR obs time
-                    thisSatRnx(:, GnssLogUtils.COL_SVN + iObs), ... % OSR obs
+                    towVec,                                     ... % OSR obs time
+                    obsVec,                                     ... % OSR obs
                     rxTow,                                      ... % Interp time
                     config.MAX_OSR_INTERP_GAP_SEC,              ... % Max gap
                     'spline',                                   ... % Type of interpolation

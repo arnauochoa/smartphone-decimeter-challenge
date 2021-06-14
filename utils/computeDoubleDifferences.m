@@ -36,7 +36,7 @@ if isempty(fieldnames(doubleDifferences))
     doubleDifferences = [];
 end
 if nDiscarded > 0 && ~strcmp(Config.EVALUATE_DATASETS, 'all')
-    fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
+%     fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
 end
 end
 

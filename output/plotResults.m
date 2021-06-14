@@ -10,12 +10,21 @@ idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
 timelineSec = (result.utcSeconds - result.utcSeconds(1));
-% nEpochs = size(result.xEst, 2);
+nEpochs = size(result.xRTK, 2);
 figures = [];
 basemap = 'none';
 
 %% RTK estimation
-estPosLla = ecef2geodeticVector(result.xEst(idxStatePos, :)');
+estPosXyz = result.xRTK(idxStatePos, :)';
+estPosLla = ecef2geodeticVector(estPosXyz);
+stdNed = nan(nEpochs, 3);
+for iEpoch = 1:nEpochs
+    Ppos = result.PRTK(idxStatePos, idxStatePos, iEpoch);
+    Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
+    stdNed(iEpoch, :) = diag(Rn2e' * Ppos * Rn2e)';
+end
+% Horizontal sigma as norm of North and East
+stdHor = vecnorm(stdNed(:, 1:2), 2, 2);
 
 %% WLS estimation
 estPosWLSLla = ecef2geodeticVector(result.xWLS(1:3, :)');
@@ -24,41 +33,43 @@ estPosWLSLla = ecef2geodeticVector(result.xWLS(1:3, :)');
 % Position
 figures = [figures figure];
 if strcmp(config.DATASET_TYPE, 'test')
-    geoplot(estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.-', ...
-        estPosLla(:, 1), estPosLla(:, 2), '.-');
-    legend('WLS', 'RTK');
+    geoplot(estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.b');
 else
     if isprop(config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
-        geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'x', ...
-            estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.', ...
-            estPosLla(:, 1), estPosLla(:, 2), '.', ...
+        geoplot(ref.posLla(1, 1), ref.posLla(1, 2), 'xk', ...
+            estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.b', ...
             'LineWidth', 1);
     else
-        geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', ...
-            estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.-', ...
-            estPosLla(:, 1), estPosLla(:, 2), '.-');
+        geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-k', ...
+            estPosWLSLla(:, 1), estPosWLSLla(:, 2), '.b');
     end
-    legend('Groundtruth', 'WLS', 'RTK');
 end
 geobasemap(basemap);
+% Plot estimation with color depending on covariance
+hold on; colormap summer;
+geoscatter(estPosLla(:, 1), estPosLla(:, 2), 6, stdHor, 'filled');
+c = colorbar; 
+c.Label.String = 'Horizontal position STD (m)';
+if strcmp(config.DATASET_TYPE, 'test'), legend('WLS', 'RTK');
+else, legend('Groundtruth', 'WLS', 'RTK'); end
 figureWindowTitle(figures(end), 'Map');
 
 % Velocity
 figures = [figures figure];
-plot(timelineSec, result.xEst(idxStateVel, :))
+plot(timelineSec, result.xRTK(idxStateVel, :))
 xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 legend('X', 'Y', 'Z');
 figureWindowTitle(figures(end), 'Velocity');
 
 % Rx clock drift
 figures = [figures figure];
-plot(timelineSec, result.xEst(idxStateClkDrift, :))
+plot(timelineSec, result.xRTK(idxStateClkDrift, :))
 xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
 figureWindowTitle(figures(end), 'Rx clock drift');
 
 % Ambiguities
 figures = [figures figure];
-plot(timelineSec, result.xEst(idxStateAllSdAmb, :), '.')
+plot(timelineSec, result.xRTK(idxStateAllSdAmb, :), '.')
 xlabel('Time since start (s)'); ylabel('Ambiguities (cyc)');
 % legend('X', 'Y', 'Z');
 figureWindowTitle(figures(end), 'Ambiguities');
@@ -105,7 +116,7 @@ figureWindowTitle(figures(end), 'Outlier rejections');
 if contains(config.DATASET_TYPE, 'train')
     % Interpolate groundtruth at the computed position's time
     refInterpLla = interp1(ref.utcSeconds, ref.posLla, result.utcSeconds);
-    assert(size(refInterpLla, 1) == size(result.xEst, 2), 'Reference and computed position vectors are not the same size');
+    assert(size(refInterpLla, 1) == size(result.xRTK, 2), 'Reference and computed position vectors are not the same size');
     % Position error
     nedError = Lla2Ned(refInterpLla, estPosLla);
     hError = Lla2Hd(refInterpLla, estPosLla);
@@ -123,15 +134,22 @@ if contains(config.DATASET_TYPE, 'train')
     refVelTime = ref.utcSeconds(1:end-1) + dtRef/2;
     refVelEcefInterp = interp1(refVelTime, refVelEcef, result.utcSeconds);
     % Velocity error
-    velErr = refVelEcefInterp - result.xEst(idxStateVel, :)';
+    velErr = refVelEcefInterp - result.xRTK(idxStateVel, :)';
 
     % Position error
     figures = [figures figure];
-    plot(timelineSec, nedError)
-    xlabel('Time since start (s)'); ylabel('Position error (m)');
-    legend('N', 'E', 'D')
+    coord = {'North', 'East', 'Down'};
     title('Groundtruth - Estimation')
-    grid on
+    for i = 1:3
+        subplot(3,1,i); hold on;
+        p1 = plot(timelineSec, nedError(:, i));
+        p2 = plot(timelineSec, 3*stdNed(:, i), 'r');
+        plot(timelineSec, -3*stdNed(:, i), 'r');
+        h = [p1 p2];
+        legend(h, {'Error', '±3\sigma'})
+        xlabel('Time since start (s)'); ylabel([coord{i} ' error (m)']);
+        grid on
+    end
     figureWindowTitle(figures(end), 'Position error');
     
     % Velocity error

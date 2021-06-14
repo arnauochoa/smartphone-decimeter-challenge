@@ -40,13 +40,13 @@ ekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
 % thisUtcSeconds -> time ref for both IMU and GNSS.
 thisUtcSeconds = ekf.tx; % First time is from the first GNSS estimation
 idxEst = 1;
-result.xEst(:, 1) = x0; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
-result.sigmaHist(:, 1) = zeros(nStates, 1);
+result.xRTK(:, 1) = x0; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
+result.PRTK(:, :, 1) = zeros(nStates, nStates, 1);
 
 % WLS solution
 nStatesWLS = 4 + PVTUtils.getNumConstellations - 1;
 result.xWLS(:, 1) = x0WLS; % TODO prealocate if num pos is known (= groundtruth?)
-result.sigmaWLS(:, 1) = zeros(nStatesWLS, 1);
+result.PWLS(:, :, 1) = zeros(nStatesWLS, nStatesWLS, 1);
 
 %% Evaluate all trajectory
 % First gnss observations is the same as for the first approx position
@@ -57,7 +57,7 @@ while ~hasEnded % while there are more observations/measurements
     % First iteration: x0 from getFirstPosition (WLS estimation)
     % Following iterations: x0 from previous iteration
     if idxEst > 1
-        x0 = result.xEst(:, idxEst-1); 
+        x0 = result.xRTK(:, idxEst-1); 
         x0WLS = result.xWLS(:, idxEst-1); 
     end
     
@@ -120,13 +120,13 @@ while ~hasEnded % while there are more observations/measurements
                 [phoneGnss.obs(:).constellation], sat.pos, sat.clkBias, x0WLS(idxComputedStates), R, obsConstel);
             % Save all states including missing constellations
             result.xWLS(:, idxEst) = zeros(nStatesWLS, 1);
-            result.sigmaWLS(:, idxEst) = zeros(nStatesWLS, 1);
+            result.PWLS(:, :, idxEst) = zeros(nStatesWLS, nStatesWLS, 1);
             result.xWLS(idxComputedStates, idxEst) = xWLS;
-            result.sigmaWLS(idxComputedStates, idxEst) = sqrt(diag(PWLS));
+            result.sigmaWLS(idxComputedStates, idxComputedStates, idxEst) = PWLS;
             clear xWLS PWLS idxObsConst
         else
             result.xWLS(:, idxEst) = result.xWLS(:, idxEst-1);
-            result.sigmaWLS(:, idxEst) = result.sigmaWLS(:, idxEst-1);
+            result.PWLS(:, :, idxEst) = result.PWLS(:, :, idxEst-1);
         end
         
         %% RTK estimation
@@ -136,8 +136,8 @@ while ~hasEnded % while there are more observations/measurements
         [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, osrRnx, phoneGnss, sat, result);
     end
     
-    result.xEst(:, idxEst) = x0;
-    result.sigmaHist(:, idxEst) = sqrt(diag(ekf.P));
+    result.xRTK(:, idxEst) = x0;
+    result.PRTK(:, :, idxEst) = ekf.P;
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
