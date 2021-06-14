@@ -1,7 +1,7 @@
 function analyzeResults(matFilePath)
 close all;
 if nargin < 1
-    matFilePath = 'data/results/test/all/result_20210610_103626.mat';
+    matFilePath = 'data/results/test/all/result_20210611_174823.mat';
 end
 load(matFilePath, 'datasetResults');
 
@@ -14,21 +14,22 @@ basemap = 'none';
 idxCampaignsToPlot = [nDatasets-5:nDatasets]; % [1:5] [nDatasets-5:nDatasets]
 
 %% Map plots
-for iSet = nDatasets    
-    if any(iSet == idxCampaignsToPlot)
-        figures = [figures figure];
-        if isTrain
-            % Map plot
-            geoplot(datasetResults(iSet).ref.posLla(:, 1), datasetResults(iSet).ref.posLla(:, 2), '.-', ...
-                datasetResults(iSet).estPosLla(:, 1), datasetResults(iSet).estPosLla(:, 2), '.-');
-            legend('Groundtruth', 'Computed');
-        else
-            geoplot(datasetResults(iSet).estPosLla(:, 1), datasetResults(iSet).estPosLla(:, 2), '.-');
-        end
-        geobasemap(basemap);
-        title = strcat(num2str(iSet), '_', datasetResults(iSet).campaignName, '_', datasetResults(iSet).phoneName);
-        figureWindowTitle(figures(end), title);
+for iSet = idxCampaignsToPlot    
+    figures = [figures figure];
+    if isTrain
+        % Map plot
+        geoplot(datasetResults(iSet).ref.posLla(:, 1), datasetResults(iSet).ref.posLla(:, 2), '.-', ...
+            datasetResults(iSet).result.estPosWLSLla(:, 1), datasetResults(iSet).result.estPosWLSLla(:, 2), '.-',...
+            datasetResults(iSet).result.estPosLla(:, 1), datasetResults(iSet).result.estPosLla(:, 2), '.-');
+        legend('Groundtruth', 'WLS', 'RTK');
+    else
+        geoplot(datasetResults(iSet).result.estPosWLSLla(:, 1), datasetResults(iSet).result.estPosWLSLla(:, 2), '.-',...
+            datasetResults(iSet).result.estPosLla(:, 1), datasetResults(iSet).result.estPosLla(:, 2), '.-');
+        legend('WLS', 'RTK');
     end
+    geobasemap(basemap);
+    title = strcat(num2str(iSet), '_', datasetResults(iSet).campaignName, '_', datasetResults(iSet).phoneName);
+    figureWindowTitle(figures(end), title);
 end
 
 %% Score computation
@@ -42,7 +43,7 @@ if isTrain
         assert(size(refInterpLla, 1) == size(datasetResults(iSet).result.xEst, 2), ...
             'Reference and computed position vectors are not the same size');
         % Position error
-        hError = Lla2Hd(refInterpLla, datasetResults(iSet).estPosLla);
+        hError = Lla2Hd(refInterpLla, datasetResults(iSet).result.estPosLla);
 
         % Compute score
         hErr95(iSet) = prctile(abs(hError),95);
