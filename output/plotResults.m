@@ -17,14 +17,22 @@ basemap = 'none';
 %% RTK estimation
 estPosXyz = result.xRTK(idxStatePos, :)';
 estPosLla = ecef2geodeticVector(estPosXyz);
-stdNed = nan(nEpochs, 3);
+posStdNed = nan(nEpochs, 3);
+velNed = nan(nEpochs, 3);
+velStdNed = nan(nEpochs, 3);
 for iEpoch = 1:nEpochs
-    Ppos = result.PRTK(idxStatePos, idxStatePos, iEpoch);
     Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
-    stdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
+    % Position STD in NED
+    Ppos = result.PRTK(idxStatePos, idxStatePos, iEpoch);
+    posStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
+    % Velocity to NED
+    velNed(iEpoch, :) = Rn2e' * result.xRTK(idxStateVel, iEpoch);
+    % Velocity STD in NED
+    Pvel = result.PRTK(idxStateVel, idxStateVel, iEpoch);
+    velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
 end
 % Horizontal sigma as norm of North and East
-stdHor = vecnorm(stdNed(:, 1:2), 2, 2);
+stdHor = vecnorm(posStdNed(:, 1:2), 2, 2);
 
 %% WLS estimation
 estPosWLSLla = ecef2geodeticVector(result.xWLS(1:3, :)');
@@ -56,9 +64,9 @@ figureWindowTitle(figures(end), 'Map');
 
 % Velocity
 figures = [figures figure];
-plot(timelineSec, result.xRTK(idxStateVel, :))
+plot(timelineSec, velNed);
 xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
-legend('X', 'Y', 'Z');
+legend('North', 'East', 'Down');
 figureWindowTitle(figures(end), 'Velocity');
 
 % Rx clock drift
@@ -118,12 +126,12 @@ if contains(config.DATASET_TYPE, 'train')
     refInterpLla = interp1(ref.utcSeconds, ref.posLla, result.utcSeconds);
     assert(size(refInterpLla, 1) == size(result.xRTK, 2), 'Reference and computed position vectors are not the same size');
     % Position error
-    nedError = Lla2Ned(refInterpLla, estPosLla);
-    hError = Lla2Hd(refInterpLla, estPosLla);
+    posErrNed = Lla2Ned(refInterpLla, estPosLla);
+    posErrHor = Lla2Hd(refInterpLla, estPosLla);
     
     % Compute score
-    hErr95 = prctile(abs(hError),95);
-    hErr50 = prctile(abs(hError),50);
+    hErr95 = prctile(abs(posErrHor),95);
+    hErr50 = prctile(abs(posErrHor),50);
     fprintf('\n ==== Score: %.4f ====\n', mean([hErr95, hErr50]));
     
     % Groundtruth velocity
@@ -134,7 +142,13 @@ if contains(config.DATASET_TYPE, 'train')
     refVelTime = ref.utcSeconds(1:end-1) + dtRef/2;
     refVelEcefInterp = interp1(refVelTime, refVelEcef, result.utcSeconds);
     % Velocity error
-    velErr = refVelEcefInterp - result.xRTK(idxStateVel, :)';
+    velErrEcef = refVelEcefInterp - result.xRTK(idxStateVel, :)';
+    velErrNed = nan(nEpochs, 3);
+    for iEpoch = 1:nEpochs
+        Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
+        % Velocity to NED
+        velErrNed(iEpoch, :) = Rn2e' * velErrEcef(iEpoch, :)';
+    end
 
     % Position error
     figures = [figures figure];
@@ -142,9 +156,9 @@ if contains(config.DATASET_TYPE, 'train')
     title('Groundtruth - Estimation')
     for i = 1:3
         subplot(3,1,i); hold on;
-        p1 = plot(timelineSec, nedError(:, i));
-        p2 = plot(timelineSec, 3*stdNed(:, i), 'r');
-        plot(timelineSec, -3*stdNed(:, i), 'r');
+        p1 = plot(timelineSec, posErrNed(:, i));
+        p2 = plot(timelineSec, 3*posStdNed(:, i), 'r');
+        plot(timelineSec, -3*posStdNed(:, i), 'r');
         h = [p1 p2];
         legend(h, {'Error', '±3\sigma'})
         xlabel('Time since start (s)'); ylabel([coord{i} ' error (m)']);
@@ -155,18 +169,29 @@ if contains(config.DATASET_TYPE, 'train')
     
     % Velocity error
     figures = [figures figure];
-    plot(timelineSec, velErr)
-    xlabel('Time since start (s)'); ylabel('Velocity error (m)');
-    legend('X', 'Y', 'Z');
     title('Groundtruth - Estimation')
-    grid on
+    for i = 1:3
+        subplot(3,1,i); hold on;
+        p1 = plot(timelineSec, velErrNed(:, i));
+        p2 = plot(timelineSec, 3*velStdNed(:, i), 'r');
+        plot(timelineSec, -3*velStdNed(:, i), 'r');
+        h = [p1 p2];
+        legend(h, {'Error', '±3\sigma'})
+        xlabel('Time since start (s)'); ylabel([coord{i} ' error (m/s)']);
+        grid on
+        hold off
+    end
     figureWindowTitle(figures(end), 'Velocity error');
+%         plot(timelineSec, velErr)
+%     xlabel('Time since start (s)'); ylabel('Velocity error (m)');
+%     legend('X', 'Y', 'Z');
+%     grid on
     
     %% CDFs
     pctl = 95;
     % Horizontal
-    hErrPctl = prctile(abs(hError),pctl);
-    [hErrF,hEerrX] = ecdf(abs(hError));
+    hErrPctl = prctile(abs(posErrHor),pctl);
+    [hErrF,hEerrX] = ecdf(abs(posErrHor));
     
     figures = [figures figure]; hold on;
     plot(hEerrX,hErrF,'LineWidth',2)
@@ -177,8 +202,8 @@ if contains(config.DATASET_TYPE, 'train')
     figureWindowTitle(figures(end), 'Hor. pos. CDF');
     
     % Vertical
-    vErrPctl = prctile(abs(nedError(:,3)),pctl);
-    [vErrF,vErrX] = ecdf(abs(nedError(:,3)));
+    vErrPctl = prctile(abs(posErrNed(:,3)),pctl);
+    [vErrF,vErrX] = ecdf(abs(posErrNed(:,3)));
     
     figures = [figures figure]; hold on;
     plot(vErrX,vErrF,'LineWidth',2)
@@ -189,9 +214,9 @@ if contains(config.DATASET_TYPE, 'train')
     figureWindowTitle(figures(end), 'Ver. pos. CDF');
     
     % Velocity
-    velErrPctl = prctile(abs(velErr),pctl);
+    velErrPctl = prctile(abs(velErrNed),pctl);
     for iDim = 1:3
-        [velErrF{iDim}, velErrX{iDim}] = ecdf(abs(velErr(:, iDim)));
+        [velErrF{iDim}, velErrX{iDim}] = ecdf(abs(velErrNed(:, iDim)));
     end
     
     figures = [figures figure]; hold on;
@@ -200,9 +225,9 @@ if contains(config.DATASET_TYPE, 'train')
         plot(velErrX{iDim},velErrF{iDim},'LineWidth',2, 'Color', colors(iDim, :))
         plot([1;1]*velErrPctl(iDim), [0;1]*pctl/100, '--', 'Color', colors(iDim, :))
     end
-    legend({'X',sprintf('%d%% bound = %.2f', pctl, velErrPctl(1)), ...
-            'Y',sprintf('%d%% bound = %.2f', pctl, velErrPctl(2)), ...
-            'Z',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
+    legend({'N',sprintf('%d%% bound = %.2f', pctl, velErrPctl(1)), ...
+            'E',sprintf('%d%% bound = %.2f', pctl, velErrPctl(2)), ...
+            'D',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
             'Location','northeastoutside');
     xlabel('Velocity error error (m/s)'); ylabel('Frequency')
     title([config.campaignName ' - ' config.phoneName], 'Interpreter', 'none');
