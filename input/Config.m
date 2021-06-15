@@ -56,8 +56,8 @@ classdef (Sealed) Config < handle
         SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
         SIGMA_Q_SD_AMBIG        = 1e3;              % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
-        SIGMA_C_M               = 1e1;              % Default std (m) for pseudorange meas          (only for elevation-based model)
-        SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")
+        SIGMA_C_M               = 1.5e1;              % Default std (m) for pseudorange meas          (only for elevation-based model)
+        SIGMA_L_M               = 3e0;              % Default std (m) for carrier phase meas        ("")
         SIGMA_D_MPS             = 1e-1;              % Default std (m/s) for doppler meas            ("")
         COV_FACTOR_C            = 1;                % Covariance factor for code pseudorange meas   (useful for weighting uncertainties coming from GnssLog)
         COV_FACTOR_L            = 1;                % Covariance factor for carrier phase meas      ("")

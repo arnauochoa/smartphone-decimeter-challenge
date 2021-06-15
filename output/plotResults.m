@@ -21,7 +21,7 @@ stdNed = nan(nEpochs, 3);
 for iEpoch = 1:nEpochs
     Ppos = result.PRTK(idxStatePos, idxStatePos, iEpoch);
     Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
-    stdNed(iEpoch, :) = diag(Rn2e' * Ppos * Rn2e)';
+    stdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
 end
 % Horizontal sigma as norm of North and East
 stdHor = vecnorm(stdNed(:, 1:2), 2, 2);
@@ -149,6 +149,7 @@ if contains(config.DATASET_TYPE, 'train')
         legend(h, {'Error', '±3\sigma'})
         xlabel('Time since start (s)'); ylabel([coord{i} ' error (m)']);
         grid on
+        hold off
     end
     figureWindowTitle(figures(end), 'Position error');
     

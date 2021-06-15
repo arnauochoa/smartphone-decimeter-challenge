@@ -22,7 +22,7 @@ switch config.EVALUATE_DATASETS
         campaignNames = getValidDir(config.obsDataPath);
         if strcmp(config.DATASET_TYPE, 'train')
             resultsDir = getResultsDir(config);
-            fidScore = fopen([resultsDir 'score_' config.resFileTimestamp 'csv'], 'w');
+            fidScore = fopen([resultsDir 'score_' config.resFileTimestamp '.csv'], 'w');
             fprintf(fidScore, 'phone,score\n');
         end
         for iCampaign = 1:length(campaignNames)
