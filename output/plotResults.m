@@ -17,22 +17,22 @@ basemap = 'none';
 %% RTK estimation
 estPosXyz = result.xRTK(idxStatePos, :)';
 estPosLla = ecef2geodeticVector(estPosXyz);
-posStdNed = nan(nEpochs, 3);
-velNed = nan(nEpochs, 3);
-velStdNed = nan(nEpochs, 3);
-for iEpoch = 1:nEpochs
-    Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
-    % Position STD in NED
-    Ppos = result.PRTK(idxStatePos, idxStatePos, iEpoch);
-    posStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
-    % Velocity to NED
-    velNed(iEpoch, :) = Rn2e' * result.xRTK(idxStateVel, iEpoch);
-    % Velocity STD in NED
-    Pvel = result.PRTK(idxStateVel, idxStateVel, iEpoch);
-    velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
-end
+% result.posStdNed = nan(nEpochs, 3);
+% result.velNed = nan(nEpochs, 3);
+% result.velStdNed = nan(nEpochs, 3);
+% for iEpoch = 1:nEpochs
+%     Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
+%     % Position STD in NED
+%     Ppos = result.PRTK(idxStatePos, idxStatePos, iEpoch);
+%     result.posStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
+%     % Velocity to NED
+%     result.velNed(iEpoch, :) = Rn2e' * result.xRTK(idxStateVel, iEpoch);
+%     % Velocity STD in NED
+%     Pvel = result.PRTK(idxStateVel, idxStateVel, iEpoch);
+%     result.velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
+% end
 % Horizontal sigma as norm of North and East
-stdHor = vecnorm(posStdNed(:, 1:2), 2, 2);
+stdHor = vecnorm(result.posStdNed(:, 1:2), 2, 2);
 
 %% WLS estimation
 estPosWLSLla = ecef2geodeticVector(result.xWLS(1:3, :)');
@@ -64,7 +64,7 @@ figureWindowTitle(figures(end), 'Map');
 
 % Velocity
 figures = [figures figure];
-plot(timelineSec, velNed);
+plot(timelineSec, result.velNed);
 xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 legend('North', 'East', 'Down');
 figureWindowTitle(figures(end), 'Velocity');
@@ -157,8 +157,8 @@ if contains(config.DATASET_TYPE, 'train')
     for i = 1:3
         subplot(3,1,i); hold on;
         p1 = plot(timelineSec, posErrNed(:, i));
-        p2 = plot(timelineSec, 3*posStdNed(:, i), 'r');
-        plot(timelineSec, -3*posStdNed(:, i), 'r');
+        p2 = plot(timelineSec, 3*result.posStdNed(:, i), 'r');
+        plot(timelineSec, -3*result.posStdNed(:, i), 'r');
         h = [p1 p2];
         legend(h, {'Error', '±3\sigma'})
         xlabel('Time since start (s)'); ylabel([coord{i} ' error (m)']);
@@ -173,8 +173,8 @@ if contains(config.DATASET_TYPE, 'train')
     for i = 1:3
         subplot(3,1,i); hold on;
         p1 = plot(timelineSec, velErrNed(:, i));
-        p2 = plot(timelineSec, 3*velStdNed(:, i), 'r');
-        plot(timelineSec, -3*velStdNed(:, i), 'r');
+        p2 = plot(timelineSec, 3*result.velStdNed(:, i), 'r');
+        plot(timelineSec, -3*result.velStdNed(:, i), 'r');
         h = [p1 p2];
         legend(h, {'Error', '±3\sigma'})
         xlabel('Time since start (s)'); ylabel([coord{i} ' error (m/s)']);

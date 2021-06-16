@@ -1,7 +1,7 @@
 function analyzeResults(matFilePath)
 close all;
 if nargin < 1
-    matFilePath = 'data/results/test/all/result_20210611_174823.mat';
+    matFilePath = 'data/results/test/all/result_20210616_091015.mat';
 end
 load(matFilePath, 'datasetResults');
 
@@ -12,10 +12,10 @@ nDatasets = length(datasetResults);
 figures = [];
 basemap = 'none';
 
-idxCampaignsToPlot = [1:5]; % [1:5] [nDatasets-5:nDatasets]
+idxCampaignsToPlot = [nDatasets-10:nDatasets]; % [1:5] [nDatasets-5:nDatasets]
 
 %% Map plots
-for iSet = idxCampaignsToPlot    
+for iSet = idxCampaignsToPlot
     figures = [figures figure];
     if isTrain
         geoplot(datasetResults(iSet).ref.posLla(:, 1), datasetResults(iSet).ref.posLla(:, 2), '.-k', ...
@@ -25,9 +25,7 @@ for iSet = idxCampaignsToPlot
     end
     geobasemap(basemap);
     % Plot estimation with color depending on covariance
-    stdPos = datasetResults(iSet).result.sigmaHist(idxStatePos, :);
-    stdNed = ecef2geodeticVector(stdPos');
-    stdHor = Lla2Hd(stdNed, zeros(size(stdPos')));
+    stdHor = vecnorm(datasetResults(iSet).result.posStdNed(:, 1:2), 2, 2);
     hold on; colormap summer;
     geoscatter(datasetResults(iSet).result.estPosLla(:, 1), datasetResults(iSet).result.estPosLla(:, 2), 5, stdHor, 'fill'); 
     c = colorbar; 

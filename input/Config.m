@@ -17,10 +17,10 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Dataset selection
-        EVALUATE_DATASETS       = 'single';                                    % 'single' 'all'
-        DATASET_TYPE            = 'train';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2021-01-04-US-RWC-2';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
+        EVALUATE_DATASETS       = 'all';                                    % 'single' 'all'
+        DATASET_TYPE            = 'test';                                  % 'train' 'test'
+        CAMPAIGN_NAME           = '2021-04-22-US-SJC-2';                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'SamsungS20Ultra';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}            % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name

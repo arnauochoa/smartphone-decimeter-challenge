@@ -29,6 +29,7 @@ switch config.EVALUATE_DATASETS
             config.campaignName = campaignNames{iCampaign};
             campaignPath = [config.obsDataPath campaignNames{iCampaign} filesep];
             phoneNames = getValidDir(campaignPath);
+%             datasetResults = [];
             for iPhone = 1:length(phoneNames)
                 config.phoneName = phoneNames{iPhone};
                 fprintf('Evaluating %s/%s \n', config.campaignName, config.phoneName)

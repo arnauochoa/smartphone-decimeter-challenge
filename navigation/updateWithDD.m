@@ -55,51 +55,53 @@ for iObs = 1:length(doubleDifferences)
     x0 = updateTotalState(ekf.x, statPos);
     
     %% Phase DD observation
-    idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst);
-    idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst);
-    % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat)
-    % TODO: what if N is estimated as 0
-    if ekf.x(idxStatePivSat) == 0, ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd; end
-    if ekf.x(idxStateVarSat) == 0, ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd; end
-    % Reinitialize ambiguity if LLI is on (pivot sat has always LLI = 0)
-    if doubleDifferences(iObs).varSatIsLLI
-        ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd;
-        ekf.P(idxStateVarSat, idxStateVarSat) = config.SIGMA_P0_SD_AMBIG^2;
+    if ~isnan(doubleDifferences(iObs).L)
+        idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst);
+        idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst);
+        % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat)
+        % TODO: what if N is estimated as 0
+        if ekf.x(idxStatePivSat) == 0, ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd; end
+        if ekf.x(idxStateVarSat) == 0, ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd; end
+        % Reinitialize ambiguity if LLI is on (pivot sat has always LLI = 0)
+        if doubleDifferences(iObs).varSatIsLLI
+            ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd;
+            ekf.P(idxStateVarSat, idxStateVarSat) = config.SIGMA_P0_SD_AMBIG^2;
+        end
+        
+        hArgs.obs = doubleDifferences(iObs).L;
+        hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaL
+            doubleDifferences(iObs).varSatSigmaL];
+        
+        % Label to show on console when outliers are detected
+        label = sprintf('Phase DD (%c%d-%c%d, f = %g)', ...
+            doubleDifferences(iObs).constel,        ...
+            doubleDifferences(iObs).pivSatPrn,      ...
+            doubleDifferences(iObs).constel,        ...
+            doubleDifferences(iObs).varSatPrn,      ...
+            doubleDifferences(iObs).freqHz);
+        % Process code observation
+        [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
+            EKF.processObservation(ekf, thisUtcSeconds,           ...
+            @fTransition, fArgs,                                    ...
+            @hPhaseDD, hArgs,                                        ...
+            label);
+        
+        % If Phase DD is rejected, reinitialize ambiguity estimations and
+        % covariances
+        if rejected
+            ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd;
+            ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd;
+            ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
+            ekf.P(idxStateVarSat, idxStateVarSat) = config.SIGMA_P0_SD_AMBIG^2;
+        end
+        
+        result.phsInnovations(idxSat, idxEst) = innovation;
+        result.phsInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+        result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst) + rejected;
+        
+        % Update total-state with absolute position
+        x0 = updateTotalState(ekf.x, statPos);
     end
-    
-    hArgs.obs = doubleDifferences(iObs).L;
-    hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaL
-        doubleDifferences(iObs).varSatSigmaL];
-    
-    % Label to show on console when outliers are detected
-    label = sprintf('Phase DD (%c%d-%c%d, f = %g)', ...
-        doubleDifferences(iObs).constel,        ...
-        doubleDifferences(iObs).pivSatPrn,      ...
-        doubleDifferences(iObs).constel,        ...
-        doubleDifferences(iObs).varSatPrn,      ...
-        doubleDifferences(iObs).freqHz);
-    % Process code observation
-    [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
-        EKF.processObservation(ekf, thisUtcSeconds,           ...
-        @fTransition, fArgs,                                    ...
-        @hPhaseDD, hArgs,                                        ...
-        label);
-    
-    % If Phase DD is rejected, reinitialize ambiguity estimations and
-    % covariances
-    if rejected
-        ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd;
-        ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd;
-        ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
-        ekf.P(idxStateVarSat, idxStateVarSat) = config.SIGMA_P0_SD_AMBIG^2;
-    end
-    
-    result.phsInnovations(idxSat, idxEst) = innovation;
-    result.phsInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-    result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst) + rejected;
-    
-    % Update total-state with absolute position
-    x0 = updateTotalState(ekf.x, statPos);
 end
 % Percentage of rejected code observations
 result.prRejectedHist(idxEst) = 100*result.prRejectedHist(idxEst) / length(doubleDifferences);

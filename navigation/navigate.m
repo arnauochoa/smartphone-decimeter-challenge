@@ -5,6 +5,7 @@ function [result] = navigate(phoneRnx, imuMeas, nav, osrRnx, ref)
 %% Initializations
 config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
 % idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 nStates = PVTUtils.getNumStates();
@@ -41,12 +42,12 @@ ekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
 thisUtcSeconds = ekf.tx; % First time is from the first GNSS estimation
 idxEst = 1;
 result.xRTK(:, 1) = x0; % TODO change to error state, prealocate if num pos is known (= groundtruth?)
-result.PRTK(:, :, 1) = zeros(nStates, nStates, 1);
+PRTK(:, :, 1) = zeros(nStates, nStates, 1);
 
 % WLS solution
 nStatesWLS = 4 + PVTUtils.getNumConstellations - 1;
 result.xWLS(:, 1) = x0WLS; % TODO prealocate if num pos is known (= groundtruth?)
-result.PWLS(:, :, 1) = zeros(nStatesWLS, nStatesWLS, 1);
+PWLSHist(:, :, 1) = zeros(nStatesWLS, nStatesWLS, 1);
 
 %% Evaluate all trajectory
 % First gnss observations is the same as for the first approx position
@@ -101,7 +102,7 @@ while ~hasEnded % while there are more observations/measurements
         fArgs.x0 = x0;
         ekf = EKF.propagateState(ekf, thisUtcSeconds, @fTransition, fArgs);
         result.xWLS(:, idxEst) = result.xWLS(:, idxEst-1);
-        result.PWLS(:, :, idxEst) = result.PWLS(:, :, idxEst-1);
+        PWLSHist(:, :, idxEst) = PWLSHist(:, :, idxEst-1);
         % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         % Skip epochs with missing obs
 %         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);
@@ -120,13 +121,13 @@ while ~hasEnded % while there are more observations/measurements
                 [phoneEpoch.obs(:).constellation], sat.pos, sat.clkBias, x0WLS(idxComputedStates), R, obsConstel);
             % Save all states including missing constellations
             result.xWLS(:, idxEst) = zeros(nStatesWLS, 1);
-            result.PWLS(:, :, idxEst) = zeros(nStatesWLS, nStatesWLS, 1);
+            PWLSHist(:, :, idxEst) = zeros(nStatesWLS, nStatesWLS, 1);
             result.xWLS(idxComputedStates, idxEst) = xWLS;
-            result.PWLS(idxComputedStates, idxComputedStates, idxEst) = PWLS;
+            PWLSHist(idxComputedStates, idxComputedStates, idxEst) = PWLS;
             clear xWLS PWLS idxObsConst
         else
             result.xWLS(:, idxEst) = result.xWLS(:, idxEst-1);
-            result.PWLS(:, :, idxEst) = result.PWLS(:, :, idxEst-1);
+            PWLSHist(:, :, idxEst) = PWLSHist(:, :, idxEst-1);
         end
         
         %% RTK estimation
@@ -137,12 +138,29 @@ while ~hasEnded % while there are more observations/measurements
     end
     
     result.xRTK(:, idxEst) = x0;
-    result.PRTK(:, :, idxEst) = ekf.P;
+    PRTK(:, :, idxEst) = ekf.P;
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
     [phoneEpoch, osrEpoch] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
     hasEnded = isempty(phoneEpoch); % TODO check imu
+end
+
+nEpochs = size(result.xRTK, 2);
+estPosXyz = result.xRTK(idxStatePos, :)';
+result.posStdNed = nan(nEpochs, 3);
+result.velNed = nan(nEpochs, 3);
+result.velStdNed = nan(nEpochs, 3);
+for iEpoch = 1:nEpochs
+    Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
+    % Position STD in NED
+    Ppos = PRTK(idxStatePos, idxStatePos, iEpoch);
+    result.posStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
+    % Velocity to NED
+    result.velNed(iEpoch, :) = Rn2e' * result.xRTK(idxStateVel, iEpoch);
+    % Velocity STD in NED
+    Pvel = PRTK(idxStateVel, idxStateVel, iEpoch);
+    result.velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
 end
 
 end
