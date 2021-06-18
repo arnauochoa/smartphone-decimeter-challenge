@@ -85,7 +85,7 @@ while ~hasEnded % while there are more observations/measurements
     result.gpsWeekN(idxEst) = phoneGnss.weekN;
     result.gpsTow(idxEst) = phoneGnss.tow;
     if isempty(phoneGnss.obs)
-        fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Propagating state.\n', phoneGnss.tow);
+        fprintf(2, 'TOW = %d - Not enough observations to estimate a position. Propagating state.\n', phoneGnss.tow);
         % Initial estimate for the transition model
         fArgs.x0 = x0;
         esekf = EKF.propagateState(esekf, thisUtcSeconds, @fTransition, fArgs);
@@ -172,42 +172,42 @@ for iObs = 1:length(doubleDifferences)
     % Update total-state with absolute position
     x0 = updateTotalState(ekf.x, osrRnx.statPos);
     
-    %% Phase DD observation
-    if ~isnan(doubleDifferences(iObs).L)
-    %     idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst);
-    %     idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst);
-        % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat) 
-        % TODO: what if N is estimated as 0
-    %     if esekf.x(idxStatePivSat) == 0, esekf.x(idxStatePivSat) = hArgs.pivSatCmcSd; end
-    %     if esekf.x(idxStateVarSat) == 0, esekf.x(idxStateVarSat) = hArgs.varSatCmcSd; end
-
-        hArgs.obs = doubleDifferences(iObs).L;
-        hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaL
-            doubleDifferences(iObs).varSatSigmaL];
-
-        % Label to show on console when outliers are detected
-        label = sprintf('Phase DD (%c%d-%c%d, f = %g)', ...
-            doubleDifferences(iObs).constel,        ...
-            doubleDifferences(iObs).pivSatPrn,      ...
-            doubleDifferences(iObs).constel,        ...
-            doubleDifferences(iObs).varSatPrn,      ...
-            doubleDifferences(iObs).freqHz);
-        % Process code observation
-        [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
-            EKF.processObservation(ekf, thisUtcSeconds,           ...
-            @fTransition, fArgs,                                    ...
-            @hPhaseDD, hArgs,                                        ...
-            label);
-
-        result.phsInnovations(idxSat, idxEst) = innovation;
-        result.phsInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-        result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst) + rejected;
-
-        % Update total-state with absolute position
-        x0 = updateTotalState(ekf.x, osrRnx.statPos);
-    else
-%         a=1;
-    end
+%     %% Phase DD observation
+%     if ~isnan(doubleDifferences(iObs).L)
+%     %     idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst);
+%     %     idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst);
+%         % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat) 
+%         % TODO: what if N is estimated as 0
+%     %     if esekf.x(idxStatePivSat) == 0, esekf.x(idxStatePivSat) = hArgs.pivSatCmcSd; end
+%     %     if esekf.x(idxStateVarSat) == 0, esekf.x(idxStateVarSat) = hArgs.varSatCmcSd; end
+% 
+%         hArgs.obs = doubleDifferences(iObs).L;
+%         hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaL
+%             doubleDifferences(iObs).varSatSigmaL];
+% 
+%         % Label to show on console when outliers are detected
+%         label = sprintf('Phase DD (%c%d-%c%d, f = %g)', ...
+%             doubleDifferences(iObs).constel,        ...
+%             doubleDifferences(iObs).pivSatPrn,      ...
+%             doubleDifferences(iObs).constel,        ...
+%             doubleDifferences(iObs).varSatPrn,      ...
+%             doubleDifferences(iObs).freqHz);
+%         % Process code observation
+%         [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
+%             EKF.processObservation(ekf, thisUtcSeconds,           ...
+%             @fTransition, fArgs,                                    ...
+%             @hPhaseDD, hArgs,                                        ...
+%             label);
+% 
+%         result.phsInnovations(idxSat, idxEst) = innovation;
+%         result.phsInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+%         result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst) + rejected;
+% 
+%         % Update total-state with absolute position
+%         x0 = updateTotalState(ekf.x, osrRnx.statPos);
+%     else
+% %         a=1;
+%     end
 end
 % Percentage of rejected code observations
 result.prRejectedHist(idxEst) = 100*result.prRejectedHist(idxEst) / length(doubleDifferences);

@@ -31,7 +31,7 @@ classdef (Sealed) Config < handle
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        P_FALSE_OUTLIER_REJECT  = 0; % Probability of false outlier rejection
+        P_FALSE_OUTLIER_REJECT  = 0.1; % Probability of false outlier rejection
         
         %% RTK parameters
         MAX_OSR_INTERP_GAP_SEC  = 15;
@@ -40,11 +40,11 @@ classdef (Sealed) Config < handle
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
         
         %% Navigation parameters
-        CONSTELLATIONS          = 'GEC';
+        CONSTELLATIONS          = 'G';
         OBS_COMBINATION         = {'none', 'none'};	
-        OBS_USED                = {'C1C+C5X', 'C1X+C5X', 'C2X'};            % PR Rinex code for observations
-        OSR_OBS_USED            = {'C1C+C5I', 'C1X+C5X', 'C2X'};            % PR Rinex code for OSR data
-        CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
+        OBS_USED                = {'C1C+C5X'};            % PR Rinex code for observations
+        OSR_OBS_USED            = {'C1C+C5I'};            % PR Rinex code for OSR data
+        CONST_COV_FACTORS       = [1];                                  % Covariance factor for each constellation
         ELEVATION_MASK          = 10;                                       % Elevation mask in degrees
         MEAS_COV_SRC            = 'uncertainty';                            % Among 'elevation' and 'uncertainty'
 %         MAX_DOPPLER_MEAS        = 6e3;                                      % Maximum doppler measurement 
