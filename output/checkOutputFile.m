@@ -35,6 +35,7 @@ for iCamp = 1:length(refTableCampaigns)
         fprintf(2, 'Our result does not contain the campaign ''%s''\n', refTableCampaigns{iCamp})
     end
 end
+
 end
 % figure; plot([refTableCamp{3}.millisSinceGpsEpoch; refTableCamp{3}.millisSinceGpsEpoch(end)*[1;1;1]] - ourTableCamp{3}.millisSinceGpsEpoch)
 % dtRef = diff(refTableCamp{4}.millisSinceGpsEpoch);

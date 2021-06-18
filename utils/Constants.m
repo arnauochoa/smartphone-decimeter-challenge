@@ -14,10 +14,6 @@ classdef Constants < handle
         
         % GNSS
         GPS_L1_HZ = 1575.42e6;      % Hz
-        
-        % Error indicators
-        NO_ERR      = 0;
-        ERR_NO_OSR  = 1;
     end
     
 end

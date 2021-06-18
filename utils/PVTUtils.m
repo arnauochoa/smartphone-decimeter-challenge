@@ -11,9 +11,9 @@ classdef PVTUtils < handle
         ID_SD_AMBIGUITY = 4;
         
         % Data structures
-        MAX_GPS_PRN = 35;
-        MAX_GAL_PRN = 100;
-        MAX_BDS_PRN = 100;
+        MAX_GPS_PRN = 40;
+        MAX_GAL_PRN = 50;
+        MAX_BDS_PRN = 70;
         
         % Map from RINEX code to frequency
         FREQUENCIES_MAP = containers.Map(...

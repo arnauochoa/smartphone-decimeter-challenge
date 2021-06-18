@@ -36,7 +36,7 @@ if isempty(fieldnames(doubleDifferences))
     doubleDifferences = [];
 end
 if nDiscarded > 0 && ~strcmp(Config.EVALUATE_DATASETS, 'all')
-    %fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
+%     fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
 end
 end
 
@@ -66,7 +66,7 @@ if numCommonSats > 1 && ~isempty([osrObs(:).C]) && ~isempty([osrObs(:).L])
     phaseSd = [osrObs(:).L] - [rxObs(:).L];
     % Set L meas with LLI activated as nan
     isLLI = [rxObs(:).LLI] ~= 0;
-    phaseSd(isLLI) = nan;
+%     phaseSd(isLLI) = nan;
 %     dopSd = [osrObs(:).D_Hz] - [rxObs(:).D_Hz];
 
     % Code-Minus-Carrier of SD
@@ -99,6 +99,7 @@ if numCommonSats > 1 && ~isempty([osrObs(:).C]) && ~isempty([osrObs(:).L])
     dd.varSatSigmaC = [rxObs(idxVarSats).C_sigma];
     dd.varSatSigmaL = [rxObs(idxVarSats).L_sigma];
     dd.varSatSigmaD = [rxObs(idxVarSats).D_sigma];
+    dd.varSatIsLLI = isLLI(idxVarSats);
 else
     dd.C = [];
     dd.L = [];
@@ -120,6 +121,7 @@ else
     dd.varSatSigmaC = [];
     dd.varSatSigmaL = [];
     dd.varSatSigmaD = [];
+    dd.varSatIsLLI = [];
 end
 end
 
