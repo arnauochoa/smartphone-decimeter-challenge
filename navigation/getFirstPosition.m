@@ -41,7 +41,7 @@ while ~firstValidEpoch
         disp(['Skipped epoch ' num2str(phoneGnss.tow) ]);
         phoneRnx.obs(idxInvalid,:) = [];
         phoneRnx.utcSeconds(idxInvalid) = [];
-%         gnssRnx.tow(idxInvalid) = [];
+        %         gnssRnx.tow(idxInvalid) = [];
     end
 end
 % compute LS position
@@ -60,7 +60,7 @@ xWLS = zeros(nStatesWLS, 1);
 PWLS = zeros(nStatesWLS);
 xWLS(idxComputedStates) = xWLSaux;
 PWLS(idxComputedStates, idxComputedStates) = PWLSaux;
-            
+
 % Fill ouptuts with LS estimates
 [x0, P0] = fillFullState(xWLS, PWLS);
 utcSeconds0 = thisUtcSeconds;
@@ -68,7 +68,7 @@ end %end of function getFirstPosition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [x0, P0] = fillFullState(xLS, PLS)
-% FILLFULLSTATE Fills full state vector and covariance matrix with 
+% FILLFULLSTATE Fills full state vector and covariance matrix with
 % parameters estimated by LS and the ones set by Config
 config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
@@ -88,6 +88,10 @@ P0(idxStatePos, idxStatePos) = config.FACTOR_P0_POS*PLS(1:3,1:3);
 
 % Fill the rest with the Config values
 P0(idxStateVel, idxStateVel) = diag(config.SIGMA_P0_VEL_XYZ.^2);
-P0(idxStateClkDrift, idxStateClkDrift) = diag(config.SIGMA_P0_CLK_DRIFT.^2);
-P0(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_P0_SD_AMBIG.^2) * eye(PVTUtils.getNumSatelliteIndices);
+if ~isempty(idxStateClkDrift)
+    P0(idxStateClkDrift, idxStateClkDrift) = diag(config.SIGMA_P0_CLK_DRIFT.^2);
+end
+if ~isempty(idxStateAllSdAmb)
+    P0(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_P0_SD_AMBIG.^2) * eye(PVTUtils.getNumSatelliteIndices);
+end
 end

@@ -69,18 +69,28 @@ xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 legend('North', 'East', 'Down');
 figureWindowTitle(figures(end), 'Velocity');
 
-% Rx clock drift
+% WLS RX clock bias
 figures = [figures figure];
-plot(timelineSec, result.xRTK(idxStateClkDrift, :))
-xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
-figureWindowTitle(figures(end), 'Rx clock drift');
+plot(timelineSec, result.xWLS(4, :))
+xlabel('Time since start (s)'); ylabel('Clock bias (m)');
+figureWindowTitle(figures(end), 'Rx clock bias (WLS)');
+
+% Rx clock drift
+if ~isempty(idxStateClkDrift)
+    figures = [figures figure];
+    plot(timelineSec, result.xRTK(idxStateClkDrift, :))
+    xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
+    figureWindowTitle(figures(end), 'Rx clock drift');
+end
 
 % Ambiguities
-figures = [figures figure];
-plot(timelineSec, result.xRTK(idxStateAllSdAmb, :), '.')
-xlabel('Time since start (s)'); ylabel('Ambiguities (cyc)');
-% legend('X', 'Y', 'Z');
-figureWindowTitle(figures(end), 'Ambiguities');
+if ~isempty(idxStateAllSdAmb)
+    figures = [figures figure];
+    plot(timelineSec, result.xRTK(idxStateAllSdAmb, :), '.')
+    xlabel('Time since start (s)'); ylabel('Ambiguities (cyc)');
+    % legend('X', 'Y', 'Z');
+    figureWindowTitle(figures(end), 'Ambiguities');
+end
 
 %% Innovations
 figures = [figures figure];
@@ -182,10 +192,6 @@ if contains(config.DATASET_TYPE, 'train')
         hold off
     end
     figureWindowTitle(figures(end), 'Velocity error');
-%         plot(timelineSec, velErr)
-%     xlabel('Time since start (s)'); ylabel('Velocity error (m)');
-%     legend('X', 'Y', 'Z');
-%     grid on
     
     %% CDFs
     pctl = 95;

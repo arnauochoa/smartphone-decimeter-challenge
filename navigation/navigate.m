@@ -29,10 +29,9 @@ result.dopRejectedHist = zeros(1, nGnssEpochs);
 %% Obtain first position
 [x0, ekf.P, ekf.tx, x0WLS] = getFirstPosition(phoneRnx, nav);
 % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-%  Use ref position as first position
-% idxRef = find(ref.utcSeconds > ekf.tx, 1, 'first');
-% [x, y, z] = geodetic2ecef(wgs84Ellipsoid, ref.posLla(idxRef, 1), ref.posLla(idxRef, 2), ref.posLla(idxRef, 3));
-% x0(idxStatePos) = [x y z]';
+% % Use ref position as first position
+idxRef = find(ref.utcSeconds > ekf.tx, 1, 'first');
+x0(idxStatePos) = geodetic2ecefVector(ref.posLla(idxRef, :))';
 % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 ekf.x = zeros(PVTUtils.getNumStates, 1);
 ekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
@@ -58,8 +57,8 @@ while ~hasEnded % while there are more observations/measurements
     % First iteration: x0 from getFirstPosition (WLS estimation)
     % Following iterations: x0 from previous iteration
     if idxEst > 1
-        x0 = result.xRTK(:, idxEst-1); 
-        x0WLS = result.xWLS(:, idxEst-1); 
+        x0 = result.xRTK(:, idxEst-1);
+        x0WLS = result.xWLS(:, idxEst-1);
     end
     
     thisUtcSeconds = phoneEpoch.utcSeconds; % TODO check imu time
@@ -77,21 +76,12 @@ while ~hasEnded % while there are more observations/measurements
     [sat.azDeg, sat.elDeg, ~] = getSatAzEl(sat.pos, x0(idxStatePos));
     
     %% Ref observation
-% (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-%     idxRef = find(ref.utcSeconds > thisUtcSeconds, 1, 'first');
-%     fArgs.x0 = x0;
-%     hArgs.x0 = x0;
-%     hArgs.statPos = osrRnx.statPos;
-%     hArgs.obs = Lla2Xyz(ref.posLla(idxRef, :))' - hArgs.statPos;
-%     hArgs.sigmaObs = 1;
-%     label = 'ref';
-%     [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
-%         EKF.processObservation(ekf, thisUtcSeconds,           ...
-%         @fTransition, fArgs,                                    ...
-%         @hRefObs, hArgs,                                        ...
-%         label);
-%     x0 = updateTotalState(ekf.x, osrRnx.statPos);
-% <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    if config.USE_REF_POS
+        assert(strcmp(config.DATASET_TYPE, 'train'), 'Reference can only be used in train datasets');
+        [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, ref, osrRnx, result);
+    end
+    % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     result.utcSeconds(idxEst) = thisUtcSeconds;
     result.gpsWeekN(idxEst) = phoneEpoch.weekN;
@@ -101,14 +91,20 @@ while ~hasEnded % while there are more observations/measurements
         % Initial estimate for the transition model
         fArgs.x0 = x0;
         ekf = EKF.propagateState(ekf, thisUtcSeconds, @fTransition, fArgs);
-        result.xWLS(:, idxEst) = result.xWLS(:, idxEst-1);
+
+        result.xWLS(:, idxEst) = x0WLS;
         PWLSHist(:, :, idxEst) = PWLSHist(:, :, idxEst-1);
+
+%         if config.USE_REF_POS
+%             [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, ref, osrRnx, result);
+%         end
+
         % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         % Skip epochs with missing obs
-%         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);
-%         [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
-%         hasEnded = isempty(phoneGnss); % TODO check imu
-%         continue
+        %         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);
+        %         [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
+        %         hasEnded = isempty(phoneGnss); % TODO check imu
+        %         continue
         % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     else
         if length([phoneEpoch.obs(:).C]) >= nStatesWLS
@@ -133,8 +129,9 @@ while ~hasEnded % while there are more observations/measurements
         %% RTK estimation
         doubleDifferences = computeDoubleDifferences(osrEpoch, phoneEpoch, sat.pos, sat.elDeg);
         [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, doubleDifferences, result);
-        
-        [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, phoneEpoch, sat, result);
+        if config.USE_DOPPLER
+            [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, phoneEpoch, sat, result);
+        end
     end
     
     result.xRTK(:, idxEst) = x0;
@@ -163,15 +160,4 @@ for iEpoch = 1:nEpochs
     result.velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
 end
 
-end
-
-function [z, y, H, R] = hRefObs(~, hArgs)
-idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-
-z = hArgs.obs;
-y = hArgs.x0(idxStatePos) - hArgs.statPos;
-% Jacobian matrix
-H = zeros(3, PVTUtils.getNumStates);
-H(idxStatePos,idxStatePos) = eye(3);
-R = diag(hArgs.sigmaObs);
 end

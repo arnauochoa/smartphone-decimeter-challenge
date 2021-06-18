@@ -27,7 +27,13 @@ classdef PVTUtils < handle
         function nStates = getNumStates()
             % GETNUMSTATES Returns the number of states in the state vector
             % 3D pos, 3D vel, clk drift, SD ambiguities
-            nStates = 7 + PVTUtils.getNumSatelliteIndices();
+            nStates = 6;
+            if Config.USE_DOPPLER % clk drift
+                nStates = nStates + 1;
+            end
+            if Config.USE_PHASE_DD % SD ambiguities
+                nStates = nStates + PVTUtils.getNumSatelliteIndices();
+            end
         end
         
         function idx = getStateIndex(stateID, prn, constellationLetter)
@@ -39,7 +45,6 @@ classdef PVTUtils < handle
             %   indices are returned.
             %   - If prn and constellation are given, the index for the SD
             %   ambiguity of the requested satellite is provided
-            
             switch stateID
                 case PVTUtils.ID_POS
                     idx = 1:3;
@@ -47,16 +52,24 @@ classdef PVTUtils < handle
                     prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_POS);
                     idx = prevIdx(end) + (1:3);
                 case PVTUtils.ID_CLK_DRIFT
-                    prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-                    idx = prevIdx(end) + 1;
-                case PVTUtils.ID_SD_AMBIGUITY
-                    prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
-                    if nargin == 1
-                        idx = prevIdx(end) + (1:PVTUtils.getNumSatelliteIndices);
-                    elseif nargin < 3
-                        error('Both PRN and CONST must be provided.');
+                    if Config.USE_DOPPLER % clk drift
+                        prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+                        idx = prevIdx(end) + 1;
                     else
-                        idx = prevIdx(end) + PVTUtils.getSatelliteIndex(prn, constellationLetter);
+                        idx = [];
+                    end
+                case PVTUtils.ID_SD_AMBIGUITY
+                    if Config.USE_PHASE_DD % SD ambiguities
+                        prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
+                        if nargin == 1
+                            idx = prevIdx(end) + (1:PVTUtils.getNumSatelliteIndices);
+                        elseif nargin < 3
+                            error('Both PRN and CONST must be provided.');
+                        else
+                            idx = prevIdx(end) + PVTUtils.getSatelliteIndex(prn, constellationLetter);
+                        end
+                    else
+                        idx = [];
                     end
                 otherwise
                     error('Invalid state ID')

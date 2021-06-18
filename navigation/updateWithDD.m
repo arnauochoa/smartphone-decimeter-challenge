@@ -5,11 +5,44 @@ function [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, statP
 % Initializations
 config = Config.getInstance;
 % Sequentally update with all DDs
+
+if config.USE_CODE_DD
+    [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
+end
+
+if config.USE_PHASE_DD
+    [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
+    % If all are rejected in one set of constellation+freq, reinitialize 
+    % ambiguity for pivot satellite of that set
+    ddConstNum = c2i([doubleDifferences(:).constel]');
+    ddFreq = [doubleDifferences(:).freqHz]';
+    constFreqs = unique([ddConstNum ddFreq], 'rows', 'stable');
+    for i = 1:size(constFreqs, 1)
+        idxConstFreq = find(ddConstNum == constFreqs(i, 1) & ddFreq == constFreqs(i, 2));
+        if isPhsRejections(idxConstFreq)
+            idxStatePivSat = PVTUtils.getStateIndex(...
+                PVTUtils.ID_SD_AMBIGUITY, ...
+                doubleDifferences(idxConstFreq(1)).pivSatPrn, ... % PRN of piv sat for this const+freq
+                doubleDifferences(idxConstFreq(1)).constel);
+            ekf.x(idxStatePivSat) = doubleDifferences(idxConstFreq(1)).pivSatCmcSd;
+            ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
+            [x0, ekf, result] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
+        end
+    end
+end
+
+% Percentage of rejected code observations
+result.prRejectedHist(idxEst) = 100*result.prRejectedHist(idxEst) / length(doubleDifferences);
+result.phsRejectedHist(idxEst) = 100*result.phsRejectedHist(idxEst) / length(doubleDifferences);
+end %end of function updateWithDD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
+% UPDATEWITHCODEDD performs the KF sequential update with all code DD's
 for iObs = 1:length(doubleDifferences)
     idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).varSatPrn, ...
         doubleDifferences(iObs).constel);
     
-    %% Pack arguments that are common for all DDs
     % Transition model arguments
     fArgs.x0 = x0;
     fArgs.obsConst = doubleDifferences(iObs).constel;
@@ -29,30 +62,61 @@ for iObs = 1:length(doubleDifferences)
         doubleDifferences(iObs).varSatElDeg];
     
     %% Code DD observation
-    hArgs.obs = doubleDifferences(iObs).C;
-    hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
-        doubleDifferences(iObs).varSatSigmaC];
+    if ~isnan(doubleDifferences(iObs).C)
+        hArgs.obs = doubleDifferences(iObs).C;
+        hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
+            doubleDifferences(iObs).varSatSigmaC];
+        
+        % Label to show on console when outliers are detected
+        label = sprintf('Code DD (%c%d-%c%d, f = %g)', ...
+            doubleDifferences(iObs).constel,        ...
+            doubleDifferences(iObs).pivSatPrn,      ...
+            doubleDifferences(iObs).constel,        ...
+            doubleDifferences(iObs).varSatPrn,      ...
+            doubleDifferences(iObs).freqHz);
+        % Process code observation
+        [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
+            EKF.processObservation(ekf, thisUtcSeconds,           ...
+            @fTransition, fArgs,                                    ...
+            @hCodeDD, hArgs,                                        ...
+            label);
+        
+        result.prInnovations(idxSat, idxEst) = innovation;
+        result.prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+        result.prRejectedHist(idxEst) = result.prRejectedHist(idxEst) + rejected;
+        
+        % Update total-state with absolute position
+        x0 = updateTotalState(ekf.x, statPos);
+    end
+end
+end %end of function updateWithCodeDD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
+% UPDATEWITHPHASEDD performs the KF sequential update with all phase DD's
+config = Config.getInstance;
+isPhsRejections = zeros(1, length(doubleDifferences));
+for iObs = 1:length(doubleDifferences)
+    idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).varSatPrn, ...
+        doubleDifferences(iObs).constel);
     
-    % Label to show on console when outliers are detected
-    label = sprintf('Code DD (%c%d-%c%d, f = %g)', ...
-        doubleDifferences(iObs).constel,        ...
-        doubleDifferences(iObs).pivSatPrn,      ...
-        doubleDifferences(iObs).constel,        ...
-        doubleDifferences(iObs).varSatPrn,      ...
-        doubleDifferences(iObs).freqHz);
-    % Process code observation
-    [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
-        EKF.processObservation(ekf, thisUtcSeconds,           ...
-        @fTransition, fArgs,                                    ...
-        @hCodeDD, hArgs,                                        ...
-        label);
-    
-    result.prInnovations(idxSat, idxEst) = innovation;
-    result.prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-    result.prRejectedHist(idxEst) = result.prRejectedHist(idxEst) + rejected;
-    
-    % Update total-state with absolute position
-    x0 = updateTotalState(ekf.x, statPos);
+    % Transition model arguments
+    fArgs.x0 = x0;
+    fArgs.obsConst = doubleDifferences(iObs).constel;
+    fArgs.pivSatPrn = doubleDifferences(iObs).pivSatPrn;
+    fArgs.varSatPrn = doubleDifferences(iObs).varSatPrn;
+    %     fArgs.statPos = statPos;
+    % Measurement model arguments
+    hArgs.x0 = x0;
+    hArgs.statPos = statPos;
+    hArgs.obsConst = doubleDifferences(iObs).constel;
+    hArgs.freqHz = doubleDifferences(iObs).freqHz;
+    hArgs.pivSatPrn = doubleDifferences(iObs).pivSatPrn;
+    hArgs.varSatPrn = doubleDifferences(iObs).varSatPrn;
+    hArgs.pivSatPos = doubleDifferences(iObs).pivSatPos;
+    hArgs.varSatPos = doubleDifferences(iObs).varSatPos;
+    hArgs.satElDeg = [doubleDifferences(iObs).pivSatElDeg
+        doubleDifferences(iObs).varSatElDeg];
     
     %% Phase DD observation
     if ~isnan(doubleDifferences(iObs).L)
@@ -80,7 +144,7 @@ for iObs = 1:length(doubleDifferences)
             doubleDifferences(iObs).varSatPrn,      ...
             doubleDifferences(iObs).freqHz);
         % Process code observation
-        [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
+        [ekf, innovation, innovationCovariance, isPhsRejections(iObs), ~, ~] = ...
             EKF.processObservation(ekf, thisUtcSeconds,           ...
             @fTransition, fArgs,                                    ...
             @hPhaseDD, hArgs,                                        ...
@@ -88,25 +152,22 @@ for iObs = 1:length(doubleDifferences)
         
         % If Phase DD is rejected, reinitialize ambiguity estimations and
         % covariances
-        if rejected
-            ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd;
+        if isPhsRejections(iObs)
+            %             ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd;
             ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd;
-            ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
+            %             ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
             ekf.P(idxStateVarSat, idxStateVarSat) = config.SIGMA_P0_SD_AMBIG^2;
         end
         
         result.phsInnovations(idxSat, idxEst) = innovation;
         result.phsInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-        result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst) + rejected;
+        result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst) + isPhsRejections(iObs);
         
         % Update total-state with absolute position
         x0 = updateTotalState(ekf.x, statPos);
     end
 end
-% Percentage of rejected code observations
-result.prRejectedHist(idxEst) = 100*result.prRejectedHist(idxEst) / length(doubleDifferences);
-result.phsRejectedHist(idxEst) = 100*result.phsRejectedHist(idxEst) / length(doubleDifferences);
-end %end of function updateWithDD
+end %end of function updateWithPhaseDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [z, y, H, R] = hCodeDD(~, hArgs)

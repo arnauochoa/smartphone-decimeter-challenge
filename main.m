@@ -3,7 +3,7 @@ close all;
 clc;
 % Script description
 
-% Change the configuration in Config class
+% Configuration can be changed in Config class
 config = Config.getInstance;
 delete(config); % Delete previous instance of Config
 config = Config.getInstance;
@@ -23,7 +23,7 @@ switch config.EVALUATE_DATASETS
         if strcmp(config.DATASET_TYPE, 'train')
             resultsDir = getResultsDir(config);
             fidScore = fopen([resultsDir 'score_' config.resFileTimestamp '.csv'], 'w');
-            fprintf(fidScore, 'phone,score\n');
+            fprintf(fidScore, 'campaign,phone,score\n');
         end
         for iCampaign = 1:length(campaignNames)
             config.campaignName = campaignNames{iCampaign};
@@ -49,7 +49,7 @@ switch config.EVALUATE_DATASETS
                 if strcmp(config.DATASET_TYPE, 'train')
                     score(iDataset) = computeScore(datasetResults(iDataset).ref, datasetResults(iDataset).result);
                     fprintf(2, '\n -> %s_%s - Score: %.4f \n\n', campaignNames{iCampaign}, phoneNames{iPhone}, score(iDataset));
-                    fprintf(fidScore, '%s_%s, %.4f\n', campaignNames{iCampaign}, phoneNames{iPhone}, score(iDataset));
+                    fprintf(fidScore, '%s,%s,%.4f\n', campaignNames{iCampaign}, phoneNames{iPhone}, score(iDataset));
                 end
                 fprintf('\n==================================================================================================================\n');
             end
@@ -60,8 +60,7 @@ switch config.EVALUATE_DATASETS
         elseif strcmp(config.DATASET_TYPE, 'train')
             finalScore = mean(score);
             fprintf('\n ==== FINAL SCORE: %.4f ====\n', finalScore);
-            fprintf(fidScore, '\nfinal score\n');
-            fprintf(fidScore, '%.4f\n', finalScore);
+            fprintf(fidScore, '\nfinal score, %.4f\n', finalScore);
             fclose(fidScore);
         end
         % Save all results in a mat file

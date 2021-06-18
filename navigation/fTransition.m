@@ -20,8 +20,13 @@ x2 = F * x1;
 
 % Process noise covariance matrix
 Q = zeros(PVTUtils.getNumStates);
+% Q(idxStatePos, idxStatePos) = 30*eye(3);
 Q(idxStateVel, idxStateVel) = diag(config.SIGMA_Q_VEL_XYZ.^2);
-Q(idxStateClkDrift, idxStateClkDrift) = config.SIGMA_Q_CLK_DRIFT.^2;
-Q(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_Q_SD_AMBIG.^2) * eye(PVTUtils.getNumSatelliteIndices);
+if ~isempty(idxStateClkDrift)
+    Q(idxStateClkDrift, idxStateClkDrift) = config.SIGMA_Q_CLK_DRIFT.^2;
+end
+if ~isempty(idxStateAllSdAmb)
+    Q(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_Q_SD_AMBIG.^2) * eye(PVTUtils.getNumSatelliteIndices);
+end
 end %end of function fTransition
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

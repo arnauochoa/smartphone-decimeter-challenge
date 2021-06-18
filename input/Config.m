@@ -16,13 +16,13 @@ classdef (Sealed) Config < handle
         %% Results
         RES_FILENAME            = 'result';
         
-        %% Dataset selection
-        EVALUATE_DATASETS       = 'all';                                    % 'single' 'all'
-        DATASET_TYPE            = 'test';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2021-04-22-US-SJC-2';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'SamsungS20Ultra';                                 % Only if EVALUATE_DATASETS = single
+        %% Dataset selection 2020-05-14-US-MTV-2_Pixel4
+        EVALUATE_DATASETS       = 'single';                                    % 'single' 'all'
+        DATASET_TYPE            = 'train';                                  % 'train' 'test'
+        CAMPAIGN_NAME           = '2020-05-14-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
-        OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'}            % By order of preference
+        OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
         
         % OBSERVATION RINEX - Uncomment to use, path from workspace
@@ -34,6 +34,10 @@ classdef (Sealed) Config < handle
         P_FALSE_OUTLIER_REJECT  = 0.01; % Probability of false outlier rejection
         
         %% RTK parameters
+        USE_REF_POS             = false;
+        USE_CODE_DD             = true;
+        USE_PHASE_DD            = true;
+        USE_DOPPLER             = true;
         MAX_OSR_INTERP_GAP_SEC  = 15;
 
         %% IMU parameters
@@ -56,14 +60,14 @@ classdef (Sealed) Config < handle
         SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
         SIGMA_Q_SD_AMBIG        = 1e3;              % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
-        SIGMA_C_M               = 2e1;              % Default std (m) for pseudorange meas          (only for elevation-based model)
+        SIGMA_C_M               = 1e2;              % Default std (m) for pseudorange meas          (only for elevation-based model)
         SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")
         SIGMA_D_MPS             = 1e-1;             % Default std (m/s) for doppler meas            ("")
         COV_FACTOR_C            = 1e0;              % Covariance factor for code pseudorange meas   (useful for weighting uncertainties coming from GnssLog)
-        COV_FACTOR_L            = 1e0;              % Covariance factor for carrier phase meas      ("")
+        COV_FACTOR_L            = 2e0;              % Covariance factor for carrier phase meas      ("")
         COV_FACTOR_D            = 5e3;              % Covariance factor for Doppler meas            ("")
         % State covariance matrix initialization - P0
-        FACTOR_P0_POS           = 1e5;              % Factor that mupliplies P0 obtained from WLS
+        FACTOR_P0_POS           = 1e5;              % Factor that multiplies P0 obtained from WLS
         SIGMA_P0_VEL_XYZ        = [1e2 1e2 1e2];    % std m/sqrt(s^3) of initial XYZ velocity
         SIGMA_P0_CLK_DRIFT      = 1e2;              % std m/sqrt(s^3) of initial clock drift
         SIGMA_P0_SD_AMBIG       = 1e7;              % std cyc of initial SD phase ambiguity
