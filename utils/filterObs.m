@@ -18,12 +18,12 @@ satVel(:, idxMasked) = [];
 satClkDrift(idxMasked) = [];
 
 % filter by uncertainty
-idxRmv = [obsGnss(:).C_sigma] > 100;
-obsGnss(idxRmv) = [];
-satPos(:, idxRmv) = [];
-satVel(:, idxRmv) = [];
-satClkBias(idxRmv) = [];
-satClkDrift(idxRmv) = [];
+% idxRmv = [obsGnss(:).C_sigma] > 100;
+% obsGnss(idxRmv) = [];
+% satPos(:, idxRmv) = [];
+% satVel(:, idxRmv) = [];
+% satClkBias(idxRmv) = [];
+% satClkDrift(idxRmv) = [];
 
 sat.pos = satPos;
 sat.vel = satVel;

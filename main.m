@@ -10,12 +10,12 @@ config = Config.getInstance;
 
 datasetResults = [];
 score = [];
-iDataset = 0;
+iTrace = 0;
 
 tic
 switch config.EVALUATE_DATASETS
     case 'single'
-        [ref, result, ~] = evaluateDataset();
+        [ref, result, ~] = evaluateTrace();
         disp('Plotting results...')
         plotResults(ref, result);
     case 'all'
@@ -33,23 +33,23 @@ switch config.EVALUATE_DATASETS
             for iPhone = 1:length(phoneNames)
                 config.phoneName = phoneNames{iPhone};
                 fprintf('Evaluating %s/%s \n', config.campaignName, config.phoneName)
-                iDataset = iDataset + 1;
-                [datasetResults(iDataset).ref, datasetResults(iDataset).result, resultsFilePath] ...
-                    = evaluateDataset();
+                iTrace = iTrace + 1;
+                [datasetResults(iTrace).ref, datasetResults(iTrace).result, resultsFilePath] ...
+                    = evaluateTrace();
                 
-                datasetResults(iDataset).campaignName = campaignNames{iCampaign};
-                datasetResults(iDataset).phoneName = phoneNames{iPhone};
+                datasetResults(iTrace).campaignName = campaignNames{iCampaign};
+                datasetResults(iTrace).phoneName = phoneNames{iPhone};
                 % RTK and WLS estimations to Geodetic
                 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-                datasetResults(iDataset).result.estPosLla = ...
-                    ecef2geodeticVector(datasetResults(iDataset).result.xRTK(idxStatePos, :)');
-                datasetResults(iDataset).result.estPosWLSLla = ...
-                    ecef2geodeticVector(datasetResults(iDataset).result.xWLS(1:3, :)');
+                datasetResults(iTrace).result.estPosLla = ...
+                    ecef2geodeticVector(datasetResults(iTrace).result.xRTK(idxStatePos, :)');
+                datasetResults(iTrace).result.estPosWLSLla = ...
+                    ecef2geodeticVector(datasetResults(iTrace).result.xWLS(1:3, :)');
                 
                 if strcmp(config.DATASET_TYPE, 'train')
-                    score(iDataset) = computeScore(datasetResults(iDataset).ref, datasetResults(iDataset).result);
-                    fprintf(2, '\n -> %s_%s - Score: %.4f \n\n', campaignNames{iCampaign}, phoneNames{iPhone}, score(iDataset));
-                    fprintf(fidScore, '%s,%s,%.4f\n', campaignNames{iCampaign}, phoneNames{iPhone}, score(iDataset));
+                    score(iTrace) = computeScore(datasetResults(iTrace).ref, datasetResults(iTrace).result);
+                    fprintf(2, '\n -> %s_%s - Score: %.4f \n\n', campaignNames{iCampaign}, phoneNames{iPhone}, score(iTrace));
+                    fprintf(fidScore, '%s,%s,%.4f\n', campaignNames{iCampaign}, phoneNames{iPhone}, score(iTrace));
                 end
                 fprintf('\n==================================================================================================================\n');
             end

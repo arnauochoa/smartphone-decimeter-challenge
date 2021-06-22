@@ -16,11 +16,11 @@ classdef (Sealed) Config < handle
         %% Results
         RES_FILENAME            = 'result';
         
-        %% Dataset selection 2020-05-14-US-MTV-2_Pixel4
-        EVALUATE_DATASETS       = 'single';                                    % 'single' 'all'
+        %% Trace selection 2020-05-14-US-MTV-2_Pixel4
+        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-05-14-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Pixel4';                                 % Only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2021-04-29-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'SamsungS20Ultra';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
@@ -168,12 +168,12 @@ classdef (Sealed) Config < handle
         end
         
         function resultsDir = getResultsDir(this)
-            resultsDir = [workspacePath 'data' filesep 'results' filesep this.DATASET_TYPE filesep];
+            resultsDir = strcat(workspacePath, 'data', filesep, 'results', filesep, this.DATASET_TYPE, filesep);
             switch this.EVALUATE_DATASETS
                 case 'single'
-                    resultsDir = [resultsDir this.campaignName filesep];
+                    resultsDir = strcat(resultsDir, this.campaignName, filesep);
                 case 'all'
-                    resultsDir = [resultsDir 'all' filesep];
+                    resultsDir = strcat(resultsDir, 'all', filesep);
                 otherwise
                     error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
             end

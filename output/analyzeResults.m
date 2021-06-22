@@ -1,18 +1,18 @@
 function analyzeResults(matFilePath)
 close all;
 if nargin < 1
-    matFilePath = 'data/results/test/all/result_20210616_091015.mat';
+    matFilePath = 'data/results/train/all/result_20210622_111534.mat';
 end
 load(matFilePath, 'datasetResults');
 
 %% Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 isTrain = ~isempty(datasetResults(1).ref);
-nDatasets = length(datasetResults);
+nTraces = length(datasetResults);
 figures = [];
 basemap = 'none';
 
-idxCampaignsToPlot = [nDatasets-10:nDatasets]; % [1:5] [nDatasets-5:nDatasets]
+idxCampaignsToPlot = [nTraces-10:nTraces]; % [1:5] [nDatasets-5:nDatasets]
 
 %% Map plots
 for iSet = idxCampaignsToPlot
@@ -38,10 +38,10 @@ end
 
 %% Score computation
 if isTrain
-    hErr95 = nan(nDatasets, 1);
-    hErr50 = nan(nDatasets, 1);
-    score = nan(nDatasets, 1);
-    for iSet = 1:nDatasets
+    hErr95 = nan(nTraces, 1);
+    hErr50 = nan(nTraces, 1);
+    score = nan(nTraces, 1);
+    for iSet = 1:nTraces
         % Interpolate groundtruth at the computed position's time
         refInterpLla = interp1(datasetResults(iSet).ref.utcSeconds, datasetResults(iSet).ref.posLla, datasetResults(iSet).result.utcSeconds);
         assert(size(refInterpLla, 1) == size(datasetResults(iSet).result.xRTK, 2), ...
@@ -54,7 +54,7 @@ if isTrain
         hErr50(iSet) = prctile(abs(hError),50);
         score(iSet) = mean([hErr95(iSet) hErr50(iSet)]);
         title = [datasetResults(iSet).campaignName '_' datasetResults(iSet).phoneName];
-        fprintf(' - %c: %.4f \n', title, score(iSet));
+        fprintf(' - %s: %.4f \n', title, score(iSet));
     end
     fprintf('\n ==== FINAL SCORE: %.4f ====\n', mean(score));
 end

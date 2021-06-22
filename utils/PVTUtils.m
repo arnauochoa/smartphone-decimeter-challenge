@@ -36,7 +36,7 @@ classdef PVTUtils < handle
             end
         end
         
-        function idx = getStateIndex(stateID, prn, constellationLetter)
+        function idx = getStateIndex(stateID, prn, constellationLetter, freqHz)
             %GETSTATEINDEX Returns the index in the state vector of the
             %given unknown.
             %   idx = GETSTATEINDEX(stateID, [prn], [constellationLetter])
@@ -119,6 +119,17 @@ classdef PVTUtils < handle
             end
             satIdx = satIdx + prn;
             assert(satIdx > 0 && satIdx < PVTUtils.getNumSatelliteIndices, 'Invalid prn.');
+        end
+        
+        function numSatellites = getNumSatFreqIndices()
+            % GETNUMSATELLITEINDICES Returns the total number of unique
+            % satellite indices
+            numSatellites = 0;
+            for iConst = 1:length(Config.CONSTELLATIONS)
+                nFreq = length(split(Config.OBS_USED{iConst}, '+'));
+                numSatellites = numSatellites + ...
+                    nFreq * PVTUtils.getTotalNumSatsConstellation(Config.CONSTELLATIONS(iConst));
+            end
         end
         
     end

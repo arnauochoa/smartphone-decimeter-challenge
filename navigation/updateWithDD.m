@@ -19,7 +19,7 @@ if config.USE_PHASE_DD
     constFreqs = unique([ddConstNum ddFreq], 'rows', 'stable');
     for i = 1:size(constFreqs, 1)
         idxConstFreq = find(ddConstNum == constFreqs(i, 1) & ddFreq == constFreqs(i, 2));
-        if isPhsRejections(idxConstFreq)
+        if all(isPhsRejections(idxConstFreq))
             idxStatePivSat = PVTUtils.getStateIndex(...
                 PVTUtils.ID_SD_AMBIGUITY, ...
                 doubleDifferences(idxConstFreq(1)).pivSatPrn, ... % PRN of piv sat for this const+freq

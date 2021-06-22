@@ -1,18 +1,20 @@
-function [resultsFilePath] = saveResults(result)
+function [resultsFilePath] = saveResults(result, fileNamePreamble)
 %SAVERESULTS Summary of this function goes here
 %   Detailed explanation goes here
 
 config = Config.getInstance;
 assert(size(result.xRTK, 2) == length(result.utcSeconds), 'Inputs do not have the same number of epochs');
 
+if nargin < 2, fileNamePreamble = ''; end
+
 %% Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 resultsDir = getResultsDir(config);
 switch config.EVALUATE_DATASETS
     case 'single'
-        resultsFilename = [config.phoneName '_' config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
+        resultsFilename = [fileNamePreamble config.phoneName '_' config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
     case 'all'
-        resultsFilename = [config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
+        resultsFilename = [fileNamePreamble config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
     otherwise
         error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
 end
@@ -31,7 +33,7 @@ millisSinceGpsEpoch = secondsSinceGpsEpoch * 1e3;
 % Convert estimated positions from ECEF to Geodetic
 estPosLla = ecef2geodeticVector(result.xRTK(idxStatePos, :)');
 
-%% Write data to file
+% %% Write data to file
 resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla);
 
 %% Interpolate to match sample submission time

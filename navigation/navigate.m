@@ -30,8 +30,8 @@ result.dopRejectedHist = zeros(1, nGnssEpochs);
 [x0, ekf.P, ekf.tx, x0WLS] = getFirstPosition(phoneRnx, nav);
 % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 % % Use ref position as first position
-idxRef = find(ref.utcSeconds > ekf.tx, 1, 'first');
-x0(idxStatePos) = geodetic2ecefVector(ref.posLla(idxRef, :))';
+% idxRef = find(ref.utcSeconds > ekf.tx, 1, 'first');
+% x0(idxStatePos) = geodetic2ecefVector(ref.posLla(idxRef, :))';
 % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 ekf.x = zeros(PVTUtils.getNumStates, 1);
 ekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
@@ -128,7 +128,9 @@ while ~hasEnded % while there are more observations/measurements
         
         %% RTK estimation
         doubleDifferences = computeDoubleDifferences(osrEpoch, phoneEpoch, sat.pos, sat.elDeg);
-        [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, doubleDifferences, result);
+        if ~isempty(doubleDifferences)
+            [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, doubleDifferences, result);
+        end
         if config.USE_DOPPLER
             [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, phoneEpoch, sat, result);
         end

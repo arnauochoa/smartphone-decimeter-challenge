@@ -1,4 +1,4 @@
-function [ref, result, resultsFilePath] = evaluateDataset()
+function [ref, result, resultsFilePath] = evaluateTrace()
     config = Config.getInstance;
     
     %% Input
