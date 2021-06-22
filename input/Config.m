@@ -19,8 +19,8 @@ classdef (Sealed) Config < handle
         %% Trace selection 2020-05-14-US-MTV-2_Pixel4
         EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2021-04-29-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'SamsungS20Ultra';                                 % Only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Mi8';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
@@ -64,7 +64,7 @@ classdef (Sealed) Config < handle
         SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")
         SIGMA_D_MPS             = 1e-1;             % Default std (m/s) for doppler meas            ("")
         COV_FACTOR_C            = 1e0;              % Covariance factor for code pseudorange meas   (useful for weighting uncertainties coming from GnssLog)
-        COV_FACTOR_L            = 2e0;              % Covariance factor for carrier phase meas      ("")
+        COV_FACTOR_L            = 1e1;              % Covariance factor for carrier phase meas      ("")
         COV_FACTOR_D            = 5e3;              % Covariance factor for Doppler meas            ("")
         % State covariance matrix initialization - P0
         FACTOR_P0_POS           = 1e5;              % Factor that multiplies P0 obtained from WLS

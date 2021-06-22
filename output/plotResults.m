@@ -122,13 +122,30 @@ figureWindowTitle(figures(end), 'Doppler innovations');
 
 %% Rejected
 figures = [figures figure]; 
-subplot(3,1,1); plot(timelineSec, result.prRejectedHist)
-xlabel('Time since start (s)'); ylabel('% rejected Code obs');
-subplot(3,1,2); plot(timelineSec, result.phsRejectedHist)
-xlabel('Time since start (s)'); ylabel('% rejected Phase obs');
-subplot(3,1,3); plot(timelineSec, result.dopRejectedHist)
-xlabel('Time since start (s)'); ylabel('% rejected Doppler obs');
+subplot(3,1,1); 
+yyaxis left; plot(timelineSec, result.prNumDD - result.prRejectedHist);
+ylabel('# used Code DDs');
+yyaxis right; plot(timelineSec, result.prRejectedHist);
+ylabel('# rejected Code DDs');
+xlabel('Time since start (s)');
+grid on
+%
+subplot(3,1,2);
+yyaxis left; plot(timelineSec, result.phsNumDD - result.phsRejectedHist)
+ylabel('# used Phase DDs');
+yyaxis right; plot(timelineSec, result.phsRejectedHist);
+ylabel('# rejected Phase DDs');
+xlabel('Time since start (s)');
+grid on
+%
+subplot(3,1,3);
+yyaxis left;plot(timelineSec, result.dopNumDD - result.dopRejectedHist);
+ylabel('# used Doppler obs');
+yyaxis right; plot(timelineSec, result.dopRejectedHist);
+ylabel('# rejected Doppler obs');
+xlabel('Time since start (s)');
 figureWindowTitle(figures(end), 'Outlier rejections');
+grid on
 
 %% Training plots
 if contains(config.DATASET_TYPE, 'train')

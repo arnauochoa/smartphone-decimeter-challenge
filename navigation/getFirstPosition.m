@@ -92,6 +92,6 @@ if ~isempty(idxStateClkDrift)
     P0(idxStateClkDrift, idxStateClkDrift) = diag(config.SIGMA_P0_CLK_DRIFT.^2);
 end
 if ~isempty(idxStateAllSdAmb)
-    P0(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_P0_SD_AMBIG.^2) * eye(PVTUtils.getNumSatelliteIndices);
+    P0(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_P0_SD_AMBIG.^2) * eye(length(idxStateAllSdAmb));
 end
 end

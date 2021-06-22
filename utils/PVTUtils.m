@@ -17,9 +17,8 @@ classdef PVTUtils < handle
         
         % Map from RINEX code to frequency
         FREQUENCIES_MAP = containers.Map(...
-            {'C1C' 'C1X' 'C2I' 'C5X' 'C2X'}, ...                  % Code (RINEX Format)
-            [1575.42e6 1575.42e6 1561.098e6 1176.45e6 1227.6e6]);    % Frequency (Hz)
-        
+            {'C1C' 'C1X' 'C5X' 'C2I' 'C2X'}, ...                        % Code (RINEX Format)
+            [1575.42e6 1575.42e6 1176.45e6 1561.098e6 1561.098e6]);     % Frequency (Hz)
     end
     
     %% Public methods
@@ -32,7 +31,7 @@ classdef PVTUtils < handle
                 nStates = nStates + 1;
             end
             if Config.USE_PHASE_DD % SD ambiguities
-                nStates = nStates + PVTUtils.getNumSatelliteIndices();
+                nStates = nStates + PVTUtils.getNumSatFreqIndices();
             end
         end
         
@@ -62,11 +61,12 @@ classdef PVTUtils < handle
                     if Config.USE_PHASE_DD % SD ambiguities
                         prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
                         if nargin == 1
-                            idx = prevIdx(end) + (1:PVTUtils.getNumSatelliteIndices);
+                            idx = prevIdx(end) + (1:PVTUtils.getNumSatFreqIndices);
                         elseif nargin < 3
                             error('Both PRN and CONST must be provided.');
                         else
-                            idx = prevIdx(end) + PVTUtils.getSatelliteIndex(prn, constellationLetter);
+                            idx = prevIdx(end) + ...
+                                PVTUtils.getSatFreqIndex(prn, constellationLetter, freqHz);
                         end
                     else
                         idx = [];
@@ -122,16 +122,53 @@ classdef PVTUtils < handle
         end
         
         function numSatellites = getNumSatFreqIndices()
-            % GETNUMSATELLITEINDICES Returns the total number of unique
-            % satellite indices
+            % GETNUMSATFREQINDICES Returns the total number of indices for
+            % unique satellite+frequency combinations
             numSatellites = 0;
             for iConst = 1:length(Config.CONSTELLATIONS)
-                nFreq = length(split(Config.OBS_USED{iConst}, '+'));
+                nFreq = PVTUtils.getNumFreqsConst(Config.CONSTELLATIONS(iConst));
                 numSatellites = numSatellites + ...
                     nFreq * PVTUtils.getTotalNumSatsConstellation(Config.CONSTELLATIONS(iConst));
             end
         end
         
+        function satIdx = getSatFreqIndex(prn, constellationLetter, freqHz)
+            % GETSATFREQINDEX Returns the index of the selected pair
+            % satellite+frequency given by its prn and constellation
+            nSatsConst = PVTUtils.getTotalNumSatsConstellation(constellationLetter);
+            assert(prn > 0 && prn <= nSatsConst, 'Invalid prn.');
+            prevConstLetters = Config.CONSTELLATIONS(1:strfind(Config.CONSTELLATIONS, constellationLetter)-1);
+            satIdx = 0;
+            for iConst = 1:length(prevConstLetters)
+                nFreqs = PVTUtils.getNumFreqsConst(prevConstLetters(iConst));
+                satIdx = satIdx + nFreqs*PVTUtils.getTotalNumSatsConstellation(prevConstLetters(iConst));
+            end
+            freqIdx = PVTUtils.getFreqIdxInConst(constellationLetter, freqHz);
+            satIdx = satIdx + (freqIdx-1)*nSatsConst + prn;
+        end
+        
+        function nFreqs = getNumFreqsConst(constellationLetter)
+            % GETNUMFREQSCONST Returns the number of frequencies selected
+            % for the required constellations
+            nFreqs = nan(size(constellationLetter));
+            for iLetter = 1:length(constellationLetter)
+                idxConst = strfind(Config.CONSTELLATIONS, constellationLetter(iLetter));
+                nFreqs(iLetter) = length(split(Config.OBS_USED{idxConst}, '+'));
+            end
+        end
+        
+        function freqIdx = getFreqIdxInConst(constellationLetter, freqHz)
+            % GETFREQIDXINCONST Returns the index of the provided frequency
+            % among all the frequencies of the provided constellation
+            idxConst = strfind(Config.CONSTELLATIONS, constellationLetter);
+            codes = split(Config.OBS_USED{idxConst}, '+');
+            freqs = nan(size(codes));
+            for iCode = 1:length(codes)
+                freqs(iCode) = PVTUtils.FREQUENCIES_MAP(codes{iCode});
+            end
+            freqIdx = find(freqs == freqHz);
+            assert(~isempty(freqIdx), 'Invalid combination of constellation and frequency');
+        end
     end
     
     %% Private methods

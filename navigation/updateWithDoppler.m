@@ -7,7 +7,7 @@ function [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, 
 % Sequentally update with all Doppler observations
 for iObs = 1:length(phoneGnss.obs)
     thisObs = phoneGnss.obs(iObs);
-    idxSat = PVTUtils.getSatelliteIndex(thisObs.prn, thisObs.constellation);
+    idxSat = PVTUtils.getSatFreqIndex(thisObs.prn, thisObs.constellation, thisObs.D_fcarrier_Hz);
     if ~isempty(thisObs.D_Hz) && ~isnan(thisObs.D_Hz)
         % Pack arguments that are common for all observations
         fArgs.x0 = x0;
@@ -44,7 +44,9 @@ for iObs = 1:length(phoneGnss.obs)
         x0 = updateTotalState(ekf.x, statPos);
     end
 end
-result.dopRejectedHist(idxEst) = 100*result.dopRejectedHist(idxEst) / length(phoneGnss.obs);
+% Number of available and rejected observations
+result.dopNumDD(idxEst) = length([phoneGnss.obs(:).D_Hz]);
+result.dopRejectedHist(idxEst) = result.dopRejectedHist(idxEst);
 end %end of function updateWithDoppler
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -18,30 +18,35 @@ if config.USE_PHASE_DD
     ddFreq = [doubleDifferences(:).freqHz]';
     constFreqs = unique([ddConstNum ddFreq], 'rows', 'stable');
     for i = 1:size(constFreqs, 1)
+        % Find indices of i'th combination of const and freq
         idxConstFreq = find(ddConstNum == constFreqs(i, 1) & ddFreq == constFreqs(i, 2));
         if all(isPhsRejections(idxConstFreq))
             idxStatePivSat = PVTUtils.getStateIndex(...
                 PVTUtils.ID_SD_AMBIGUITY, ...
-                doubleDifferences(idxConstFreq(1)).pivSatPrn, ... % PRN of piv sat for this const+freq
-                doubleDifferences(idxConstFreq(1)).constel);
+                doubleDifferences(idxConstFreq(1)).pivSatPrn,   ... % PRN of piv sat for this const+freq
+                doubleDifferences(idxConstFreq(1)).constel,     ... % Constellation
+                constFreqs(i, 2));                                  % Freq of this set of DDs
             ekf.x(idxStatePivSat) = doubleDifferences(idxConstFreq(1)).pivSatCmcSd;
             ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
             [x0, ekf, result] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
         end
     end
 end
-
-% Percentage of rejected code observations
-result.prRejectedHist(idxEst) = 100*result.prRejectedHist(idxEst) / length(doubleDifferences);
-result.phsRejectedHist(idxEst) = 100*result.phsRejectedHist(idxEst) / length(doubleDifferences);
+% Number of available and rejected observations
+result.prNumDD(idxEst) = length([doubleDifferences(:).C]);
+result.phsNumDD(idxEst) = length([doubleDifferences(:).L]);
+result.prRejectedHist(idxEst) = result.prRejectedHist(idxEst);
+result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst);
 end %end of function updateWithDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
 % UPDATEWITHCODEDD performs the KF sequential update with all code DD's
 for iObs = 1:length(doubleDifferences)
-    idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).varSatPrn, ...
-        doubleDifferences(iObs).constel);
+    idxSat = PVTUtils.getSatFreqIndex(      ...
+        doubleDifferences(iObs).varSatPrn,  ...
+        doubleDifferences(iObs).constel,    ...
+        doubleDifferences(iObs).freqHz);
     
     % Transition model arguments
     fArgs.x0 = x0;
@@ -97,8 +102,10 @@ function [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(x0, ekf, thisUtc
 config = Config.getInstance;
 isPhsRejections = zeros(1, length(doubleDifferences));
 for iObs = 1:length(doubleDifferences)
-    idxSat = PVTUtils.getSatelliteIndex(doubleDifferences(iObs).varSatPrn, ...
-        doubleDifferences(iObs).constel);
+    idxSat = PVTUtils.getSatFreqIndex(      ...
+        doubleDifferences(iObs).varSatPrn,  ...
+        doubleDifferences(iObs).constel,    ...
+        doubleDifferences(iObs).freqHz);
     
     % Transition model arguments
     fArgs.x0 = x0;
@@ -120,8 +127,8 @@ for iObs = 1:length(doubleDifferences)
     
     %% Phase DD observation
     if ~isnan(doubleDifferences(iObs).L)
-        idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst);
-        idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst);
+        idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
+        idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
         % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat)
         % TODO: what if N is estimated as 0
         if ekf.x(idxStatePivSat) == 0, ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd; end
@@ -210,8 +217,8 @@ function [z, y, H, R] = hPhaseDD(x, hArgs)
 % Initializations
 config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst);
-idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst);
+idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
+idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
 rxPos = hArgs.x0(idxStatePos);
 lambda = Constants.CELERITY / hArgs.freqHz;
 
