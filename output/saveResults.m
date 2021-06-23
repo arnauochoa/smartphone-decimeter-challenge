@@ -38,7 +38,7 @@ resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, 
 
 %% Interpolate to match sample submission time
 if strcmp(config.EVALUATE_DATASETS, 'all') && strcmp(config.DATASET_TYPE, 'test')
-    resultsFilename = [config.RES_FILENAME '_interp_' config.resFileTimestamp '.csv'];
+    resultsFilename = [fileNamePreamble config.RES_FILENAME '_interp_' config.resFileTimestamp '.csv'];
     refTable = readtable('data/sample_submission.csv');
     refTableThis = refTable(strcmp(refTable.phone, [config.campaignName '_' config.phoneName]), :);
 
