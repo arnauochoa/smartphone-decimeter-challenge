@@ -17,20 +17,6 @@ basemap = 'none';
 %% RTK estimation
 estPosXyz = result.xRTK(idxStatePos, :)';
 estPosLla = ecef2geodeticVector(estPosXyz);
-% result.posStdNed = nan(nEpochs, 3);
-% result.velNed = nan(nEpochs, 3);
-% result.velStdNed = nan(nEpochs, 3);
-% for iEpoch = 1:nEpochs
-%     Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
-%     % Position STD in NED
-%     Ppos = result.PRTK(idxStatePos, idxStatePos, iEpoch);
-%     result.posStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
-%     % Velocity to NED
-%     result.velNed(iEpoch, :) = Rn2e' * result.xRTK(idxStateVel, iEpoch);
-%     % Velocity STD in NED
-%     Pvel = result.PRTK(idxStateVel, idxStateVel, iEpoch);
-%     result.velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
-% end
 % Horizontal sigma as norm of North and East
 stdHor = vecnorm(result.posStdNed(:, 1:2), 2, 2);
 
@@ -69,16 +55,20 @@ xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 legend('North', 'East', 'Down');
 figureWindowTitle(figures(end), 'Velocity');
 
-% WLS RX clock bias
-figures = [figures figure];
-plot(timelineSec, result.xWLS(4, :))
-xlabel('Time since start (s)'); ylabel('Clock bias (m)');
-figureWindowTitle(figures(end), 'Rx clock bias (WLS)');
-
-% Rx clock drift
 if ~isempty(idxStateClkDrift)
-    figures = [figures figure];
+    % Rx clock bias
+    figures = [figures figure]; hold on;
+    plot(timelineSec, result.xWLS(4, :))
+    plot(timelineSec, cumsum(result.xRTK(idxStateClkDrift, :)))
+    legend('WLS', 'RTK (clock drift)')
+    xlabel('Time since start (s)'); ylabel('Clock bias (m)');
+    figureWindowTitle(figures(end), 'Rx clock bias');
+    
+    % Rx clock drift
+    figures = [figures figure]; hold on;
+    plot(timelineSec(1:end-1), diff(result.xWLS(4, :)))
     plot(timelineSec, result.xRTK(idxStateClkDrift, :))
+    legend('WLS (clock bias)', 'RTK')
     xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
     figureWindowTitle(figures(end), 'Rx clock drift');
 end

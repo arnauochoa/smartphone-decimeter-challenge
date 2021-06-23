@@ -168,11 +168,11 @@ for iObs = 1:length(doubleDifferences)
         
         result.phsInnovations(idxSat, idxEst) = innovation;
         result.phsInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-        result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst) + isPhsRejections(iObs);
         
         % Update total-state with absolute position
         x0 = updateTotalState(ekf.x, statPos);
     end
+    result.phsRejectedHist(idxEst) = sum(isPhsRejections(iObs));
 end
 end %end of function updateWithPhaseDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

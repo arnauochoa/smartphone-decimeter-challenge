@@ -16,9 +16,9 @@ classdef (Sealed) Config < handle
         %% Results
         RES_FILENAME            = 'result';
         
-        %% Trace selection 2020-05-14-US-MTV-2_Pixel4
-        EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
-        DATASET_TYPE            = 'test';                                  % 'train' 'test'
+        %% Trace selection
+        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
+        DATASET_TYPE            = 'train';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Mi8';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
@@ -58,13 +58,13 @@ classdef (Sealed) Config < handle
         % Process noise covariance matrix - Q
         SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
         SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
-        SIGMA_Q_SD_AMBIG        = 1e3;              % std cyc of SD phase ambiguity
+        SIGMA_Q_SD_AMBIG        = 1e-2;              % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
         SIGMA_C_M               = 1e2;              % Default std (m) for pseudorange meas          (only for elevation-based model)
         SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")
         SIGMA_D_MPS             = 1e-1;             % Default std (m/s) for doppler meas            ("")
         COV_FACTOR_C            = 1e0;              % Covariance factor for code pseudorange meas   (useful for weighting uncertainties coming from GnssLog)
-        COV_FACTOR_L            = 1e1;              % Covariance factor for carrier phase meas      ("")
+        COV_FACTOR_L            = 1e0;              % Covariance factor for carrier phase meas      ("")
         COV_FACTOR_D            = 5e3;              % Covariance factor for Doppler meas            ("")
         % State covariance matrix initialization - P0
         FACTOR_P0_POS           = 1e5;              % Factor that multiplies P0 obtained from WLS
