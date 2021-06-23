@@ -20,36 +20,36 @@ config = Config.getInstance;
 config.resFileTimestamp = filename(end-14:end);
 
 %% Trace selection
-% for iTrace = 1:nTraces
-%     f = figure;
-%     if isTrain
-%         geoplot(datasetResults(iTrace).ref.posLla(:, 1), datasetResults(iTrace).ref.posLla(:, 2), '.-k', ...
-%             datasetResults(iTrace).result.estPosWLSLla(:, 1), datasetResults(iTrace).result.estPosWLSLla(:, 2), '.b');
-%     else
-%         geoplot(datasetResults(iTrace).result.estPosWLSLla(:, 1), datasetResults(iTrace).result.estPosWLSLla(:, 2), '.b');
-%     end
-%     geobasemap(basemap);
-%     % Plot estimation with color depending on covariance
-%     stdHor = vecnorm(datasetResults(iTrace).result.posStdNed(:, 1:2), 2, 2);
-%     hold on; colormap summer;
-%     geoscatter(datasetResults(iTrace).result.estPosLla(:, 1), datasetResults(iTrace).result.estPosLla(:, 2), 5, stdHor, 'fill');
-%     c = colorbar;
-%     c.Label.String = 'Horizontal position STD (m)';
-%     if isTrain, legend('Groundtruth', 'WLS', 'RTK');
-%     else, legend('WLS', 'RTK'); end
-%     title = strcat(num2str(iTrace), '_', datasetResults(iTrace).campaignName, '_', datasetResults(iTrace).phoneName);
-%     figureWindowTitle(f, title);
-% 
-%     answer = '';
-%     while ~strcmp(answer, 'y') && ~strcmp(answer, 'n')
-%         answer = input('Is this result correct (y/n) ? ', 's');
-%     end
-%     selectedTracesTable.Campaign{iTrace} = datasetResults(iTrace).campaignName;
-%     selectedTracesTable.Phone{iTrace} = datasetResults(iTrace).phoneName;
-%     selectedTracesTable.IsCorrect(iTrace) = strcmp(answer, 'y');
-%     close(f);
-% end
-selectedTracesTable = readtable('test_selectedTracesTable.txt');
+for iTrace = 1:nTraces
+    f = figure;
+    if isTrain
+        geoplot(datasetResults(iTrace).ref.posLla(:, 1), datasetResults(iTrace).ref.posLla(:, 2), '.-k', ...
+            datasetResults(iTrace).result.estPosWLSLla(:, 1), datasetResults(iTrace).result.estPosWLSLla(:, 2), '.b');
+    else
+        geoplot(datasetResults(iTrace).result.estPosWLSLla(:, 1), datasetResults(iTrace).result.estPosWLSLla(:, 2), '.b');
+    end
+    geobasemap(basemap);
+    % Plot estimation with color depending on covariance
+    stdHor = vecnorm(datasetResults(iTrace).result.posStdNed(:, 1:2), 2, 2);
+    hold on; colormap summer;
+    geoscatter(datasetResults(iTrace).result.estPosLla(:, 1), datasetResults(iTrace).result.estPosLla(:, 2), 5, stdHor, 'fill');
+    c = colorbar;
+    c.Label.String = 'Horizontal position STD (m)';
+    if isTrain, legend('Groundtruth', 'WLS', 'RTK');
+    else, legend('WLS', 'RTK'); end
+    title = strcat(num2str(iTrace), '_', datasetResults(iTrace).campaignName, '_', datasetResults(iTrace).phoneName);
+    figureWindowTitle(f, title);
+
+    answer = '';
+    while ~strcmp(answer, 'y') && ~strcmp(answer, 'n')
+        answer = input('Is this result correct (y/n) ? ', 's');
+    end
+    selectedTracesTable.Campaign{iTrace} = datasetResults(iTrace).campaignName;
+    selectedTracesTable.Phone{iTrace} = datasetResults(iTrace).phoneName;
+    selectedTracesTable.IsCorrect(iTrace) = strcmp(answer, 'y');
+    close(f);
+end
+% selectedTracesTable = readtable('test_selectedTracesTable.txt');
 
 
 %% Trace reassignation
