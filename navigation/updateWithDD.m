@@ -42,6 +42,7 @@ end %end of function updateWithDD
 
 function [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
 % UPDATEWITHCODEDD performs the KF sequential update with all code DD's
+isPrRejections = zeros(1, length(doubleDifferences));
 for iObs = 1:length(doubleDifferences)
     idxSat = PVTUtils.getSatFreqIndex(      ...
         doubleDifferences(iObs).varSatPrn,  ...
@@ -67,7 +68,8 @@ for iObs = 1:length(doubleDifferences)
         doubleDifferences(iObs).varSatElDeg];
     
     %% Code DD observation
-    if ~isnan(doubleDifferences(iObs).C)
+    if ~isnan(doubleDifferences(iObs).C) && ...
+            (doubleDifferences(iObs).pivSatSigmaC + doubleDifferences(iObs).varSatSigmaC) < Constants.MAX_C_SIGMA
         hArgs.obs = doubleDifferences(iObs).C;
         hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
             doubleDifferences(iObs).varSatSigmaC];
@@ -80,7 +82,7 @@ for iObs = 1:length(doubleDifferences)
             doubleDifferences(iObs).varSatPrn,      ...
             doubleDifferences(iObs).freqHz);
         % Process code observation
-        [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
+        [ekf, innovation, innovationCovariance, isPrRejections(iObs), ~, ~] = ...
             EKF.processObservation(ekf, thisUtcSeconds,           ...
             @fTransition, fArgs,                                    ...
             @hCodeDD, hArgs,                                        ...
@@ -88,12 +90,14 @@ for iObs = 1:length(doubleDifferences)
         
         result.prInnovations(idxSat, idxEst) = innovation;
         result.prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-        result.prRejectedHist(idxEst) = result.prRejectedHist(idxEst) + rejected;
         
         % Update total-state with absolute position
         x0 = updateTotalState(ekf.x, statPos);
+    else
+        isPrRejections(iObs) = 1;
     end
 end
+result.prRejectedHist(idxEst) = sum(isPrRejections);
 end %end of function updateWithCodeDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -126,7 +130,8 @@ for iObs = 1:length(doubleDifferences)
         doubleDifferences(iObs).varSatElDeg];
     
     %% Phase DD observation
-    if ~isnan(doubleDifferences(iObs).L)
+    if ~isnan(doubleDifferences(iObs).L) && ...
+            (doubleDifferences(iObs).pivSatSigmaL + doubleDifferences(iObs).varSatSigmaL) < Constants.MAX_L_SIGMA
         idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
         idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
         % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat)
@@ -171,9 +176,11 @@ for iObs = 1:length(doubleDifferences)
         
         % Update total-state with absolute position
         x0 = updateTotalState(ekf.x, statPos);
+    else
+        isPhsRejections(iObs) = 1;
     end
-    result.phsRejectedHist(idxEst) = sum(isPhsRejections(iObs));
 end
+result.phsRejectedHist(idxEst) = sum(isPhsRejections);
 end %end of function updateWithPhaseDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

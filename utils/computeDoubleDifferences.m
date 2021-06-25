@@ -1,7 +1,7 @@
 function [doubleDifferences] = computeDoubleDifferences(osrGnss, phoneGnss, satPos, satElDeg)
 % COMPUTEDOUBLEDIFFERENCES Computes the double differences considering
 % different constellations and frequencies
-
+config = Config.getInstance;
 if nargin<1
     selfTest();
     return;
@@ -35,10 +35,11 @@ doubleDifferences = soa2aos(doubleDifferences, 2);
 if isempty(fieldnames(doubleDifferences))
     doubleDifferences = [];
 end
-if nDiscarded > 0 && ~strcmp(Config.EVALUATE_DATASETS, 'all')
-%     fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
+if nDiscarded > 0 && ~strcmp(Config.EVALUATE_DATASETS, 'all') && config.SHOW_DEBUG_MESSAGES
+    fprintf('>> TOW = %d, %d observations haven''t been found in OSR.\n', phoneGnss.tow, nDiscarded);
 end
-end
+end %end of function computeDoubleDifferences
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [dd, nDiscard] = getDD(rxObs, osrObs, satPos, satElDeg)
 % GETDD Computes the DD of the two given sets of observations
@@ -73,7 +74,7 @@ if numCommonSats > 1 && ~isempty([osrObs(:).C]) && ~isempty([osrObs(:).L])
     cmcSd = codeSd - phaseSd;
     
     % Find indices of pivot and varying satellites
-    [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI);
+    [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI, [rxObs(:).C_sigma], [rxObs(:).L_sigma]);
     
     % Double differences
     dd.C = (codeSd(idxPivSat) - codeSd(idxVarSats));
@@ -123,17 +124,23 @@ else
     dd.varSatSigmaD = [];
     dd.varSatIsLLI = [];
 end
-end
+end %end of function getDD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI)
-    % Set satellites with LLI on as elev 0 so they are not selected as pivot
+function [idxPivSat, idxVarSats] = choosePivotSat(satElDeg, isLLI, C_sigma, L_sigma)
+    % Set satellites with LLI 'on', or large sigmas, as elev 0 so they are 
+    % not selected as pivot
     satElDeg(isLLI) = 0;
+    satElDeg(C_sigma > Constants.MAX_C_SIGMA) = 0;
+    satElDeg(L_sigma > Constants.MAX_L_SIGMA) = 0;
     % Find sat with max elevation and select it as pivot
     satIndices = 1:length(satElDeg);
     [~, idxPivSat] = max(satElDeg);
     idxVarSats = satIndices(satIndices ~= idxPivSat); % All except pivot sat
-end
+end %end of function choosePivotSat
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% -----------------------------------------------------------------------------
 function selfTest()
 
 obs.constellation = 'GGGGGEEEC';

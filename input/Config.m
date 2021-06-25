@@ -13,6 +13,8 @@ classdef (Sealed) Config < handle
     %   OSR:
     %       {workspace_path}/data/sdc-data/corrections/{source_name}/OSR/[see getOSRFilepaths]
     properties (Constant)
+        SHOW_DEBUG_MESSAGES     = false;
+        
         %% Results
         RES_FILENAME            = 'result';
         
@@ -58,7 +60,7 @@ classdef (Sealed) Config < handle
         % Process noise covariance matrix - Q
         SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
         SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
-        SIGMA_Q_SD_AMBIG        = 1e-2;              % std cyc of SD phase ambiguity
+        SIGMA_Q_SD_AMBIG        = 1e2;              % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
         SIGMA_C_M               = 1e2;              % Default std (m) for pseudorange meas          (only for elevation-based model)
         SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")

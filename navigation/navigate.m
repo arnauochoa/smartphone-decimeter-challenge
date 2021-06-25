@@ -14,6 +14,7 @@ phoneEpochs = unique(phoneRnx.utcSeconds);
 nGnssEpochs = length(phoneEpochs);
 % EKF:
 ekf = EKF.build(uint16(nStates), config.P_FALSE_OUTLIER_REJECT);
+ekf.debugDisplay = config.SHOW_DEBUG_MESSAGES;
 
 nStatesWLS = 4 + PVTUtils.getNumConstellations - 1;
 % TODO: debugging variables, check which need to be kept
@@ -151,6 +152,10 @@ while ~hasEnded % while there are more observations/measurements
         if config.USE_DOPPLER
             [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, phoneEpoch, sat, result);
         end
+    end
+    
+    if any(diag(ekf.P) < 0)
+        error('Covariance should not be negative');
     end
     
     result.xRTK(:, idxEst) = x0;
