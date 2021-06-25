@@ -1,5 +1,5 @@
 function checkOutputFile(ourFilePath)
-% Compare our file with sample submission provided by Google
+% CHECKOUTPUTFILE Compare our file with sample submission provided by Google
 if nargin < 1
     ourFilePath = 'data/results/test/all/result_20210602_173112.csv';% 160144
 end

@@ -33,5 +33,10 @@ SwiftNav OSR:   {workspace_path}/data/sdc-data/corrections/SwiftNav/OSR/{OSR_fil
                         |-- test
         |-- smartphone-decimeter-challenge/
 ```
-* Select the desired configuration in the class `Config`.
+* Select the desired configuration in the class `Config`:
 * Run `main`.
+
+* Other useful functions and scripts:
+    * `output/analyzeResults`: Plot the traces of a whole train/test dataset.
+    * `output/checkOutputFile`: Compares the number of entries of the output file generated from the evaluation of the test dataset with the sample submission file.
+    * `test/analyzeMeasurements`: Plots the pre-processed GNSS measurements and uncertainties of the selected traces.

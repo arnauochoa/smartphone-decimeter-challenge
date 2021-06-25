@@ -1,4 +1,5 @@
 function analyzeResults(matFilePath)
+% ANALYZERESULTS Plots the trajectories of a whole dataset (i.e. train, test)
 close all;
 if nargin < 1
     matFilePath = 'data/results/train/all/result_20210622_111534.mat';
