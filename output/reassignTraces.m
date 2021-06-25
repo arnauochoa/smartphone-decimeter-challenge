@@ -1,4 +1,8 @@
 function reassignTraces(matFilePath)
+% REASSIGNTRACES Plots the computed trajectories and allows to select which
+% traces should be substited by one from another phone
+% IMPORTANT: Make sure that the fields EVALUATE_DATASETS and DATASET_TYPE 
+% in the configuration file match with the selected matFilePath 
 if nargin < 1
     matFilePath = 'data/results/test/all/result_20210623_091453.mat';
 end
