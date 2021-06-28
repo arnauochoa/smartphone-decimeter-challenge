@@ -22,7 +22,7 @@ classdef (Sealed) Config < handle
         EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Mi8';                                 % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Pixel4XL';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
@@ -60,7 +60,7 @@ classdef (Sealed) Config < handle
         % Process noise covariance matrix - Q
         SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
         SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
-        SIGMA_Q_SD_AMBIG        = 1e2;              % std cyc of SD phase ambiguity
+        SIGMA_Q_SD_AMBIG        = 1e-2;              % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
         SIGMA_C_M               = 1e2;              % Default std (m) for pseudorange meas          (only for elevation-based model)
         SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")

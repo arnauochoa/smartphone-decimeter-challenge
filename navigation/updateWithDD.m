@@ -26,7 +26,8 @@ if config.USE_PHASE_DD
                 doubleDifferences(idxConstFreq(1)).pivSatPrn,   ... % PRN of piv sat for this const+freq
                 doubleDifferences(idxConstFreq(1)).constel,     ... % Constellation
                 constFreqs(i, 2));                                  % Freq of this set of DDs
-            ekf.x(idxStatePivSat) = doubleDifferences(idxConstFreq(1)).pivSatCmcSd;
+            lambda = Constants.CELERITY / constFreqs(i, 2);
+            ekf.x(idxStatePivSat) = - doubleDifferences(idxConstFreq(1)).pivSatCmcSd / lambda;
             ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
             [x0, ekf, result] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
         end
@@ -165,9 +166,8 @@ for iObs = 1:length(doubleDifferences)
         % If Phase DD is rejected, reinitialize ambiguity estimations and
         % covariances
         if isPhsRejections(iObs)
-            %             ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd;
-            ekf.x(idxStateVarSat) = doubleDifferences(iObs).varSatCmcSd;
-            %             ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
+            lambda = Constants.CELERITY / hArgs.freqHz;
+            ekf.x(idxStateVarSat) = -doubleDifferences(iObs).varSatCmcSd / lambda;
             ekf.P(idxStateVarSat, idxStateVarSat) = config.SIGMA_P0_SD_AMBIG^2;
         end
         
@@ -197,10 +197,10 @@ rxPos = hArgs.x0(idxStatePos);
 z = hArgs.obs;
 
 % Observation estimation
-y = norm(hArgs.statPos - hArgs.pivSatPos) - ... % |stat - sat1|
-    norm(rxPos - hArgs.pivSatPos) -         ... % |user - sat1|
-    norm(hArgs.statPos - hArgs.varSatPos) + ... % |stat - sat2|
-    norm(rxPos - hArgs.varSatPos);              % |user - sat2|
+y = norm(hArgs.statPos - hArgs.pivSatPos)   - ...   % |stat - sat1|
+    norm(rxPos - hArgs.pivSatPos)           - ...   % |user - sat1|
+    norm(hArgs.statPos - hArgs.varSatPos)   + ...   % |stat - sat2|
+    norm(rxPos - hArgs.varSatPos);                  % |user - sat2|
 
 % Difference between LOS vectors of satellites towards receiver
 pivSatLosVec = unitVector(hArgs.statPos - hArgs.pivSatPos);
@@ -254,6 +254,5 @@ H(idxStateVarSat) = -lambda;
 % Measurement covariance matrix, consider DD sigmas
 R = config.COV_FACTOR_L * computeRtkMeasCovariance(hArgs.satElDeg, ...
     hArgs.sigmaObs, config.SIGMA_L_M, hArgs.obsConst);
-% z-y
 end %end of function hPhaseDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -62,12 +62,6 @@ idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
 % Observation
 z = hArgs.obs;
 
-% Distance between receiver and satellite. Second term is Sagnac effect.
-dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...
-    Constants.OMEGA_E/Constants.CELERITY *          ...
-    ( hArgs.satPos(1) * hArgs.x0(idxStatePos(2)) -  ...
-    hArgs.satPos(2) * hArgs.x0(idxStatePos(1)) );
-
 % Unit vector from user to satellite
 vUS = unitVector(hArgs.satPos - hArgs.x0(idxStatePos));
 
@@ -75,6 +69,12 @@ vUS = unitVector(hArgs.satPos - hArgs.x0(idxStatePos));
 y = dot(hArgs.satVel - hArgs.x0(idxStateVel), vUS) + ...    % Radial velocity from user to sat
     hArgs.x0(idxStateClkDrift) -                     ...    % Receiver clock drift
     Constants.CELERITY * hArgs.satClkDrift;                 % Satellite clock drift
+
+% Distance between receiver and satellite. Second term is Sagnac effect.
+dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...
+    Constants.OMEGA_E/Constants.CELERITY *          ...
+    ( hArgs.satPos(1) * hArgs.x0(idxStatePos(2)) -  ...
+    hArgs.satPos(2) * hArgs.x0(idxStatePos(1)) );
 
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);
