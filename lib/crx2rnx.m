@@ -1,5 +1,7 @@
 function crx2rnx(rnxFilepath)
-    scriptPath = [projectPath 'lib' filesep 'RNXCMP_4.0.8' filesep 'bin' filesep 'CRX2RNX'];
+    if ispc, rnxcmp_folder = 'RNXCMP_4.0.8_windows'; end
+    if isunix, rnxcmp_folder = 'RNXCMP_4.0.8_linux'; end
+    scriptPath = [projectPath 'lib' filesep rnxcmp_folder filesep 'bin' filesep 'CRX2RNX'];
     cmd = strcat(scriptPath, " ", rnxFilepath, ' -f');
     [status,cmdout] = system(cmd);
     if status ~= 0
