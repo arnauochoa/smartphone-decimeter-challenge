@@ -72,7 +72,7 @@ classdef (Sealed) Config < handle
         FACTOR_P0_POS           = 1e5;              % Factor that multiplies P0 obtained from WLS
         SIGMA_P0_VEL_XYZ        = [1e2 1e2 1e2];    % std m/sqrt(s^3) of initial XYZ velocity
         SIGMA_P0_CLK_DRIFT      = 1e2;              % std m/sqrt(s^3) of initial clock drift
-        SIGMA_P0_SD_AMBIG       = 1e7;              % std cyc of initial SD phase ambiguity
+        SIGMA_P0_SD_AMBIG       = 1e5;              % std cyc of initial SD phase ambiguity
     end
     
     properties

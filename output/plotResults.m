@@ -113,26 +113,23 @@ figureWindowTitle(figures(end), 'Doppler innovations');
 %% Rejected
 figures = [figures figure]; 
 subplot(3,1,1); 
-yyaxis left; plot(timelineSec, result.prNumDD - result.prRejectedHist);
-ylabel('# used Code DDs');
-yyaxis right; plot(timelineSec, result.prRejectedHist);
-ylabel('# rejected Code DDs');
+area(timelineSec, [result.prRejectedHist', result.prNumDD' - result.prRejectedHist']);
+legend({'Rejected', 'Used'});
+ylabel('# Code DDs');
 xlabel('Time since start (s)');
 grid on
 %
 subplot(3,1,2);
-yyaxis left; plot(timelineSec, result.phsNumDD - result.phsRejectedHist)
-ylabel('# used Phase DDs');
-yyaxis right; plot(timelineSec, result.phsRejectedHist);
-ylabel('# rejected Phase DDs');
+area(timelineSec, [result.phsRejectedHist', result.phsNumDD' - result.phsRejectedHist']);
+legend({'Rejected', 'Used'});
+ylabel('# Phase DDs');
 xlabel('Time since start (s)');
 grid on
 %
 subplot(3,1,3);
-yyaxis left;plot(timelineSec, result.dopNumDD - result.dopRejectedHist);
-ylabel('# used Doppler obs');
-yyaxis right; plot(timelineSec, result.dopRejectedHist);
-ylabel('# rejected Doppler obs');
+area(timelineSec, [result.dopRejectedHist', result.dopNumDD' - result.dopRejectedHist']);
+legend({'Rejected', 'Used'});
+ylabel('# Doppler obs');
 xlabel('Time since start (s)');
 figureWindowTitle(figures(end), 'Outlier rejections');
 grid on
