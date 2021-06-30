@@ -14,7 +14,7 @@ classdef Constants < handle
         
         % Uncertainty thresholds
         MAX_C_SIGMA     = 1e10;             % Maximum value for code pr uncertainty
-        MAX_L_SIGMA     = 1e10;             % Maximum value for carrier phase uncertainty
+        MAX_L_SIGMA     = 1e2;             % Maximum value for carrier phase uncertainty
         
         % GNSS
         GPS_L1_HZ       = 1575.42e6;      % Hz

@@ -132,7 +132,8 @@ for iObs = 1:length(doubleDifferences)
     
     %% Phase DD observation
     if ~isnan(doubleDifferences(iObs).L) && ...
-            (doubleDifferences(iObs).pivSatSigmaL + doubleDifferences(iObs).varSatSigmaL) < Constants.MAX_L_SIGMA
+            (doubleDifferences(iObs).pivSatSigmaL + doubleDifferences(iObs).varSatSigmaL) < Constants.MAX_L_SIGMA && ...
+            (doubleDifferences(iObs).pivSatSigmaL + doubleDifferences(iObs).varSatSigmaL) > 1e-2
         idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
         idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
         % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat)

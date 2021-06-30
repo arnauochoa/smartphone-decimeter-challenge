@@ -22,7 +22,7 @@ classdef (Sealed) Config < handle
         EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Pixel4XL';                                 % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Mi8';                                 % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
