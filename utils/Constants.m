@@ -13,8 +13,10 @@ classdef Constants < handle
         DAYS_TO_UTC     = 719529;           % days from 1-1-0000 to 1-1-1970
         
         % Uncertainty thresholds
-        MAX_C_SIGMA     = 1e10;             % Maximum value for code pr uncertainty
-        MAX_L_SIGMA     = 1e2;             % Maximum value for carrier phase uncertainty
+        MIN_C_SIGMA     = 1e-2;             % Minimum value for code pr uncertainty
+        MAX_C_SIGMA     = 1e5;              % Maximum value for code pr uncertainty
+        MIN_L_SIGMA     = 1e-2              % Maximum value for carrier phase uncertainty
+        MAX_L_SIGMA     = 1e2;              % Maximum value for carrier phase uncertainty
         
         % GNSS
         GPS_L1_HZ       = 1575.42e6;      % Hz

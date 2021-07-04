@@ -52,7 +52,7 @@ classdef (Sealed) Config < handle
         OSR_OBS_USED            = {'C1C+C5I', 'C1X+C5X', 'C2X'};            % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
         ELEVATION_MASK          = 10;                                       % Elevation mask in degrees
-        MEAS_COV_SRC            = 'uncertainty';                            % Among 'elevation' and 'uncertainty'
+        MEAS_COV_SRC            = 'elevation';                            % Among 'elevation' and 'uncertainty'
 %         MAX_DOPPLER_MEAS        = 6e3;                                      % Maximum doppler measurement 
 %         MAX_DOPPLER_UNCERT      = 10;                                       % Maximum doppler uncertainty
         
