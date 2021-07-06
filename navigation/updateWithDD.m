@@ -8,6 +8,7 @@ config = Config.getInstance;
 
 if config.USE_CODE_DD
     [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
+    result.prNumDD(idxEst) = length([doubleDifferences(:).C]);
 end
 
 if config.USE_PHASE_DD
@@ -32,12 +33,8 @@ if config.USE_PHASE_DD
             [x0, ekf, result] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
         end
     end
+    result.phsNumDD(idxEst) = length([doubleDifferences(:).L]);
 end
-% Number of available and rejected observations
-result.prNumDD(idxEst) = length([doubleDifferences(:).C]);
-result.phsNumDD(idxEst) = length([doubleDifferences(:).L]);
-result.prRejectedHist(idxEst) = result.prRejectedHist(idxEst);
-result.phsRejectedHist(idxEst) = result.phsRejectedHist(idxEst);
 end %end of function updateWithDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -114,6 +111,14 @@ for iObs = 1:length(doubleDifferences)
             doubleDifferences(iObs).varSatSigmaC,           ... % Code uncertainty
             config.SIGMA_C_M,                               ... % Default code STD
             doubleDifferences(iObs).constel);                   % Constellation
+        % TODO: remove this (old diagonal R)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+%         vecR(numValidDD) = config.COV_FACTOR_C *   ...
+%             computeRtkMeasCovariance(                       ...
+%             [doubleDifferences(iObs).pivSatElDeg doubleDifferences(iObs).varSatElDeg],            ... % Elevation in degrees
+%             [doubleDifferences(iObs).pivSatSigmaC doubleDifferences(iObs).varSatSigmaC],           ... % Code uncertainty
+%             config.SIGMA_C_M,                               ... % Default code STD
+%             doubleDifferences(iObs).constel);                   % Constellation
+        % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     else
         isPrInvalid(iObs) = 1;
     end
@@ -121,7 +126,10 @@ end
 if ~all(isPrInvalid)
     idxPivVarR = reassignUnique(idxPivVarR);
     hArgs.R = buildRdd(idxPivVarR, covPivVarR, numValidDD);
-    
+    % TODO: remove this (old diagonal R)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+%     hArgs.R = diag(vecR);
+    % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
     % Process code observation
     [ekf, innovations, innovationCovariances, rejections, ~, ~] = ...
         EKF.processObservation(ekf, thisUtcSeconds,           ...
@@ -225,30 +233,43 @@ for iObs = 1:length(doubleDifferences)
         hArgs.H(numValidDD, idxStatePivSat) = lambda;
         hArgs.H(numValidDD, idxStateVarSat) = -lambda;
         
-        % D matrix to convert from R_SD to R_DD
-        idxPivVarR(numValidDD, :) = [idxPivSat(numValidDD) idxVarSat(numValidDD)];
-        % Pivot satellite covariance
-        covPivVarR(numValidDD, 1) = config.COV_FACTOR_L *   ...
+%         % D matrix to convert from R_SD to R_DD
+%         idxPivVarR(numValidDD, :) = [idxPivSat(numValidDD) idxVarSat(numValidDD)];
+%         % Pivot satellite covariance
+%         covPivVarR(numValidDD, 1) = config.COV_FACTOR_L *   ...
+%             computeRtkMeasCovariance(                       ...
+%             doubleDifferences(iObs).pivSatElDeg,            ... % Elevation in degrees
+%             doubleDifferences(iObs).pivSatSigmaL,           ... % Code uncertainty
+%             config.SIGMA_L_M,                               ... % Default code STD
+%             doubleDifferences(iObs).constel);                   % Constellation
+%         % Variable satellite covariance
+%         covPivVarR(numValidDD, 2) = config.COV_FACTOR_L *   ...
+%             computeRtkMeasCovariance(                       ...
+%             doubleDifferences(iObs).varSatElDeg,            ... % Elevation in degrees
+%             doubleDifferences(iObs).varSatSigmaL,           ... % Code uncertainty
+%             config.SIGMA_L_M,                               ... % Default code STD
+%             doubleDifferences(iObs).constel);                   % Constellation
+
+        % TODO: remove this (old diagonal R)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+        vecR(numValidDD) = config.COV_FACTOR_L *   ...
             computeRtkMeasCovariance(                       ...
-            doubleDifferences(iObs).pivSatElDeg,            ... % Elevation in degrees
-            doubleDifferences(iObs).pivSatSigmaL,           ... % Code uncertainty
+            [doubleDifferences(iObs).pivSatElDeg doubleDifferences(iObs).varSatElDeg],            ... % Elevation in degrees
+            [doubleDifferences(iObs).pivSatSigmaL doubleDifferences(iObs).varSatSigmaL],           ... % Code uncertainty
             config.SIGMA_L_M,                               ... % Default code STD
             doubleDifferences(iObs).constel);                   % Constellation
-        % Variable satellite covariance
-        covPivVarR(numValidDD, 2) = config.COV_FACTOR_L *   ...
-            computeRtkMeasCovariance(                       ...
-            doubleDifferences(iObs).varSatElDeg,            ... % Elevation in degrees
-            doubleDifferences(iObs).varSatSigmaL,           ... % Code uncertainty
-            config.SIGMA_L_M,                               ... % Default code STD
-            doubleDifferences(iObs).constel);                   % Constellation
+        % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     else
         isPhsInvalid(iObs) = 1;
     end
 end
 
 if ~all(isPhsInvalid)
-    idxPivVarR = reassignUnique(idxPivVarR);
-    hArgs.R = buildRdd(idxPivVarR, covPivVarR, numValidDD);
+%     idxPivVarR = reassignUnique(idxPivVarR);
+%     hArgs.R = buildRdd(idxPivVarR, covPivVarR, numValidDD);
+
+    % TODO: remove this (old diagonal R)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    hArgs.R = diag(vecR);
+    % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
     % Process code observation
     [ekf, innovations, innovationCovariances, rejections, ~, ~] = ...
@@ -270,8 +291,6 @@ result.phsRejectedHist(idxEst) = sum(isPhsRejected);
 result.phsInvalidHist(idxEst) = sum(isPhsInvalid);
 end %end of function updateWithCodeDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
 
 
 % function [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)

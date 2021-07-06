@@ -24,14 +24,17 @@ result.utcSeconds = nan(1, nGnssEpochs);
 result.prInnovations = nan(nSatFreqs, nGnssEpochs);
 result.prInnovationCovariances = nan(nSatFreqs, nGnssEpochs);
 result.prRejectedHist = zeros(1, nGnssEpochs);
+result.prInvalidHist = zeros(1, nGnssEpochs);
 result.prNumDD = nan(1, nGnssEpochs);
 result.phsInnovations = nan(nSatFreqs, nGnssEpochs);
 result.phsInnovationCovariances = nan(nSatFreqs, nGnssEpochs);
 result.phsRejectedHist = zeros(1, nGnssEpochs);
+result.phsInvalidHist = zeros(1, nGnssEpochs);
 result.phsNumDD = nan(1, nGnssEpochs);
 result.dopInnovations = nan(nSatFreqs, nGnssEpochs);
 result.dopInnovationCovariances = nan(nSatFreqs, nGnssEpochs);
 result.dopRejectedHist = zeros(1, nGnssEpochs);
+result.dopInvalidHist = zeros(1, nGnssEpochs);
 result.dopNumDD = nan(1, nGnssEpochs);
 
 %% Obtain first position

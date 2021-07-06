@@ -113,22 +113,22 @@ figureWindowTitle(figures(end), 'Doppler innovations');
 %% Rejected
 figures = [figures figure]; 
 subplot(3,1,1); 
-area(timelineSec, [result.prRejectedHist', result.prNumDD' - result.prRejectedHist']);
-legend({'Rejected', 'Used'});
+area(timelineSec, [result.prRejectedHist', result.prInvalidHist', result.prNumDD' - result.prRejectedHist' - result.prInvalidHist']);
+legend({'Rejected', 'Invalid', 'Used'});
 ylabel('# Code DDs');
 xlabel('Time since start (s)');
 grid on
 %
 subplot(3,1,2);
-area(timelineSec, [result.phsRejectedHist', result.phsNumDD' - result.phsRejectedHist']);
-legend({'Rejected', 'Used'});
+area(timelineSec, [result.phsRejectedHist', result.phsInvalidHist', result.phsNumDD' - result.phsRejectedHist' - result.phsInvalidHist']);
+legend({'Rejected', 'Invalid', 'Used'});
 ylabel('# Phase DDs');
 xlabel('Time since start (s)');
 grid on
 %
 subplot(3,1,3);
-area(timelineSec, [result.dopRejectedHist', result.dopNumDD' - result.dopRejectedHist']);
-legend({'Rejected', 'Used'});
+area(timelineSec, [result.dopRejectedHist', result.dopInvalidHist', result.dopNumDD' - result.dopRejectedHist' - result.dopInvalidHist']);
+legend({'Rejected', 'Invalid', 'Used'});
 ylabel('# Doppler obs');
 xlabel('Time since start (s)');
 figureWindowTitle(figures(end), 'Outlier rejections');
