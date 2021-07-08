@@ -84,7 +84,7 @@ P0 = zeros(nStates);
 
 % Fill parameters estimated by LS
 x0(idxStatePos) = xLS(1:3);
-P0(idxStatePos, idxStatePos) = config.FACTOR_P0_POS*eye(3);%PLS(1:3,1:3);
+P0(idxStatePos, idxStatePos) = config.FACTOR_P0_POS*PLS(1:3,1:3);
 
 % Fill the rest with the Config values
 P0(idxStateVel, idxStateVel) = diag(config.SIGMA_P0_VEL_XYZ.^2);

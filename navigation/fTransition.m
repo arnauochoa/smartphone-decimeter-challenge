@@ -20,7 +20,7 @@ x2 = F * x1;
 
 % Process noise covariance matrix
 Q = zeros(PVTUtils.getNumStates);
-% Q(idxStatePos, idxStatePos) = 30*eye(3);
+% Q(idxStatePos, idxStatePos) = 10*eye(3);
 Q(idxStateVel, idxStateVel) = diag(config.SIGMA_Q_VEL_XYZ.^2);
 if ~isempty(idxStateClkDrift)
     Q(idxStateClkDrift, idxStateClkDrift) = config.SIGMA_Q_CLK_DRIFT.^2;

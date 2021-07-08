@@ -3,12 +3,19 @@ function [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, 
 % observations
 
 % Initializations
-
+config = Config.getInstance;
+isDopRejected = zeros(1, length(phoneGnss.obs));
+isDopInvalid = zeros(1, length(phoneGnss.obs));
 % Sequentally update with all Doppler observations
 for iObs = 1:length(phoneGnss.obs)
     thisObs = phoneGnss.obs(iObs);
     idxSat = PVTUtils.getSatFreqIndex(thisObs.prn, thisObs.constellation, thisObs.D_fcarrier_Hz);
-    if ~isempty(thisObs.D_Hz) && ~isnan(thisObs.D_Hz)
+    
+    sigmaDopplerMps = hz2mps(thisObs.D_sigma, thisObs.D_fcarrier_Hz);
+    if ~isempty(thisObs.D_Hz) && ~isnan(thisObs.D_Hz)   && ...
+            sigmaDopplerMps > Constants.MIN_D_SIGMA     && ...
+            sigmaDopplerMps < Constants.MAX_D_SIGMA
+        
         % Pack arguments that are common for all observations
         fArgs.x0 = x0;
         fArgs.statPos = statPos;
@@ -21,7 +28,7 @@ for iObs = 1:length(phoneGnss.obs)
 
         % Convert Doppler from Hz to mps (pseudorange-rate)
         hArgs.obs = -hz2mps(thisObs.D_Hz, thisObs.D_fcarrier_Hz);
-        hArgs.sigmaObs = hz2mps(thisObs.D_sigma, thisObs.D_fcarrier_Hz);
+        hArgs.sigmaObs = sigmaDopplerMps;
         
         % Label to show on console when outliers are detected
         label = sprintf('Doppler (%c%d, f = %g)',   ...
@@ -30,23 +37,26 @@ for iObs = 1:length(phoneGnss.obs)
             thisObs.D_fcarrier_Hz);
         
         % Process code observation
-        [ekf, innovation, innovationCovariance, rejected, ~, ~] = ...
-            EKF.processObservation(ekf, thisUtcSeconds,           ...
-            @fTransition, fArgs,                                    ...
-            @hDoppler, hArgs,                                        ...
-            label);
+        [ekf, innovation, innovationCovariance, isDopRejected(iObs), ~, ~] =    ...
+            EKF.processObservation(ekf, thisUtcSeconds,                         ...
+            @fTransition, fArgs,                                                ...
+            @hDoppler, hArgs,                                                   ...
+            label,                                                              ...
+            config.SEQUENTIAL_UPDATE);
         
         result.dopInnovations(idxSat, idxEst) = innovation;
         result.dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-        result.dopRejectedHist(idxEst) = result.dopRejectedHist(idxEst) + rejected;
         
         % Update total-state with absolute position
         x0 = updateTotalState(ekf.x, statPos);
+    else
+        isDopInvalid(iObs) = 1;
     end
 end
 % Number of available and rejected observations
 result.dopNumDD(idxEst) = length([phoneGnss.obs(:).D_Hz]);
-result.dopRejectedHist(idxEst) = result.dopRejectedHist(idxEst);
+result.dopRejectedHist(idxEst) = sum(isDopRejected);
+result.dopInvalidHist(idxEst) = sum(isDopInvalid);
 end %end of function updateWithDoppler
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

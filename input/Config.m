@@ -13,7 +13,9 @@ classdef (Sealed) Config < handle
     %   OSR:
     %       {workspace_path}/data/sdc-data/corrections/{source_name}/OSR/[see getOSRFilepaths]
     properties (Constant)
+        %% Debug options
         SHOW_DEBUG_MESSAGES     = false;
+        EPOCHS_TO_RUN           = 180;                                      % Set as inf to run all epochs    
         
         %% Results
         RES_FILENAME            = 'result';
@@ -22,7 +24,7 @@ classdef (Sealed) Config < handle
         EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Pixel4XL';                                 % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Mi8';                                    % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
@@ -33,6 +35,7 @@ classdef (Sealed) Config < handle
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
+        SEQUENTIAL_UPDATE       = true;
         P_FALSE_OUTLIER_REJECT  = 0.01; % Probability of false outlier rejection
         
         %% RTK parameters
@@ -65,9 +68,9 @@ classdef (Sealed) Config < handle
         SIGMA_C_M               = 1e2;              % Default std (m) for pseudorange meas          (only for elevation-based model)
         SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")
         SIGMA_D_MPS             = 1e-1;             % Default std (m/s) for doppler meas            ("")
-        COV_FACTOR_C            = 1e0;              % Covariance factor for code pseudorange meas   (useful for weighting uncertainties coming from GnssLog)
-        COV_FACTOR_L            = 1e0;              % Covariance factor for carrier phase meas      ("")
-        COV_FACTOR_D            = 5e3;              % Covariance factor for Doppler meas            ("")
+        COV_FACTOR_C            = 1e1;              % Covariance factor for code pseudorange meas   (useful for weighting uncertainties coming from GnssLog)
+        COV_FACTOR_L            = 1e2;              % Covariance factor for carrier phase meas      ("")
+        COV_FACTOR_D            = 1e5;              % Covariance factor for Doppler meas            ("")
         % State covariance matrix initialization - P0
         FACTOR_P0_POS           = 1e5;              % Factor that multiplies P0 obtained from WLS
         SIGMA_P0_VEL_XYZ        = [1e2 1e2 1e2];    % std m/sqrt(s^3) of initial XYZ velocity

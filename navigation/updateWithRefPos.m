@@ -1,4 +1,4 @@
-function [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, ref, osrRnx, result)
+function [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, idxEst, ref, osrRnx, result)
 % UPDATEWITHDD Performs the KF update with the double differenced
 % observations
 
@@ -12,8 +12,10 @@ label = 'ref';
     EKF.processObservation(ekf, thisUtcSeconds,             ...
     @fTransition, fArgs,                                    ...
     @hRefObs, hArgs,                                        ...
-    label);
+    label,                                                  ...
+    config.SEQUENTIAL_UPDATE);
 x0 = updateTotalState(ekf.x, osrRnx.statPos);
+result.refRejectedHist(idxEst) = rejected;
 end
 
 
@@ -25,5 +27,5 @@ y = hArgs.x0(idxStatePos) - hArgs.statPos;
 % Jacobian matrix
 H = zeros(3, PVTUtils.getNumStates);
 H(idxStatePos,idxStatePos) = eye(3);
-R = 0.1*eye(3);
+R = 1e-1*eye(3);
 end

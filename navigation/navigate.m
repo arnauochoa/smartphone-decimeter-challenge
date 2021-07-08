@@ -11,7 +11,9 @@ idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
 nStates = PVTUtils.getNumStates();
 nSatFreqs = PVTUtils.getNumSatFreqIndices();
 phoneEpochs = unique(phoneRnx.utcSeconds);
-nGnssEpochs = length(phoneEpochs);
+if isinf(config.EPOCHS_TO_RUN), nGnssEpochs = length(phoneEpochs);
+else,                           nGnssEpochs = config.EPOCHS_TO_RUN;     end
+
 % EKF:
 ekf = EKF.build(uint16(nStates), config.P_FALSE_OUTLIER_REJECT);
 ekf.debugDisplay = config.SHOW_DEBUG_MESSAGES;
@@ -24,15 +26,20 @@ result.utcSeconds = nan(1, nGnssEpochs);
 result.prInnovations = nan(nSatFreqs, nGnssEpochs);
 result.prInnovationCovariances = nan(nSatFreqs, nGnssEpochs);
 result.prRejectedHist = zeros(1, nGnssEpochs);
+result.prInvalidHist = zeros(1, nGnssEpochs);
 result.prNumDD = nan(1, nGnssEpochs);
 result.phsInnovations = nan(nSatFreqs, nGnssEpochs);
 result.phsInnovationCovariances = nan(nSatFreqs, nGnssEpochs);
 result.phsRejectedHist = zeros(1, nGnssEpochs);
+result.phsInvalidHist = zeros(1, nGnssEpochs);
 result.phsNumDD = nan(1, nGnssEpochs);
 result.dopInnovations = nan(nSatFreqs, nGnssEpochs);
 result.dopInnovationCovariances = nan(nSatFreqs, nGnssEpochs);
 result.dopRejectedHist = zeros(1, nGnssEpochs);
+result.dopInvalidHist = zeros(1, nGnssEpochs);
 result.dopNumDD = nan(1, nGnssEpochs);
+% Reference position observations
+result.refRejectedHist = zeros(1, nGnssEpochs);
 
 %% Obtain first position
 [x0, ekf.P, ekf.tx, x0WLS] = getFirstPosition(phoneRnx, nav);
@@ -95,7 +102,7 @@ while ~hasEnded % while there are more observations/measurements
     % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     if config.USE_REF_POS
         assert(strcmp(config.DATASET_TYPE, 'train'), 'Reference can only be used in train datasets');
-        [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, ref, osrRnx, result);
+        [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, idxEst, ref, osrRnx, result);
     end
     % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
@@ -164,7 +171,7 @@ while ~hasEnded % while there are more observations/measurements
     
     % Check if there are more measurements/observations
     [phoneEpoch, osrEpoch] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
-    hasEnded = isempty(phoneEpoch); % TODO check imu
+    hasEnded = isempty(phoneEpoch) || idxEst > nGnssEpochs; % TODO check imu
 end
 
 nEpochs = size(result.xRTK, 2);

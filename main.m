@@ -1,7 +1,8 @@
 clearvars -except
-close all;
+% close all;
 clc;
-% Script description
+% This script launches evaluation of dataset(s) following the selected
+% configuration and calls the functions that plot and save the results.
 
 % Configuration can be changed in Config class
 config = Config.getInstance;
