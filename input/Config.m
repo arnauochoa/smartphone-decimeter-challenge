@@ -15,7 +15,7 @@ classdef (Sealed) Config < handle
     properties (Constant)
         %% Debug options
         SHOW_DEBUG_MESSAGES     = false;
-        EPOCHS_TO_RUN           = 180;                                      % Set as inf to run all epochs    
+        EPOCHS_TO_RUN           = 400;                                      % Set as inf to run all epochs    
         
         %% Results
         RES_FILENAME            = 'result';
@@ -35,14 +35,17 @@ classdef (Sealed) Config < handle
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        SEQUENTIAL_UPDATE       = true;
+        UPDATE_MODE       = 3;
+        % 1: Sequential update, y recomputed after each sequential update (seq update by updateWithDD)
+        % 2: Sequential update, y computed once before the update (seq update by EKF)
+        % 3: Batch update
         P_FALSE_OUTLIER_REJECT  = 0.01; % Probability of false outlier rejection
         
         %% RTK parameters
         USE_REF_POS             = false;
         USE_CODE_DD             = true;
-        USE_PHASE_DD            = true;
-        USE_DOPPLER             = true;
+        USE_PHASE_DD            = false;
+        USE_DOPPLER             = false;
         MAX_OSR_INTERP_GAP_SEC  = 15;
 
         %% IMU parameters

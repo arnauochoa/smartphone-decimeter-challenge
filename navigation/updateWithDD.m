@@ -41,8 +41,10 @@ end %end of function updateWithDD
 function [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
 % UPDATEWITHCODEDD performs the KF sequential update with all code DD's
 config = Config.getInstance;
+idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 isPrRejected = zeros(1, length(doubleDifferences));
 isPrInvalid = zeros(1, length(doubleDifferences));
+iValidObs = 0;
 for iObs = 1:length(doubleDifferences)
     % Transition model arguments
     fArgs.x0 = x0;
@@ -53,57 +55,112 @@ for iObs = 1:length(doubleDifferences)
     % Measurement model arguments
     hArgs.x0 = x0;
     hArgs.statPos = statPos;
-    hArgs.obsConst = doubleDifferences(iObs).constel;
+%     hArgs.obsConst = doubleDifferences(iObs).constel;
     hArgs.freqHz = doubleDifferences(iObs).freqHz;
     hArgs.pivSatPrn = doubleDifferences(iObs).pivSatPrn;
     hArgs.varSatPrn = doubleDifferences(iObs).varSatPrn;
     hArgs.pivSatPos = doubleDifferences(iObs).pivSatPos;
     hArgs.varSatPos = doubleDifferences(iObs).varSatPos;
-    hArgs.satElDeg = [doubleDifferences(iObs).pivSatElDeg
-        doubleDifferences(iObs).varSatElDeg];
+%     hArgs.satElDeg = [doubleDifferences(iObs).pivSatElDeg
+%         doubleDifferences(iObs).varSatElDeg];
     
     %% Code DD observation
     sigmaDD = doubleDifferences(iObs).pivSatSigmaC + doubleDifferences(iObs).varSatSigmaC;
     if ~isnan(doubleDifferences(iObs).C)    && ...
             sigmaDD > Constants.MIN_C_SIGMA && ...
             sigmaDD < Constants.MAX_C_SIGMA
+        iValidObs = iValidObs + 1;
         
-        idxSat = PVTUtils.getSatFreqIndex(      ...
+        idxSat(iValidObs) = PVTUtils.getSatFreqIndex(      ...
             doubleDifferences(iObs).varSatPrn,  ...
             doubleDifferences(iObs).constel,    ...
             doubleDifferences(iObs).freqHz);
         
-        hArgs.obs = doubleDifferences(iObs).C;
-        hArgs.sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
+        % Observation
+        hArgs.z(iValidObs, 1) = doubleDifferences(iObs).C;
+        
+        % Observation estimation
+        hArgs.y(iValidObs, 1) =                                                           ...
+            norm(statPos - doubleDifferences(iObs).pivSatPos)           -   ... % |stat - sat1|
+            norm(x0(idxStatePos) - doubleDifferences(iObs).pivSatPos)   -   ... % |user - sat1|
+            norm(statPos - doubleDifferences(iObs).varSatPos)           +   ... % |stat - sat2|
+            norm(x0(idxStatePos) - doubleDifferences(iObs).varSatPos);          % |user - sat2|
+        
+        % Difference between LOS vectors of satellites towards receiver
+        pivSatLosVec = unitVector(statPos - doubleDifferences(iObs).pivSatPos);
+        varSatLosVec = unitVector(statPos - doubleDifferences(iObs).varSatPos);
+        ddLosVec = varSatLosVec - pivSatLosVec;
+        
+        % Jacobian matrix
+        hArgs.H(iValidObs, :) = zeros(1, PVTUtils.getNumStates);
+        hArgs.H(iValidObs, idxStatePos) = ddLosVec;
+        
+        sigmaObs = [doubleDifferences(iObs).pivSatSigmaC
             doubleDifferences(iObs).varSatSigmaC];
+        satElDeg = [doubleDifferences(iObs).pivSatElDeg
+            doubleDifferences(iObs).varSatElDeg];
+        diagR(iValidObs, 1) = config.COV_FACTOR_C * computeRtkMeasCovariance(...
+            satElDeg, sigmaObs, config.SIGMA_C_M, doubleDifferences(iObs).constel);
         
-        % Label to show on console when outliers are detected
-        label = sprintf('Code DD (%c%d-%c%d, f = %g)', ...
-            doubleDifferences(iObs).constel,        ...
-            doubleDifferences(iObs).pivSatPrn,      ...
-            doubleDifferences(iObs).constel,        ...
-            doubleDifferences(iObs).varSatPrn,      ...
-            doubleDifferences(iObs).freqHz);
-        % Process code observation
-        [ekf, innovation, innovationCovariance, isPrRejected(iObs), ~, ~] = ...
-            EKF.processObservation(ekf, thisUtcSeconds,                     ...
-            @fTransition, fArgs,                                            ...
-            @hCodeDD, hArgs,                                                ...
-            label,                                                          ...
-            config.SEQUENTIAL_UPDATE);
-        
-        result.prInnovations(idxSat, idxEst) = innovation;
-        result.prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-        
-        % Update total-state with absolute position
-        x0 = updateTotalState(ekf.x, statPos);
+        if config.UPDATE_MODE == 1
+            hArgs.z = hArgs.z(iValidObs, 1);
+            hArgs.y = hArgs.y(iValidObs, 1);
+            hArgs.H = hArgs.H(iValidObs, :);
+            hArgs.R = diagR(iValidObs, 1);
+            % Label to show on console when outliers are detected
+            label = sprintf('Code DD');
+            % Process code observation
+            [ekf, innovation, innovationCovariance, isPrRejected, ~, ~] =       ...
+                EKF.processObservation(ekf, thisUtcSeconds,                     ...
+                @fTransition, fArgs,                                            ...
+                @hCodeDD, hArgs,                                                ...
+                label,                                                          ...
+                true); % true for sequential update
+            
+            % Update total-state with absolute position
+            x0 = updateTotalState(ekf.x, statPos);
+        end
     else
         isPrInvalid(iObs) = 1;
     end
 end
+
+if config.UPDATE_MODE == 2 || config.UPDATE_MODE == 3
+    hArgs.R = diag(diagR);
+    % Label to show on console when outliers are detected
+    label = sprintf('Code DD');
+    % Process code observation
+    [ekf, innovation, innovationCovariance, isPrRejected, ~, ~] = ...
+        EKF.processObservation(ekf, thisUtcSeconds,                     ...
+        @fTransition, fArgs,                                            ...
+        @hCodeDD, hArgs,                                                ...
+        label,                                                          ...
+        config.UPDATE_MODE == 2);
+    
+    % Update total-state with absolute position
+    x0 = updateTotalState(ekf.x, statPos);
+end
+
+result.prInnovations(idxSat, idxEst) = innovation;
+result.prInnovationCovariances(idxSat, idxEst) = innovationCovariance;
 result.prRejectedHist(idxEst) = sum(isPrRejected);
 result.prInvalidHist(idxEst) = sum(isPrInvalid);
 end %end of function updateWithCodeDD
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [z, y, H, R] = hCodeDD(~, hArgs)
+% HCODEDD provides the measurement model for the sequential code
+% double-differenced observations
+
+% Observation
+z = hArgs.z;
+% Observation estimation
+y = hArgs.y;
+% Jacobian matrix
+H = hArgs.H;
+% Measurement covariance matrix, consider DD sigmas
+R = hArgs.R;
+end %end of function hCodeDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [x0, ekf, result, isPhsRejected] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
@@ -170,7 +227,7 @@ for iObs = 1:length(doubleDifferences)
             @fTransition, fArgs,                                                ...
             @hPhaseDD, hArgs,                                                   ...
             label,                                                              ...
-            config.SEQUENTIAL_UPDATE);
+            true);
         
         % If Phase DD is rejected, reinitialize ambiguity estimations and
         % covariances
@@ -192,39 +249,6 @@ end
 result.phsRejectedHist(idxEst) = sum(isPhsRejected);
 result.phsInvalidHist(idxEst) = sum(isPhsInvalid);
 end %end of function updateWithPhaseDD
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-function [z, y, H, R] = hCodeDD(~, hArgs)
-% HCODEDD provides the measurement model for the sequential code
-% double-differenced observations
-
-% Initializations
-config = Config.getInstance;
-idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-rxPos = hArgs.x0(idxStatePos);
-
-% Observation
-z = hArgs.obs;
-
-% Observation estimation
-y = norm(hArgs.statPos - hArgs.pivSatPos)   - ...   % |stat - sat1|
-    norm(rxPos - hArgs.pivSatPos)           - ...   % |user - sat1|
-    norm(hArgs.statPos - hArgs.varSatPos)   + ...   % |stat - sat2|
-    norm(rxPos - hArgs.varSatPos);                  % |user - sat2|
-
-% Difference between LOS vectors of satellites towards receiver
-pivSatLosVec = unitVector(hArgs.statPos - hArgs.pivSatPos);
-varSatLosVec = unitVector(hArgs.statPos - hArgs.varSatPos);
-ddLosVec = varSatLosVec - pivSatLosVec;
-
-% Jacobian matrix
-H = zeros(1, PVTUtils.getNumStates);
-H(idxStatePos) = ddLosVec;
-
-% Measurement covariance matrix, consider DD sigmas
-R = config.COV_FACTOR_C * computeRtkMeasCovariance(hArgs.satElDeg, ...
-    hArgs.sigmaObs, config.SIGMA_C_M, hArgs.obsConst);
-end %end of function hCodeDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function [z, y, H, R] = hPhaseDD(x, hArgs)
