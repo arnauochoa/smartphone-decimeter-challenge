@@ -15,7 +15,7 @@ classdef (Sealed) Config < handle
     properties (Constant)
         %% Debug options
         SHOW_DEBUG_MESSAGES     = false;
-        EPOCHS_TO_RUN           = 180;                                      % Set as inf to run all epochs    
+        EPOCHS_TO_RUN           = inf;                                      % Set as inf to run all epochs    
         
         %% Results
         RES_FILENAME            = 'result';
