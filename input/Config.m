@@ -35,7 +35,7 @@ classdef (Sealed) Config < handle
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        UPDATE_MODE       = 3;
+        UPDATE_MODE       = 1;
         % 1: Sequential update, y recomputed after each sequential update (seq update by updateWithDD)
         % 2: Sequential update, y computed once before the update (seq update by EKF)
         % 3: Batch update
@@ -44,8 +44,8 @@ classdef (Sealed) Config < handle
         %% RTK parameters
         USE_REF_POS             = false;
         USE_CODE_DD             = true;
-        USE_PHASE_DD            = false;
-        USE_DOPPLER             = false;
+        USE_PHASE_DD            = true;
+        USE_DOPPLER             = true;
         MAX_OSR_INTERP_GAP_SEC  = 15;
 
         %% IMU parameters

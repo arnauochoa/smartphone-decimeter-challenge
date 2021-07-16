@@ -59,7 +59,11 @@ classdef PVTUtils < handle
                     end
                 case PVTUtils.ID_SD_AMBIGUITY
                     if Config.USE_PHASE_DD % SD ambiguities
-                        prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
+                        if Config.USE_DOPPLER % clk drift
+                            prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
+                        else
+                            prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
+                        end
                         if nargin == 1
                             idx = prevIdx(end) + (1:PVTUtils.getNumSatFreqIndices);
                         elseif nargin < 3
