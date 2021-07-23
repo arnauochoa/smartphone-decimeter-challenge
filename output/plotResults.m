@@ -5,10 +5,11 @@ close all;
 
 %% Initializations
 config = Config.getInstance;
+nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
-idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
+idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
+idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
 timelineSec = (result.utcSeconds - result.utcSeconds(1));
 nEpochs = size(result.xRTK, 2);
 figures = [];
@@ -208,7 +209,7 @@ if contains(config.DATASET_TYPE, 'train')
     plot([1;1]*hErrPctl, [0;1]*pctl/100, '--k')
     legend('CDF',sprintf('%d%% bound = %.2f', pctl, hErrPctl));
     xlabel('Horizontal error (m)'); ylabel('Frequency')
-    title([config.campaignName ' - ' config.phoneName], 'Interpreter', 'none');
+    title([config.campaignName ' - ' strjoin(config.phoneNames, '+')], 'Interpreter', 'none');
     figureWindowTitle(figures(end), 'Hor. pos. CDF');
     
     % Vertical
@@ -220,7 +221,7 @@ if contains(config.DATASET_TYPE, 'train')
     plot([1;1]*vErrPctl, [0;1]*pctl/100, '--k')
     legend('CDF',sprintf('%d%% bound = %.2f', pctl, vErrPctl));
     xlabel('Vertical error error (m)'); ylabel('Frequency')
-    title([config.campaignName ' - ' config.phoneName], 'Interpreter', 'none');
+    title([config.campaignName ' - ' strjoin(config.phoneNames, '+')], 'Interpreter', 'none');
     figureWindowTitle(figures(end), 'Ver. pos. CDF');
     
     % Velocity
@@ -240,7 +241,7 @@ if contains(config.DATASET_TYPE, 'train')
             'D',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
             'Location','northeastoutside');
     xlabel('Velocity error error (m/s)'); ylabel('Frequency')
-    title([config.campaignName ' - ' config.phoneName], 'Interpreter', 'none');
+    title([config.campaignName ' - ' strjoin(config.phoneNames, '+')], 'Interpreter', 'none');
     figureWindowTitle(figures(end), 'Velocity CDF');
 end
 

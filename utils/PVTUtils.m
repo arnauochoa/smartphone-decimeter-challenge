@@ -4,11 +4,12 @@ classdef PVTUtils < handle
     %   constellations, satellites, etc.
     
     properties (Constant)
-        % State-vector id's
+        % State-vector id's (same order as in state vector)
         ID_POS = 1;
-        ID_VEL = 2;
-        ID_CLK_DRIFT = 3;
-        ID_SD_AMBIGUITY = 4;
+        ID_ATT = 2;
+        ID_VEL = 3;
+        ID_CLK_DRIFT = 4;
+        ID_SD_AMBIGUITY = 5;
         
         % Data structures
         MAX_GPS_PRN = 40;
@@ -26,16 +27,23 @@ classdef PVTUtils < handle
         function nStates = getNumStates()
             % GETNUMSTATES Returns the number of states in the state vector
             % 3D pos, 3D vel, clk drift, SD ambiguities
+            config = Config.getInstance();
+            nPhones = length(config.phoneNames);
             nStates = 6;
+            if Config.MULTI_RX
+                nStates = nStates + 2; % yaw and roll
+            else
+                nPhones = 1;
+            end
             if Config.USE_DOPPLER % clk drift
-                nStates = nStates + 1;
+                nStates = nStates + nPhones;
             end
             if Config.USE_PHASE_DD % SD ambiguities
-                nStates = nStates + PVTUtils.getNumSatFreqIndices();
+                nStates = nStates + nPhones * PVTUtils.getNumSatFreqIndices();
             end
         end
         
-        function idx = getStateIndex(stateID, prn, constellationLetter, freqHz)
+        function idx = getStateIndex(stateId, idxPhone, prn, constellationLetter, freqHz)
             %GETSTATEINDEX Returns the index in the state vector of the
             %given unknown.
             %   idx = GETSTATEINDEX(stateID, [prn], [constellationLetter])
@@ -44,40 +52,60 @@ classdef PVTUtils < handle
             %   indices are returned.
             %   - If prn and constellation are given, the index for the SD
             %   ambiguity of the requested satellite is provided
-            switch stateID
+            config = Config.getInstance();
+            nPhones = length(config.phoneNames);
+            idx = [];
+            prevIdx = [];
+            prevStateId = stateId - 1;
+            if nargin == 2 && max(idxPhone) > nPhones
+                error('Phone index is invalid, must be <= %i', nPhones);
+            end
+            while isempty(prevIdx) && prevStateId > 0
+                prevIdx = PVTUtils.getStateIndex(prevStateId, nPhones);
+                prevStateId = prevStateId-1;
+            end
+            if isempty(prevIdx), prevIdx = 0; end
+            switch stateId
                 case PVTUtils.ID_POS
-                    idx = 1:3;
+                    idx = prevIdx(end) + (1:3);
+                case PVTUtils.ID_ATT
+                    idx = prevIdx(end) + (1:2);
                 case PVTUtils.ID_VEL
-                    prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_POS);
                     idx = prevIdx(end) + (1:3);
                 case PVTUtils.ID_CLK_DRIFT
-                    if Config.USE_DOPPLER % clk drift
-                        prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-                        idx = prevIdx(end) + 1;
-                    else
-                        idx = [];
+                    if config.USE_DOPPLER % clk drift
+                        if nargin == 2
+                            idx = prevIdx(end) + idxPhone;
+                        else
+                            error('Phone index must be provided.');
+                        end
                     end
                 case PVTUtils.ID_SD_AMBIGUITY
-                    if Config.USE_PHASE_DD % SD ambiguities
-                        prevIdx = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
-                        if nargin == 1
-                            idx = prevIdx(end) + (1:PVTUtils.getNumSatFreqIndices);
-                        elseif nargin < 3
-                            error('Both PRN and CONST must be provided.');
-                        else
-                            idx = prevIdx(end) + ...
-                                PVTUtils.getSatFreqIndex(prn, constellationLetter, freqHz);
+                    if config.USE_PHASE_DD % SD ambiguities
+                        nAmb = PVTUtils.getNumSatFreqIndices;
+                        if nargin > 2 && nargin < 5
+                            error('Phone, prn, const, and frequency must be provided.');
                         end
-                    else
-                        idx = [];
+                        
+                        for i = idxPhone
+                            if nargin == 2 % All SD ambiguities of given phones
+                                idxThis = prevIdx(end) + (idxPhone(i)-1)*nAmb + (1:nAmb);
+                            else % Selected SD ambiguities of given phones
+                                idxThis = prevIdx(end) + (idxPhone(i)-1)*nAmb + ...
+                                    PVTUtils.getSatFreqIndex(prn, constellationLetter, freqHz);
+                            end
+                            idx = [idx, idxThis];
+                        end
+                        
                     end
+                    
                 otherwise
                     error('Invalid state ID')
             end
         end
         
         function nConst = getNumConstellations()
-            % GETNUMCONSTELLATIONS Returns the total number of 
+            % GETNUMCONSTELLATIONS Returns the total number of
             % constellations selected in the configuration
             config = Config.getInstance;
             nConst = length(config.CONSTELLATIONS);
@@ -187,7 +215,7 @@ classdef PVTUtils < handle
         end
         
         function nSatsConstellation = getTotalNumSatsConstellation(constellationLetter)
-            % GETTOTALNUMSATSCONSTELLATION Returns the maximum number of 
+            % GETTOTALNUMSATSCONSTELLATION Returns the maximum number of
             % satellites for the given constellation
             switch constellationLetter
                 case 'G'

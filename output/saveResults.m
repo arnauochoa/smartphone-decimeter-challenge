@@ -12,7 +12,7 @@ idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 resultsDir = getResultsDir(config);
 switch config.EVALUATE_DATASETS
     case 'single'
-        resultsFilename = [fileNamePreamble config.phoneName '_' config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
+        resultsFilename = [fileNamePreamble strjoin(config.phoneNames, '+') '_' config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
     case 'all'
         resultsFilename = [fileNamePreamble config.RES_FILENAME '_' config.resFileTimestamp '.csv'];
     otherwise
@@ -37,10 +37,12 @@ estPosLla = ecef2geodeticVector(result.xRTK(idxStatePos, :)');
 resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla);
 
 %% Interpolate to match sample submission time
+% TODO: perform interpolation for all smartphones
+phoneName = config.phoneNames{1};
 if strcmp(config.EVALUATE_DATASETS, 'all') && strcmp(config.DATASET_TYPE, 'test')
     resultsFilename = [fileNamePreamble config.RES_FILENAME '_interp_' config.resFileTimestamp '.csv'];
     refTable = readtable('data/sample_submission.csv');
-    refTableThis = refTable(strcmp(refTable.phone, [config.campaignName '_' config.phoneName]), :);
+    refTableThis = refTable(strcmp(refTable.phone, [config.campaignName '_' phoneName]), :);
 
     estPosLlaInt = interp1(millisSinceGpsEpoch, estPosLla, refTableThis.millisSinceGpsEpoch, 'spline', 'extrap');
     resultsFilePath = writeResult(resultsDir, resultsFilename, refTableThis.millisSinceGpsEpoch, estPosLlaInt);
@@ -62,7 +64,7 @@ fid = fopen(resultsFilePath, 'a');
 % Write header if necessary
 if writeHeader, fprintf(fid, resultsHeader); end
 for iEpoch = 1:length(millisSinceGpsEpoch)
-    fprintf(fid, '%s_%s,', config.campaignName, config.phoneName);      % phone
+    fprintf(fid, '%s_%s,', config.campaignName, strjoin(config.phoneNames, '+'));      % phone
     fprintf(fid, '%d,', millisSinceGpsEpoch(iEpoch));                   % millisSinceGpsEpoch
     fprintf(fid, '%.15f,%.14f', estPosLla(iEpoch, 1), estPosLla(iEpoch, 2)); % latDeg,lngDeg
     fprintf(fid, '\n');

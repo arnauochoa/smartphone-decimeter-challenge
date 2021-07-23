@@ -2,10 +2,11 @@
 function [x2, F, Q] = fTransition(x1, t1, t2, fArgs)
 % Initializations
 config = Config.getInstance;
+nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
-idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
+idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
+idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
 
 % Transition time step
 dt = t2 - t1;

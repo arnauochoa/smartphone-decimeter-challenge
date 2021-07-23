@@ -1,16 +1,17 @@
-function [result] = navigate(phoneRnx, imuMeas, nav, osrRnx, ref)
+function [result] = navigate(phones, nav)
 %NAVIGATE Summary of this function goes here
 %   Detailed explanation goes here
 
 %% Initializations
 config = Config.getInstance;
+nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
+% idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);     % TODO: change phones index to iPhone
 % idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 nStates = PVTUtils.getNumStates();
 nSatFreqs = PVTUtils.getNumSatFreqIndices();
-phoneEpochs = unique(phoneRnx.utcSeconds);
+phoneEpochs = unique(phones(1).gnss.utcSeconds);                            % TODO: change phones index to iPhone
 if isinf(config.EPOCHS_TO_RUN), nGnssEpochs = length(phoneEpochs);
 else,                           nGnssEpochs = config.EPOCHS_TO_RUN;     end
 
@@ -42,14 +43,14 @@ result.dopNumDD = nan(1, nGnssEpochs);
 result.refRejectedHist = zeros(1, nGnssEpochs);
 
 %% Obtain first position
-[x0, ekf.P, ekf.tx, x0WLS] = getFirstPosition(phoneRnx, nav);
+[x0, ekf.P, ekf.tx, x0WLS] = getFirstPosition(phones(1).gnss, nav);        % TODO: change phones index to iPhone
 % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 % % Use ref position as first position
-% idxRef = find(ref.utcSeconds > ekf.tx, 1, 'first');
-% x0(idxStatePos) = geodetic2ecefVector(ref.posLla(idxRef, :))';
+% idxRef = find(phones(1).ref.utcSeconds > ekf.tx, 1, 'first');            % TODO: change phones index to iPhone
+% x0(idxStatePos) = geodetic2ecefVector(phones(1).ref.posLla(idxRef, :))'; % TODO: change phones index to iPhone
 % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 ekf.x = zeros(PVTUtils.getNumStates, 1);
-ekf.x(idxStatePos) = x0(idxStatePos) - osrRnx.statPos;
+ekf.x(idxStatePos) = x0(idxStatePos) - phones(1).osr.statPos;           % TODO: change phones index to iPhone
 
 % Loop variables
 % thisUtcSeconds -> time ref for both IMU and GNSS.
@@ -73,7 +74,7 @@ end
 
 %% Evaluate all trajectory
 % First gnss observations is the same as for the first approx position
-[phoneEpoch, osrEpoch] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx, 'this');
+[phoneEpoch, osrEpoch] = getNextGnss(thisUtcSeconds, phones(1).gnss, phones(1).osr, 'this');% TODO: change phones index to iPhone
 hasEnded = isempty(phoneEpoch); % TODO check imu
 
 while ~hasEnded % while there are more observations/measurements
@@ -102,7 +103,7 @@ while ~hasEnded % while there are more observations/measurements
     % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     if config.USE_REF_POS
         assert(strcmp(config.DATASET_TYPE, 'train'), 'Reference can only be used in train datasets');
-        [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, idxEst, ref, osrRnx, result);
+        [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, idxEst, phones(1).ref, phones(1).osr, result);% TODO: change phones index to iPhone
     end
     % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     
@@ -115,19 +116,19 @@ while ~hasEnded % while there are more observations/measurements
         fArgs.x0 = x0;
         ekf = EKF.propagateState(ekf, thisUtcSeconds, @fTransition, fArgs);
         % Update total-state with absolute position
-        x0 = updateTotalState(ekf.x, osrRnx.statPos);
+        x0 = updateTotalState(ekf.x, phones(1).osr.statPos);                       % TODO: change phones index to iPhone
 
         result.xWLS(:, idxEst) = x0WLS;
         PWLSHist(:, :, idxEst) = PWLSHist(:, :, idxEst-1);
 
 %         if config.USE_REF_POS
-%             [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, ref, osrRnx, result);
+%             [x0, ekf, result, thisUtcSeconds] = updateWithRefPos(x0, ekf, thisUtcSeconds, phones(1).ref, phones(1).osr, result);% TODO: change phones index to iPhone
 %         end
 
         % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
         % Skip epochs with missing obs
         %         fprintf(2, 'TOW = %d - Not enough observations to estimate a potition. Skipping epoch.\n', phoneGnss.tow);
-        %         [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
+        %         [phoneGnss, osrGnss] = getNextGnss(thisUtcSeconds, phones(1).gnss, phones(1).osr);% TODO: change phones index to iPhone
         %         hasEnded = isempty(phoneGnss); % TODO check imu
         %         continue
         % <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -154,10 +155,10 @@ while ~hasEnded % while there are more observations/measurements
         %% RTK estimation
         doubleDifferences = computeDoubleDifferences(osrEpoch, phoneEpoch, sat.pos, sat.elDeg);
         if ~isempty(doubleDifferences)
-            [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, doubleDifferences, result);
+            [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, phones(1).osr.statPos, doubleDifferences, result);% TODO: change phones index to iPhone
         end
         if config.USE_DOPPLER
-            [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, osrRnx.statPos, phoneEpoch, sat, result);
+            [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, phones(1).osr.statPos, phoneEpoch, sat, result);% TODO: change phones index to iPhone
         end
     end
     
@@ -170,7 +171,7 @@ while ~hasEnded % while there are more observations/measurements
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
-    [phoneEpoch, osrEpoch] = getNextGnss(thisUtcSeconds, phoneRnx, osrRnx);
+    [phoneEpoch, osrEpoch] = getNextGnss(thisUtcSeconds, phones(1).gnss, phones(1).osr);% TODO: change phones index to iPhone
     hasEnded = isempty(phoneEpoch) || idxEst > nGnssEpochs; % TODO check imu
 end
 

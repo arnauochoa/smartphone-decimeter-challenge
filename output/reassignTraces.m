@@ -64,7 +64,7 @@ if isTrain
 end
 for iTrace = 1:nTraces
     config.campaignName = selectedTracesTable.Campaign{iTrace};
-    config.phoneName = selectedTracesTable.Phone{iTrace};
+    config.phoneNames = selectedTracesTable.Phone(iTrace); % 1x1 cell with char array
     if ~selectedTracesTable.IsCorrect(iTrace)
         thisCampaign = selectedTracesTable.Campaign{iTrace};
         % Find first correct trace in this campaign

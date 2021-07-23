@@ -4,18 +4,18 @@ classdef (Sealed) Config < handle
     % the selected dataset
     
     % This code assumes that the data is structured as follows:
-    %   Observations:   
+    %   Observations:
     %       {workspace_path}/data/sdc-data/{train or test}/{campaign_name}/{phone_name}/{phone_name}_GnssLog.txt
-    %   Groundtruth:    
+    %   Groundtruth:
     %       {workspace_path}/data/sdc-data/{train or test}/{campaign_name}/{phone_name}/supplemental/SPAN_{phone_name}_10Hz.nmea
-    %   Navigation:     
+    %   Navigation:
     %       {workspace_path}/data/sdc-data/brdc/{campaign_name}/BRDC00WRD_R_{datetime}_01D_GN.rnx
     %   OSR:
     %       {workspace_path}/data/sdc-data/corrections/{source_name}/OSR/[see getOSRFilepaths]
     properties (Constant)
         %% Debug options
         SHOW_DEBUG_MESSAGES     = false;
-        EPOCHS_TO_RUN           = inf;                                      % Set as inf to run all epochs    
+        EPOCHS_TO_RUN           = 100;                                      % Set as inf to run all epochs
         
         %% Results
         RES_FILENAME            = 'result';
@@ -23,20 +23,20 @@ classdef (Sealed) Config < handle
         %% Trace selection
         EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
-        CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Mi8';                                    % Only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Pixel4';                                    % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
         
         % OBSERVATION RINEX - Uncomment to use, path from workspace
-%         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
-%             filesep 'igs_data' filesep 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
-%         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
+        %         OBS_RINEX_PATH          = [workspacePath 'data' filesep 'other' ...
+        %             filesep 'igs_data' filesep 'STFU00USA_S_20202190000_01D_01S_MO.crx' filesep 'STFU00USA_S_20202192215_15M_01S_MO.rnx'];
+        %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        SEQUENTIAL_UPDATE       = true;
-        P_FALSE_OUTLIER_REJECT  = 0.01; % Probability of false outlier rejection
+        MULTI_RX                = true;                                     % If true, all phones from a campaign are used
+        P_FALSE_OUTLIER_REJECT  = 0.01;                                     % Probability of false outlier rejection
         
         %% RTK parameters
         USE_REF_POS             = false;
@@ -44,19 +44,19 @@ classdef (Sealed) Config < handle
         USE_PHASE_DD            = true;
         USE_DOPPLER             = true;
         MAX_OSR_INTERP_GAP_SEC  = 15;
-
+        
         %% IMU parameters
         MAX_IMU_INTERP_GAP_SEC  = 0.02;
         
         %% Navigation parameters
         CONSTELLATIONS          = 'GEC';
-%         OBS_COMBINATION         = {'none', 'none'};	
+        %         OBS_COMBINATION         = {'none', 'none'};
         OBS_USED                = {'C1C+C5X', 'C1X+C5X', 'C2X'};            % PR Rinex code for observations
         OSR_OBS_USED            = {'C1C+C5I', 'C1X+C5X', 'C2X'};            % PR Rinex code for OSR data
         CONST_COV_FACTORS       = [1 1 2];                                  % Covariance factor for each constellation
         ELEVATION_MASK          = 10;                                       % Elevation mask in degrees
         MEAS_COV_SRC            = 'uncertainty';                            % Among 'elevation' and 'uncertainty'
-%         MAX_DOPPLER_MEAS        = 6e3;                                      % Maximum doppler measurement 
+%         MAX_DOPPLER_MEAS        = 6e3;                                      % Maximum doppler measurement
 %         MAX_DOPPLER_UNCERT      = 10;                                       % Maximum doppler uncertainty
         
         %% KF tuning parameters
@@ -80,35 +80,45 @@ classdef (Sealed) Config < handle
     
     properties
         campaignName = Config.CAMPAIGN_NAME;
-        phoneName = Config.PHONE_NAME;
-        resFileTimestamp = '';
+        phoneNames;
+        resFileTimestamp;
     end
     
     %% Private constructor
     methods (Access = private)
-      function obj = Config()
-          obj.resFileTimestamp = datestr(datetime('now'), 'yyyymmdd_HHMMSS');
-      end
+        function obj = Config()
+            obj.resFileTimestamp = datestr(datetime('now'), 'yyyymmdd_HHMMSS');
+            if obj.MULTI_RX
+                obj.phoneNames = getPhoneNamesInCampaign(obj);
+            else
+                obj.phoneNames = {Config.PHONE_NAME};
+            end
+        end
+        
     end
     
-    %% Public methods 
+    %% Public methods
     methods (Static)
-        % Singleton instantiator        
+        % Singleton instantiator
         function singleObj = getInstance()
             persistent localObj
-             if isempty(localObj) || ~isvalid(localObj)
+            if isempty(localObj) || ~isvalid(localObj)
                 localObj = Config;
-             end
-             singleObj = localObj;
+            end
+            singleObj = localObj;
         end
     end
     
-    methods        
-        function [dirPath, fileName] = getObsDirFile(this)
+    methods
+        function [dirPaths, fileNames] = getObsDirFile(this)
             %GETOBSDIRFILE Returns the directory and the filename of the
             %observation file according to the selected configuration.
-            dirPath = [this.obsDataPath this.campaignName filesep this.phoneName filesep];
-            fileName = [this.phoneName '_GnssLog.txt'];
+            dirPaths = cell(size(this.phoneNames));
+            fileNames = cell(size(this.phoneNames));
+            for iPhone = 1:length(this.phoneNames)
+                dirPaths{iPhone} = [this.obsDataPath this.campaignName filesep this.phoneNames{iPhone} filesep];
+                fileNames{iPhone} = [this.phoneNames{iPhone} '_GnssLog.txt'];
+            end
         end
         
         function filepaths = getNavFilepaths(this)
@@ -159,12 +169,15 @@ classdef (Sealed) Config < handle
             end
         end
         
-        function [dirPath, fileName] = getRefDirFile(this)
+        function [dirPaths, fileNames] = getRefDirFile(this)
             %GETREFDIRFILE Returns the directory and the filename of the
             %groundtruth file according to the selected configuration.
-            [dirPath, ~] = this.getObsDirFile();
-            dirPath = [dirPath 'supplemental' filesep];
-            fileName = ['SPAN_' this.phoneName '_10Hz.nmea'];
+            [dirPaths, ~] = this.getObsDirFile();
+            fileNames = cell(size(this.phoneNames));
+            for iPhone = 1:length(this.phoneNames)
+                dirPaths{iPhone} = [dirPaths{iPhone} 'supplemental' filesep];
+                fileNames{iPhone} = ['SPAN_' this.phoneNames{iPhone} '_10Hz.nmea'];
+            end
         end
         
         function path = obsDataPath(this)
@@ -184,6 +197,10 @@ classdef (Sealed) Config < handle
             end
         end
         
+        function phoneNames = getPhoneNamesInCampaign(this)
+            campaignPath = [this.obsDataPath this.campaignName filesep];
+            phoneNames = getValidDir(campaignPath);
+        end
     end
     
     %% Private methods

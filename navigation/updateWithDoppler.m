@@ -4,6 +4,7 @@ function [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, 
 
 % Initializations
 config = Config.getInstance;
+idxPhone = 1;
 isDopRejected = zeros(1, length(phoneGnss.obs));
 isDopInvalid = zeros(1, length(phoneGnss.obs));
 % Sequentally update with all Doppler observations
@@ -19,6 +20,7 @@ for iObs = 1:length(phoneGnss.obs)
         % Pack arguments that are common for all observations
         fArgs.x0 = x0;
         fArgs.statPos = statPos;
+        hArgs.idxPhone = idxPhone;
         hArgs.x0 = x0;
         hArgs.satPos = sat.pos(:, iObs);
         hArgs.satVel = sat.vel(:, iObs);
@@ -66,7 +68,7 @@ function [z, y, H, R] = hDoppler(~, hArgs)
 % Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
+idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, hArgs.idxPhone);
 
 % Observation
 z = hArgs.obs;
@@ -75,9 +77,9 @@ z = hArgs.obs;
 vUS = unitVector(hArgs.satPos - hArgs.x0(idxStatePos));
 
 % Observation estimation
-y = dot(hArgs.satVel - hArgs.x0(idxStateVel), vUS) + ...    % Radial velocity from user to sat
-    hArgs.x0(idxStateClkDrift) -                     ...    % Receiver clock drift
-    Constants.CELERITY * hArgs.satClkDrift;                 % Satellite clock drift
+y = vUS'*(hArgs.satVel - hArgs.x0(idxStateVel)) +   ...    % Radial velocity from user to sat
+    hArgs.x0(idxStateClkDrift) -                    ...    % Receiver clock drift
+    Constants.CELERITY * hArgs.satClkDrift;                % Satellite clock drift
 
 % Distance between receiver and satellite. Second term is Sagnac effect.
 dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...

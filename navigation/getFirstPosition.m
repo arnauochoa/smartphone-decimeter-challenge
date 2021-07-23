@@ -71,10 +71,11 @@ function [x0, P0] = fillFullState(xLS, PLS)
 % FILLFULLSTATE Fills full state vector and covariance matrix with
 % parameters estimated by LS and the ones set by Config
 config = Config.getInstance;
+nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT);
-idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY);
+idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
+idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
 
 % Initialize state vector and cov matrix
 nStates = PVTUtils.getNumStates();

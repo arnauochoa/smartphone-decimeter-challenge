@@ -4,15 +4,15 @@ function [x0, ekf, result] = updateWithDD(x0, ekf, thisUtcSeconds, idxEst, statP
 
 % Initializations
 config = Config.getInstance;
+idxPhone = 1; % TODO: change phones index to iPhone
 % Sequentally update with all DDs
-
 if config.USE_CODE_DD
-    [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
+    [x0, ekf, result] = updateWithCodeDD(idxPhone, x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
     result.prNumDD(idxEst) = length([doubleDifferences(:).C]);
 end
 
 if config.USE_PHASE_DD
-    [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
+    [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(idxPhone, x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
     % If all are rejected in one set of constellation+freq, reinitialize 
     % ambiguity for pivot satellite of that set
     ddConstNum = c2i([doubleDifferences(:).constel]');
@@ -24,13 +24,14 @@ if config.USE_PHASE_DD
         if all(isPhsRejections(idxConstFreq))
             idxStatePivSat = PVTUtils.getStateIndex(...
                 PVTUtils.ID_SD_AMBIGUITY, ...
+                idxPhone, ...
                 doubleDifferences(idxConstFreq(1)).pivSatPrn,   ... % PRN of piv sat for this const+freq
                 doubleDifferences(idxConstFreq(1)).constel,     ... % Constellation
                 constFreqs(i, 2));                                  % Freq of this set of DDs
             lambda = Constants.CELERITY / constFreqs(i, 2);
             ekf.x(idxStatePivSat) = - doubleDifferences(idxConstFreq(1)).pivSatCmcSd / lambda;
             ekf.P(idxStatePivSat, idxStatePivSat) = config.SIGMA_P0_SD_AMBIG^2;
-            [x0, ekf, result] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
+            [x0, ekf, result] = updateWithPhaseDD(idxPhone, x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
         end
     end
     result.phsNumDD(idxEst) = length([doubleDifferences(:).L]);
@@ -38,7 +39,7 @@ end
 end %end of function updateWithDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [x0, ekf, result] = updateWithCodeDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
+function [x0, ekf, result] = updateWithCodeDD(idxPhone, x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
 % UPDATEWITHCODEDD performs the KF sequential update with all code DD's
 config = Config.getInstance;
 isPrRejected = zeros(1, length(doubleDifferences));
@@ -105,7 +106,7 @@ result.prInvalidHist(idxEst) = sum(isPrInvalid);
 end %end of function updateWithCodeDD
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function [x0, ekf, result, isPhsRejected] = updateWithPhaseDD(x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
+function [x0, ekf, result, isPhsRejected] = updateWithPhaseDD(idxPhone, x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result)
 % UPDATEWITHPHASEDD performs the KF sequential update with all phase DD's
 config = Config.getInstance;
 isPhsRejected = zeros(1, length(doubleDifferences));
@@ -123,6 +124,7 @@ for iObs = 1:length(doubleDifferences)
     fArgs.varSatPrn = doubleDifferences(iObs).varSatPrn;
     %     fArgs.statPos = statPos;
     % Measurement model arguments
+    hArgs.idxPhone = idxPhone;
     hArgs.x0 = x0;
     hArgs.statPos = statPos;
     hArgs.obsConst = doubleDifferences(iObs).constel;
@@ -140,8 +142,8 @@ for iObs = 1:length(doubleDifferences)
             sigmaDD > Constants.MIN_L_SIGMA && ...
             sigmaDD < Constants.MAX_L_SIGMA
         
-        idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
-        idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
+        idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, idxPhone, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
+        idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, idxPhone, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
         % Ambiguities: set to CMC if it's 0 (not estimated yet for this sat)
         % TODO: what if N is estimated as 0
         if ekf.x(idxStatePivSat) == 0, ekf.x(idxStatePivSat) = doubleDifferences(iObs).pivSatCmcSd; end
@@ -232,8 +234,8 @@ function [z, y, H, R] = hPhaseDD(x, hArgs)
 % Initializations
 config = Config.getInstance;
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
-idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
+idxStatePivSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.idxPhone, hArgs.pivSatPrn, hArgs.obsConst, hArgs.freqHz);
+idxStateVarSat = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, hArgs.idxPhone, hArgs.varSatPrn, hArgs.obsConst, hArgs.freqHz);
 rxPos = hArgs.x0(idxStatePos);
 lambda = Constants.CELERITY / hArgs.freqHz;
 
