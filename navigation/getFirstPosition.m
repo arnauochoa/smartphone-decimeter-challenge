@@ -73,6 +73,7 @@ function [x0, P0] = fillFullState(xLS, PLS)
 config = Config.getInstance;
 nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+idxStateAtt = PVTUtils.getStateIndex(PVTUtils.ID_ATT);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
@@ -87,11 +88,18 @@ P0 = zeros(nStates);
 x0(idxStatePos) = xLS(1:3);
 P0(idxStatePos, idxStatePos) = config.FACTOR_P0_POS*PLS(1:3,1:3);
 
-% Fill the rest with the Config values
+%% Fill the rest with the Config values
+% Attitude
+if ~isempty(idxStateAtt)
+    x0(idxStateAtt) = config.X0_ATT_XYZ(config.ATT_TO_EST_XYZ);
+    P0(idxStateAtt, idxStateAtt) = diag(config.SIGMA_P0_ATT_XYZ(config.ATT_TO_EST_XYZ).^2);
+end
+% Velocity
 P0(idxStateVel, idxStateVel) = diag(config.SIGMA_P0_VEL_XYZ.^2);
 if ~isempty(idxStateClkDrift)
     P0(idxStateClkDrift, idxStateClkDrift) = diag(config.SIGMA_P0_CLK_DRIFT.^2);
 end
+% Ambiguities
 if ~isempty(idxStateAllSdAmb)
     P0(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_P0_SD_AMBIG.^2) * eye(length(idxStateAllSdAmb));
 end

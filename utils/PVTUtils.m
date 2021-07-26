@@ -31,7 +31,7 @@ classdef PVTUtils < handle
             nPhones = length(config.phoneNames);
             nStates = 6;
             if Config.MULTI_RX
-                nStates = nStates + 2; % yaw and roll
+                nStates = nStates + sum(config.ATT_TO_EST_XYZ); % pitch, roll, yaw
             else
                 nPhones = 1;
             end
@@ -69,7 +69,7 @@ classdef PVTUtils < handle
                 case PVTUtils.ID_POS
                     idx = prevIdx(end) + (1:3);
                 case PVTUtils.ID_ATT
-                    idx = prevIdx(end) + (1:2);
+                    idx = prevIdx(end) + (1:sum(config.ATT_TO_EST_XYZ));
                 case PVTUtils.ID_VEL
                     idx = prevIdx(end) + (1:3);
                 case PVTUtils.ID_CLK_DRIFT

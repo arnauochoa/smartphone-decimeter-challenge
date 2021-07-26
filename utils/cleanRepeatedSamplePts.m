@@ -6,7 +6,7 @@ function [x, y] = cleanRepeatedSamplePts(x, y)
 % Input:
 %   x       = Vector. Independent variable
 %   y       = Vector or matrix. Dependent variable
-% Input:
+% Output:
 %   x       = Vector. Independent variable
 %   y       = Vector or matrix. Dependent variable
 %

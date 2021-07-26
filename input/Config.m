@@ -35,6 +35,7 @@ classdef (Sealed) Config < handle
         %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
+        ATT_TO_EST_XYZ          = logical([0 1 1]);                         % Attitude angles to estimate, as: X=pitch, Y=roll Z=yaw
         MULTI_RX                = true;                                     % If true, all phones from a campaign are used
         P_FALSE_OUTLIER_REJECT  = 0.01;                                     % Probability of false outlier rejection
         
@@ -60,10 +61,12 @@ classdef (Sealed) Config < handle
 %         MAX_DOPPLER_UNCERT      = 10;                                       % Maximum doppler uncertainty
         
         %% KF tuning parameters
+        X0_ATT_XYZ              = [0 0 0];          % (rad) initial XYZ attitude angles
         % Process noise covariance matrix - Q
+        SIGMA_Q_ATT_XYZ         = [0 pi/72 pi/18];  % std rad/sqrt(s) of XYZ attitude angles
         SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
         SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
-        SIGMA_Q_SD_AMBIG        = 1e-2;              % std cyc of SD phase ambiguity
+        SIGMA_Q_SD_AMBIG        = 1e-2;             % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
         SIGMA_C_M               = 1e2;              % Default std (m) for pseudorange meas          (only for elevation-based model)
         SIGMA_L_M               = 1e0;              % Default std (m) for carrier phase meas        ("")
@@ -73,6 +76,7 @@ classdef (Sealed) Config < handle
         COV_FACTOR_D            = 1e5;              % Covariance factor for Doppler meas            ("")
         % State covariance matrix initialization - P0
         FACTOR_P0_POS           = 1e5;              % Factor that multiplies P0 obtained from WLS
+        SIGMA_P0_ATT_XYZ        = [0 pi/36 pi];     % std rad/sqrt(s) of XYZ attitude angles
         SIGMA_P0_VEL_XYZ        = [1e2 1e2 1e2];    % std m/sqrt(s^3) of initial XYZ velocity
         SIGMA_P0_CLK_DRIFT      = 1e2;              % std m/sqrt(s^3) of initial clock drift
         SIGMA_P0_SD_AMBIG       = 1e5;              % std cyc of initial SD phase ambiguity

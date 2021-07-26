@@ -52,17 +52,22 @@ for iPhone = 1:nPhones
         title(config.phoneNames{iPhone})
     end
     
-    ref1PosLlaInterp = interp1(phones(1).ref.utcSeconds, phones(1).ref.posLla, phones(2).ref.utcSeconds, 'spline');
+%     ref2PosLlaInterp = interp1(phones(2).ref.utcSeconds, phones(2).ref.posLla, phones(1).ref.utcSeconds, 'spline');
+    diffPos = geodetic2ecefVector(phones(1).ref.posLla) - geodetic2ecefVector(phones(2).ref.posLla);
+%     diffPos = Lla2Ned(phones(1).ref.posLla, phones(2).ref.posLla);
     
     for iDim = 1:3
-        diffPosXYZ = geodetic2ecefVector(phones(2).ref.posLla) - geodetic2ecefVector(ref1PosLlaInterp);
         figure(5)
         subplot(3, 1, iDim)
-        plot(phones(1).ref.utcSeconds, diffPosXYZ(:, iDim))
-        ylabel([dimXYZ{iDim} '_E (m)'])
+        plot(phones(1).ref.utcSeconds, diffPos(:, iDim))
+%         ylabel([dimXYZ{iDim} '_E (m)'])
     end
     
     figure(6)
-    plot(phones(1).ref.utcSeconds, vecnorm(diffPosXYZ(:, iDim), 2, 2))
+    plot(phones(1).ref.utcSeconds, vecnorm(diffPos, 2, 2))
     ylabel('Lever arm length (m)')
+    
+    figure(7)
+    plot(phones(1).ref.utcSeconds, phones(2).ref.utcSeconds)
+    xlabel(['UTC Seconds ' config.phoneNames{1}]); ylabel(['UTC Seconds ' config.phoneNames{2}]);
 end

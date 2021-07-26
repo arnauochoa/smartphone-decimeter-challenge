@@ -1,13 +1,14 @@
 function [ref, result, resultsFilePath] = evaluateTrace()
+% EVALUATETRACE Evaluates a single trace using the selected configuration
+
     config = Config.getInstance;
     
     %% Input
     [phones, nav, ~, osrRnx] = loadData();
     
-    
     if ~isempty(osrRnx.obs)
         %% Compute geometry
-        % TODO: Define geometry of phones in the car
+        phones = findGeometry(phones);
 
         %% Pre-process IMU measurements
         phones = preprocessIns(phones);
