@@ -1,9 +1,12 @@
-function phones = interpOSR(osrRnxRaw, phones)
+function [phones, osr]= interpOSR(osrRnxRaw, phones)
 % INTERPOSR Interpolates OSR data to match gnssRnx time
 
 config = Config.getInstance;
 
-nPhones = 1;%length(config.phoneNames);
+nPhones = length(config.phoneNames);
+
+osr.statPos = osrRnxRaw.statPos;
+osr.interpRnx(nPhones, 1) = struct('obs', [], 'type', []);
 
 for iPhone = 1:nPhones
     rxWkNum = unique(phones(iPhone).gnss.obs(:, GnssLogUtils.COL_WN));
@@ -62,8 +65,9 @@ for iPhone = 1:nPhones
     end
     
     % Copy all fields replacing obs matrix by interpolated obs
-    phones(iPhone).osr = osrRnxRaw;
+    osr.interpRnx(iPhone).type = osrRnxRaw.type;
     % Save osrRnx sorted by time, then const, then sat
-    phones(iPhone).osr.obs = sortrows(osrRnxAux, [GnssLogUtils.COL_WN GnssLogUtils.COL_TOW GnssLogUtils.COL_CONST GnssLogUtils.COL_SVN]);
+    osr.interpRnx(iPhone).obs = sortrows(osrRnxAux, ...
+        [GnssLogUtils.COL_WN GnssLogUtils.COL_TOW GnssLogUtils.COL_CONST GnssLogUtils.COL_SVN]);
 end
 end

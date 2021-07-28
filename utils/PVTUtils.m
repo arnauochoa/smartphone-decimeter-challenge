@@ -5,10 +5,10 @@ classdef PVTUtils < handle
     
     properties (Constant)
         % State-vector id's (same order as in state vector)
-        ID_POS = 1;
-        ID_ATT = 2;
-        ID_VEL = 3;
-        ID_CLK_DRIFT = 4;
+        ID_POS          = 1;
+        ID_ATT_XYZ      = 2;
+        ID_VEL          = 3;
+        ID_CLK_DRIFT    = 4;
         ID_SD_AMBIGUITY = 5;
         
         % Data structures
@@ -31,7 +31,7 @@ classdef PVTUtils < handle
             nPhones = length(config.phoneNames);
             nStates = 6;
             if Config.MULTI_RX
-                nStates = nStates + sum(config.ATT_TO_EST_XYZ); % pitch, roll, yaw
+                nStates = nStates + 3;%sum(config.ATT_TO_EST_XYZ); % pitch, roll, yaw
             else
                 nPhones = 1;
             end
@@ -68,8 +68,10 @@ classdef PVTUtils < handle
             switch stateId
                 case PVTUtils.ID_POS
                     idx = prevIdx(end) + (1:3);
-                case PVTUtils.ID_ATT
-                    idx = prevIdx(end) + (1:sum(config.ATT_TO_EST_XYZ));
+                case PVTUtils.ID_ATT_XYZ
+                    if config.MULTI_RX
+                        idx = prevIdx(end) + (1:3);%sum(config.ATT_TO_EST_XYZ));
+                    end
                 case PVTUtils.ID_VEL
                     idx = prevIdx(end) + (1:3);
                 case PVTUtils.ID_CLK_DRIFT
@@ -87,7 +89,7 @@ classdef PVTUtils < handle
                             error('Phone, prn, const, and frequency must be provided.');
                         end
                         
-                        for i = idxPhone
+                        for i = 1:length(idxPhone)
                             if nargin == 2 % All SD ambiguities of given phones
                                 idxThis = prevIdx(end) + (idxPhone(i)-1)*nAmb + (1:nAmb);
                             else % Selected SD ambiguities of given phones

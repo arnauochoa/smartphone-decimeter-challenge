@@ -1,4 +1,4 @@
-function [gnss, osr] = getNextGnss(lastUtcSeconds, gnssRnx, osrRnx, whichObs)
+function [gnssEpoch, osrEpoch, phoneInfo] = getNextGnss(lastUtcSeconds, phones, osr, whichObs)
 % GETNEXTGNSS returns a structure with the next GNSS observations 
 %
 %   gnss = GETNEXTGNSS(lastUtcMillis, gnssRnx, [osrRnx, whichObs])
@@ -9,54 +9,76 @@ function [gnss, osr] = getNextGnss(lastUtcSeconds, gnssRnx, osrRnx, whichObs)
 %       - the next epoch of lastUtcSeconds (if whichObs = 'next')
 
 config = Config.getInstance;
+nPhones = length(config.phoneNames);
 
 if ~exist('whichObs', 'var')
     whichObs = 'next';
 end
-if ~exist('osrRnx', 'var')
-    osrRnx = [];
+if ~exist('osr', 'var')
+    osr = [];
 end
 
-switch whichObs
-    case 'this'
-        firstObsIdx = find(gnssRnx.utcSeconds == lastUtcSeconds, 1, 'first');
-    case 'next'
-        firstObsIdx = find(gnssRnx.utcSeconds > lastUtcSeconds, 1, 'first');
-    otherwise
-        error('Invalid ''whichObs'' specifier, the possible values are ''this'' and ''next''')
+nextObsIndices = nan(1, nPhones);
+nextObsUtc = nan(1, nPhones);
+for iPhone = 1:nPhones
+    gnssRnx = phones(iPhone).gnss;
+    switch whichObs
+        case 'this'
+            nextObsIdx = find(gnssRnx.utcSeconds == lastUtcSeconds, 1, 'first');
+        case 'next'
+            nextObsIdx = find(gnssRnx.utcSeconds > lastUtcSeconds, 1, 'first');
+        otherwise
+            error('Invalid ''whichObs'' specifier, the possible values are ''this'' and ''next''')
+    end
+    if ~isempty(nextObsIdx)
+        nextObsIndices(iPhone) = nextObsIdx;
+        nextObsUtc(iPhone) = gnssRnx.utcSeconds(nextObsIdx);
+    end
 end
 
-if ~isempty(firstObsIdx) % If there are more observations
+if ~all(isnan(nextObsIndices)) % If there are more observations
+    % Find phone with next earlier observation
+    [~, idxPhoneNextObs] = min(nextObsUtc);
+    gnssRnx = phones(idxPhoneNextObs).gnss;
+    nextObsIdx = nextObsIndices(idxPhoneNextObs);
+    
+    % Fill phone information
+    phoneInfo.idx = idxPhoneNextObs;
+    phoneInfo.phoneName = config.phoneNames{idxPhoneNextObs};
+    phoneInfo.posBody = phones(idxPhoneNextObs).posBody;
+    
     % TOW of epoch to return
-    nextTow = gnssRnx.obs(firstObsIdx, 2);
+    nextTow = gnssRnx.obs(nextObsIdx, 2);
     % Obs vector of epoch to return
-    gnss.obs = get_obs_vector(nextTow,  ... 
+    gnssEpoch.obs = get_obs_vector(nextTow,  ... 
         config.CONSTELLATIONS,  ...
         config.OBS_USED,        ...
         {},                     ...
         gnssRnx.obs,            ...
         gnssRnx.type);
     % Timestamps of epoch to return
-    gnss.utcSeconds = gnssRnx.utcSeconds(firstObsIdx);
-    gnss.weekN = gnssRnx.obs(firstObsIdx, 1);
-    gnss.tow = nextTow;
+    gnssEpoch.utcSeconds = gnssRnx.utcSeconds(nextObsIdx);
+    gnssEpoch.weekN = gnssRnx.obs(nextObsIdx, 1);
+    gnssEpoch.tow = nextTow;
     
-    if ~isempty(osrRnx)
+    if ~isempty(osr)
+    osrRnx = osr.interpRnx(idxPhoneNextObs);
     % Obs vector of epoch to return
-    osr.obs = get_obs_vector(nextTow,  ... 
+    osrEpoch.obs = get_obs_vector(nextTow,  ... 
         config.CONSTELLATIONS,  ...
         config.OSR_OBS_USED,    ...
         {},                     ...
         osrRnx.obs,             ...
         osrRnx.type);
-    osr.utcSeconds = gnss.utcSeconds;
-    osr.weekN = gnss.weekN;
-    osr.tow = gnss.tow;
+    osrEpoch.utcSeconds = gnssEpoch.utcSeconds;
+    osrEpoch.weekN = gnssEpoch.weekN;
+    osrEpoch.tow = gnssEpoch.tow;
     else
-        osr = [];
+        osrEpoch = [];
     end
 else % If there aren't more observations
-    gnss = [];
-    osr = [];
+    gnssEpoch = [];
+    osrEpoch = [];
+    phoneInfo = [];
 end
 end

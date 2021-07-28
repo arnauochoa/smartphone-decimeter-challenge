@@ -1,12 +1,14 @@
-function [x0, ekf, result] = updateWithDoppler(x0, ekf, thisUtcSeconds, idxEst, statPos, phoneGnss, sat, result)
+function [x0, ekf, result] = updateWithDoppler(phoneInfo, x0, ekf, thisUtcSeconds, idxEst, statPos, phoneGnss, sat, result)
 % UPDATEWITHDD Performs the KF update with the double differenced
 % observations
 
 % Initializations
 config = Config.getInstance;
-idxPhone = 1;
 isDopRejected = zeros(1, length(phoneGnss.obs));
 isDopInvalid = zeros(1, length(phoneGnss.obs));
+
+% Phone information for measurement model
+hArgs.phoneInfo  = phoneInfo;
 % Sequentally update with all Doppler observations
 for iObs = 1:length(phoneGnss.obs)
     thisObs = phoneGnss.obs(iObs);
@@ -20,7 +22,6 @@ for iObs = 1:length(phoneGnss.obs)
         % Pack arguments that are common for all observations
         fArgs.x0 = x0;
         fArgs.statPos = statPos;
-        hArgs.idxPhone = idxPhone;
         hArgs.x0 = x0;
         hArgs.satPos = sat.pos(:, iObs);
         hArgs.satVel = sat.vel(:, iObs);
@@ -45,8 +46,8 @@ for iObs = 1:length(phoneGnss.obs)
             @hDoppler, hArgs,                                                   ...
             label);
         
-        result.dopInnovations(idxSat, idxEst) = innovation;
-        result.dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+        result.dopInnovations(idxSat, idxEst, phoneInfo.idx) = innovation;
+        result.dopInnovationCovariances(idxSat, idxEst, phoneInfo.idx) = innovationCovariance;
         
         % Update total-state with absolute position
         x0 = updateTotalState(ekf.x, statPos);
@@ -68,7 +69,7 @@ function [z, y, H, R] = hDoppler(~, hArgs)
 % Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
-idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, hArgs.idxPhone);
+idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, hArgs.phoneInfo.idx);
 
 % Observation
 z = hArgs.obs;

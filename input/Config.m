@@ -15,7 +15,7 @@ classdef (Sealed) Config < handle
     properties (Constant)
         %% Debug options
         SHOW_DEBUG_MESSAGES     = false;
-        EPOCHS_TO_RUN           = 100;                                      % Set as inf to run all epochs
+        EPOCHS_TO_RUN           = 500;                                      % Set as inf to run all epochs
         
         %% Results
         RES_FILENAME            = 'result';
@@ -24,7 +24,7 @@ classdef (Sealed) Config < handle
         EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
         DATASET_TYPE            = 'train';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'Pixel4';                                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Pixel4XL';                                    % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
@@ -35,8 +35,8 @@ classdef (Sealed) Config < handle
         %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        ATT_TO_EST_XYZ          = logical([0 1 1]);                         % Attitude angles to estimate, as: X=pitch, Y=roll Z=yaw
         MULTI_RX                = true;                                     % If true, all phones from a campaign are used
+%         ATT_TO_EST_XYZ          = logical([0 1 1]);                         % Attitude angles to estimate, as: X=pitch, Y=roll Z=yaw
         P_FALSE_OUTLIER_REJECT  = 0.01;                                     % Probability of false outlier rejection
         
         %% RTK parameters

@@ -1,4 +1,4 @@
-function [x0, P0, utcSeconds0, xWLS] = getFirstPosition(phoneRnx, nav)
+function [x0, P0, utcSeconds0, xWLS, phoneInfo] = getFirstPosition(phones, nav)
 % GETFIRSTPOSITION Computes the position using LS at the first epoch with
 % enough GNSS observations
 
@@ -10,7 +10,7 @@ thisUtcSeconds = 0;
 % Find the first epoch that has enough observations
 while ~firstValidEpoch
     % Obtain observations of next epoch
-    phoneGnss = getNextGnss(thisUtcSeconds, phoneRnx);
+    [phoneGnss, ~, phoneInfo] = getNextGnss(thisUtcSeconds, phones);
     thisUtcSeconds = phoneGnss.utcSeconds;
     
     % Get states of satellites selected in Config
@@ -73,7 +73,7 @@ function [x0, P0] = fillFullState(xLS, PLS)
 config = Config.getInstance;
 nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
-idxStateAtt = PVTUtils.getStateIndex(PVTUtils.ID_ATT);
+idxStateAtt = PVTUtils.getStateIndex(PVTUtils.ID_ATT_XYZ);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
@@ -91,16 +91,16 @@ P0(idxStatePos, idxStatePos) = config.FACTOR_P0_POS*PLS(1:3,1:3);
 %% Fill the rest with the Config values
 % Attitude
 if ~isempty(idxStateAtt)
-    x0(idxStateAtt) = config.X0_ATT_XYZ(config.ATT_TO_EST_XYZ);
-    P0(idxStateAtt, idxStateAtt) = diag(config.SIGMA_P0_ATT_XYZ(config.ATT_TO_EST_XYZ).^2);
+    x0(idxStateAtt) = config.X0_ATT_XYZ;
+    P0(idxStateAtt, idxStateAtt) = diag(config.SIGMA_P0_ATT_XYZ.^2);
 end
 % Velocity
 P0(idxStateVel, idxStateVel) = diag(config.SIGMA_P0_VEL_XYZ.^2);
 if ~isempty(idxStateClkDrift)
-    P0(idxStateClkDrift, idxStateClkDrift) = diag(config.SIGMA_P0_CLK_DRIFT.^2);
+    P0(idxStateClkDrift, idxStateClkDrift) = config.SIGMA_P0_CLK_DRIFT.^2 * eye(length(idxStateClkDrift));
 end
 % Ambiguities
 if ~isempty(idxStateAllSdAmb)
-    P0(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_P0_SD_AMBIG.^2) * eye(length(idxStateAllSdAmb));
+    P0(idxStateAllSdAmb, idxStateAllSdAmb) = config.SIGMA_P0_SD_AMBIG.^2 * eye(length(idxStateAllSdAmb));
 end
 end

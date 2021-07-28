@@ -14,11 +14,11 @@ function [ref, result, resultsFilePath] = evaluateTrace()
         phones = preprocessIns(phones);
     
         %% Interpolate OSR data
-        phones = interpOSR(osrRnx, phones);
+        [phones, osr] = interpOSR(osrRnx, phones);
         
         %% Navigate
         disp('Computing positions...');
-        result = navigate(phones, nav);
+        result = navigate(phones, osr, nav);
 
         %% Output
         disp('Navigation ended, saving results...');

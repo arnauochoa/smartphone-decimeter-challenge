@@ -7,6 +7,7 @@ close all;
 config = Config.getInstance;
 nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+idxStateAttXyz = PVTUtils.getStateIndex(PVTUtils.ID_ATT_XYZ);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
@@ -16,10 +17,12 @@ figures = [];
 basemap = 'none';
 
 %% RTK estimation
-estPosXyz = result.xRTK(idxStatePos, :)';
-estPosLla = ecef2geodeticVector(estPosXyz);
+estPosXyz       = result.xRTK(idxStatePos, :)';
+estPosLla       = ecef2geodeticVector(estPosXyz);
 % Horizontal sigma as norm of North and East
-stdHor = vecnorm(result.posStdNed(:, 1:2), 2, 2);
+stdHor          = vecnorm(result.posStdNed(:, 1:2), 2, 2);
+% Attitude
+estAttXyzDeg    = rad2deg(result.xRTK(idxStateAttXyz, :)');
 
 %% WLS estimation
 estPosWLSLla = ecef2geodeticVector(result.xWLS(1:3, :)');
@@ -49,6 +52,13 @@ if strcmp(config.DATASET_TYPE, 'test'), legend('WLS', 'RTK');
 else, legend('Groundtruth', 'WLS', 'RTK'); end
 figureWindowTitle(figures(end), 'Map');
 
+% Attitude
+figures = [figures figure];
+plot(timelineSec, estAttXyzDeg);
+xlabel('Time since start (s)'); ylabel('Attitude (degrees)');
+legend('Pitch', 'Roll', 'Yaw');
+figureWindowTitle(figures(end), 'Attitude');
+
 % Velocity
 figures = [figures figure];
 plot(timelineSec, result.velNed);
@@ -56,60 +66,94 @@ xlabel('Time since start (s)'); ylabel('Velocity (m/s)');
 legend('North', 'East', 'Down');
 figureWindowTitle(figures(end), 'Velocity');
 
+% Phones used
+if config.MULTI_RX
+    figures = [figures figure];
+    plot(timelineSec, result.phoneUsed, 'x');
+    yticks(1:nPhones); yticklabels(config.phoneNames);
+    xlabel('Time since start (s)'); ylabel('Phone')
+    figureWindowTitle(figures(end), 'Phones');
+end
+
 if ~isempty(idxStateClkDrift)
     % Rx clock bias
-    figures = [figures figure]; hold on;
-    plot(timelineSec, result.xWLS(4, :))
-    plot(timelineSec, cumsum(result.xRTK(idxStateClkDrift, :)))
-    legend('WLS', 'RTK (clock drift)')
-    xlabel('Time since start (s)'); ylabel('Clock bias (m)');
+    figures = [figures figure];
+    for iPhone = 1:nPhones
+        subplot(nPhones, 1, iPhone); hold on;
+        title(config.phoneNames{iPhone});
+        plot(timelineSec, cumsum(result.xRTK(idxStateClkDrift(iPhone), :)))
+        if iPhone == 1 && false
+            plot(timelineSec, result.xWLS(4, :))
+            legend('RTK (clock drift)', 'WLS')
+        else
+            legend('RTK (clock drift)')
+        end
+        xlabel('Time since start (s)'); ylabel('Clock bias (m)');
+    end
     figureWindowTitle(figures(end), 'Rx clock bias');
     
     % Rx clock drift
-    figures = [figures figure]; hold on;
-    plot(timelineSec(1:end-1), diff(result.xWLS(4, :)))
-    plot(timelineSec, result.xRTK(idxStateClkDrift, :))
-    legend('WLS (clock bias)', 'RTK')
-    xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
+    figures = [figures figure];
+    for iPhone = 1:nPhones
+        subplot(nPhones, 1, iPhone); hold on;
+        title(config.phoneNames{iPhone});
+        plot(timelineSec, result.xRTK(idxStateClkDrift(iPhone), :))
+        if iPhone == 1 && false
+            plot(timelineSec(1:end-1), diff(result.xWLS(4, :)))
+            legend('RTK', 'WLS (clock bias)')
+        else
+            legend('RTK')
+        end
+        xlabel('Time since start (s)'); ylabel('Clock drift (m/s)');
+    end
     figureWindowTitle(figures(end), 'Rx clock drift');
 end
 
 % Ambiguities
 if ~isempty(idxStateAllSdAmb)
     figures = [figures figure];
-    plot(timelineSec, result.xRTK(idxStateAllSdAmb, :), '.')
-    xlabel('Time since start (s)'); ylabel('Ambiguities (cyc)');
-    % legend('X', 'Y', 'Z');
+    for iPhone = 1:nPhones
+        idxStateThisSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, iPhone);
+        subplot(nPhones, 1, iPhone); hold on;
+        plot(timelineSec, result.xRTK(idxStateThisSdAmb, :), '.')
+        xlabel('Time since start (s)'); ylabel('Ambiguities (cyc)');
+    end
     figureWindowTitle(figures(end), 'Ambiguities');
 end
 
 %% Innovations
-figures = [figures figure];
-subplot(2,1,1)
-plot(result.prInnovations', '.')
-xlabel('Time since start (s)'); ylabel('Code DD innovations (m)');
-subplot(2,1,2)
-plot(result.prInnovationCovariances', '.')
-xlabel('Time since start (s)'); ylabel('Code DD innovation covariances (m²)');
-figureWindowTitle(figures(end), 'Code DD innovations');
+for iPhone = 1:nPhones
+    figures = [figures figure];
+    subplot(2,1,1)
+    plot(result.prInnovations(:, :, iPhone)', '.')
+    xlabel('Time since start (s)'); ylabel('Code DD innovations (m)');
+    subplot(2,1,2)
+    plot(result.prInnovationCovariances(:, :, iPhone)', '.')
+    xlabel('Time since start (s)'); ylabel('Code DD innovation covariances (m²)');
+    figureWindowTitle(figures(end), ['Code DD innovations - ' config.phoneNames{iPhone}]);
+end
 
-figures = [figures figure];
-subplot(2,1,1)
-plot(result.phsInnovations', '.')
-xlabel('Time since start (s)'); ylabel('Phase DD innovations (m)');
-subplot(2,1,2)
-plot(result.phsInnovationCovariances', '.')
-xlabel('Time since start (s)'); ylabel('Phase DD innovation covariances (m²)');
-figureWindowTitle(figures(end), 'Phase DD innovations');
+for iPhone = 1:nPhones
+    figures = [figures figure];
+    subplot(2,1,1)
+    plot(result.phsInnovations(:, :, iPhone)', '.')
+    xlabel('Time since start (s)'); ylabel('Phase DD innovations (m)');
+    subplot(2,1,2)
+    plot(result.phsInnovationCovariances(:, :, iPhone)', '.')
+    xlabel('Time since start (s)'); ylabel('Phase DD innovation covariances (m²)');
+    figureWindowTitle(figures(end), ['Phase DD innovations - ' config.phoneNames{iPhone}]);
+end
 
-figures = [figures figure];
-subplot(2,1,1)
-plot(result.dopInnovations', '.')
-xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
-subplot(2,1,2)
-plot(result.dopInnovationCovariances', '.')
-xlabel('Time since start (s)'); ylabel('Doppler innovation covariances (m²/s²)');
-figureWindowTitle(figures(end), 'Doppler innovations');
+for iPhone = 1:nPhones
+    figures = [figures figure];
+    subplot(2,1,1)
+    plot(result.dopInnovations(:, :, iPhone)', '.')
+    xlabel('Time since start (s)'); ylabel('Doppler innovations (m/s)');
+    subplot(2,1,2)
+    plot(result.dopInnovationCovariances(:, :, iPhone)', '.')
+    xlabel('Time since start (s)'); ylabel('Doppler innovation covariances (m²/s²)');
+    figureWindowTitle(figures(end), ['Doppler innovations - ' config.phoneNames{iPhone}]);
+end
 
 %% Rejected
 figures = [figures figure]; 
