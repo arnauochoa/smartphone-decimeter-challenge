@@ -10,7 +10,7 @@ if config.USE_CODE_DD
     result.prNumDD(idxEst) = length([doubleDifferences(:).C]);
 end
 
-if config.USE_PHASE_DD% && phoneInfo.idx == 1
+if config.USE_PHASE_DD && phoneInfo.idx == 1
     [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(phoneInfo, x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
     % If all are rejected in one set of constellation+freq, reinitialize 
     % ambiguity for pivot satellite of that set

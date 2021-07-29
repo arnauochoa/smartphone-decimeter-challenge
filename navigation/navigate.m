@@ -182,6 +182,9 @@ while ~hasEnded % while there are more observations/measurements
         pb.print(idxEst, nGnssEpochs);
     end
     
+    % TODO: Remove (lever arm test)
+    result.sat(idxEst) = sat;
+    
     idxEst = idxEst + 1;
     
     % Check if there are more measurements/observations
