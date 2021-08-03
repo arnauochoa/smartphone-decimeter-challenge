@@ -15,14 +15,13 @@ classdef (Sealed) Config < handle
     properties (Constant)
         %% Debug options
         SHOW_DEBUG_MESSAGES     = false;
-        EPOCHS_TO_RUN           = 5;                                      % Set as inf to run all epochs
+        EPOCHS_TO_RUN           = inf;                                      % Set as inf to run all epochs
         
         %% Results
         RES_FILENAME            = 'result';
         
         %% Trace selection
         EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
-        DATASET_TYPE            = 'test';                                  % 'train' 'test'
         CAMPAIGN_NAME           = '2021-04-15-US-MTV-1';%'2020-06-11-US-MTV-1';%'2021-04-15-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                    % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
@@ -82,6 +81,7 @@ classdef (Sealed) Config < handle
     end
     
     properties
+        DATASET_TYPE            = 'test';                                  % 'train' 'test'
         campaignName = Config.CAMPAIGN_NAME;
         phoneNames;
         resFileTimestamp;

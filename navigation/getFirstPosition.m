@@ -37,10 +37,10 @@ while ~firstValidEpoch
     % if the current epoch is not valid, discard the corresponding observations from the observation matrix
     if ~firstValidEpoch
         % Indices of invalid observations in gnssRnx
-        idxInvalid = phoneRnx.utcSeconds == thisUtcSeconds;
+        idxInvalid = phoneGnss.utcSeconds == thisUtcSeconds;
         disp(['Skipped epoch ' num2str(phoneGnss.tow) ]);
-        phoneRnx.obs(idxInvalid,:) = [];
-        phoneRnx.utcSeconds(idxInvalid) = [];
+        phoneGnss.obs(idxInvalid,:) = [];
+        phoneGnss.utcSeconds(idxInvalid) = [];
         %         gnssRnx.tow(idxInvalid) = [];
     end
 end

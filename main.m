@@ -5,8 +5,8 @@ clc;
 % configuration and calls the functions that plot and save the results.
 
 % Configuration can be changed in Config class
-config = Config.getInstance;
-delete(config); % Delete previous instance of Config
+% config = Config.getInstance;
+% delete(config); % Delete previous instance of Config
 config = Config.getInstance;
 
 datasetResults = [];

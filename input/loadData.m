@@ -38,7 +38,7 @@ for iPhone = 1:nPhones
     % lastObsGPST = wntow2datetime(lastObsGPST(1), lastObsGPST(2));
 
     %% Groundtruth data
-    if contains(Config.DATASET_TYPE, 'test')
+    if contains(config.DATASET_TYPE, 'test')
         phones(iPhone).ref = [];
     else
         if isprop(config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
