@@ -1,5 +1,6 @@
 function phones = findGeometry(phones)
-% FINDGEOMETRY Computes the geometry of the smartphones in the lever arm
+% FINDGEOMETRY Computes the geometry of the smartphones in the lever arm.
+% Phone 1 is considered the master receiver
 %   phones = FINDGEOMETRY(phones)
 %
 % Input:
@@ -9,10 +10,24 @@ function phones = findGeometry(phones)
 %   phones  =   Structure array. Contains GNSS and INS measurements,
 %               groundtruth and geometry in body frame
 
-% TODO: find actual geometry for each case (from groundtruth, table, etc)
-config = Config.getInstance();
-phones(1).posBody   =   [0 0 0]';
-if config.MULTI_RX
-    phones(2).posBody   =   [-0.1 0 0]';
+%% Initializations
+config          = Config.getInstance();
+nPhones         = length(phones);
+folderpath      = [projectPath filesep 'geometry' filesep 'baselines' filesep];
+
+campaign        = config.campaignName(1:end-2);
+try
+load([folderpath campaign], 'phoneNames', 'phonePosBody');
+catch ME
+    if (strcmp(ME.identifier,'MATLAB:load:couldNotReadFile'))
+        error('No geometry file exists for %s', campaign);
+    end
+    rethrow(ME);
+end
+
+for iPhone = 1:nPhones
+    phoneIdx = find(ismember(phoneNames, config.phoneNames(iPhone)));
+    assert(~isempty(phoneIdx), 'Unknown geometry')
+    phones(iPhone).posBody = phonePosBody(:, phoneIdx);
 end
 end

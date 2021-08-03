@@ -65,6 +65,7 @@ for iPhone = 1:nPhones
             ggaVec = [ref_nmea.Gga];
             rmcVec = [ref_nmea.Rmc];
             phones(iPhone).ref.posLla = [[ggaVec.LatDeg]' [ggaVec.LonDeg]' [ggaVec.AltM]'];
+            phones(iPhone).ref.trackDeg = [rmcVec.TrackDeg]';
             % Transform groundtruth's UTC time to GPS time
             [refGpsTime, phones(iPhone).ref.gpsSeconds, ~]= Utc2Gps(datevec([rmcVec.Datenum]));
             phones(iPhone).ref.wNum = refGpsTime(:, 1);

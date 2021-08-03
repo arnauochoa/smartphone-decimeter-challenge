@@ -177,7 +177,8 @@ while ~hasEnded % while there are more observations/measurements
     result.xRTK(:, idxEst) = x0;
     PRTK(:, :, idxEst) = ekf.P;
     result.phoneUsed(idxEst) = phoneInfo.idx;
-    % Progress bar
+    
+    % Progress indicator
     if mod(idxEst, Constants.PROGRESS_BAR_STEP) == 0
         pb.print(idxEst, nGnssEpochs);
     end
@@ -191,6 +192,7 @@ while ~hasEnded % while there are more observations/measurements
     [gnssEpoch, osrEpoch, phoneInfo] = getNextGnss(thisUtcSeconds, phones, osr);
     hasEnded = isempty(gnssEpoch) || idxEst > nGnssEpochs; % TODO check imu
 end
+% Progress indicator
 pb.print(idxEst-1, nGnssEpochs);
 
 nEpochs = size(result.xRTK, 2);
@@ -199,6 +201,8 @@ result.posStdNed = nan(nEpochs, 3);
 result.velNed = nan(nEpochs, 3);
 result.velStdNed = nan(nEpochs, 3);
 for iEpoch = 1:nEpochs
+    
+    
     Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
     % Position STD in NED
     Ppos = PRTK(idxStatePos, idxStatePos, iEpoch);
