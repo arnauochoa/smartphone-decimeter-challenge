@@ -10,7 +10,7 @@ if config.USE_CODE_DD
     result.prNumDD(idxEst) = length([doubleDifferences(:).C]);
 end
 
-if config.USE_PHASE_DD && phoneInfo.idx == 1
+if config.USE_PHASE_DD
     [x0, ekf, result, isPhsRejections] = updateWithPhaseDD(phoneInfo, x0, ekf, thisUtcSeconds, idxEst, statPos, doubleDifferences, result);
     % If all are rejected in one set of constellation+freq, reinitialize 
     % ambiguity for pivot satellite of that set
@@ -130,11 +130,11 @@ varSatLosVec = unitVector(hArgs.statPos - hArgs.varSatPos);
 ddLosVec = varSatLosVec - pivSatLosVec;
 
 % Term to account for geometry of smartphones
-Rx = [1 0 0; 0 cos(pitch) -sin(pitch); 0 sin(pitch) cos(pitch)];
+% Rx = [1 0 0; 0 cos(pitch) -sin(pitch); 0 sin(pitch) cos(pitch)];
 Ry = [cos(roll) 0 sin(roll); 0 1 0; -sin(roll) 0 cos(roll)];
 Rz = [cos(yaw) -sin(yaw) 0; sin(yaw) cos(yaw) 0; 0 0 1];
-rotBody2Ltp = Rx * Rz * Ry;
-phoneGeometry = ddLosVec' * rotBody2Ltp * hArgs.phoneInfo.posBody;
+Rbody2ltp = Rz * Ry;%Rx * Rz * Ry;
+phoneGeometry = ddLosVec' * Rbody2ltp * hArgs.phoneInfo.posBody;
 
 % Observation estimation
 y = norm(hArgs.statPos - hArgs.pivSatPos)   - ...   % |stat - sat1|
@@ -146,10 +146,25 @@ y = norm(hArgs.statPos - hArgs.pivSatPos)   - ...   % |stat - sat1|
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);
 H(idxStatePos) = ddLosVec;
-H(idxStateAttXyz(2)) = -ddLosVec' * norm(hArgs.phoneInfo.posBody) * ...         TODO: generalize 3 angles in state vector
-    [cos(yaw)*sin(roll); sin(yaw)*sin(roll); cos(roll)];
-H(idxStateAttXyz(3)) = -ddLosVec' *  norm(hArgs.phoneInfo.posBody) * ...        TODO: generalize 3 angles in state vector
-    [sin(yaw)*cos(roll); -cos(yaw)*cos(roll); 0];
+
+% LTP(ENU)->ECEF rotation matrix
+Rned2enu = [0 1 0; 1 0 0; 0 0 -1];
+Rltp2ecef = Rned2enu * compute_Rn2e(rxPos(1), rxPos(2), rxPos(3));
+
+% Body->LTP rotation matrix differentiated over roll
+Rbody2ltp_diffRoll = ...
+    [-cos(roll)*sin(yaw)    0   cos(roll)*cos(yaw); ...
+    -sin(roll)*sin(yaw)     0   cos(roll)*sin(yaw); ...
+    -cos(yaw)               0   -sin(yaw)];
+
+% Body->LTP rotation matrix differentiated over yaw
+Rbody2ltp_diffYaw = ...
+    [-sin(roll)*cos(yaw)    -cos(roll)  -sin(roll)*sin(yaw);    ...
+    cos(roll)*cos(yaw)      -sin(roll)  cos(roll)*sin(yaw);     ...
+    0                       0           0];
+
+H(idxStateAttXyz(2)) = -ddLosVec' * Rltp2ecef * Rbody2ltp_diffRoll * hArgs.phoneInfo.posBody;
+H(idxStateAttXyz(3)) = -ddLosVec' * Rltp2ecef * Rbody2ltp_diffYaw * hArgs.phoneInfo.posBody;
 
 % Measurement covariance matrix, consider DD sigmas
 R = config.COV_FACTOR_C * computeRtkMeasCovariance(hArgs.satElDeg, ...
@@ -287,13 +302,30 @@ y = norm(hArgs.statPos - hArgs.pivSatPos)   - ...   % |stat - sat1|
     lambda * x(idxStatePivSat)              - ...   % lambda * N_piv
     lambda * x(idxStateVarSat);                     % lambda * N_var
 
+
 % Jacobian matrix
 H = zeros(1, PVTUtils.getNumStates);
 H(idxStatePos) = ddLosVec;
-H(idxStateAttXyz(2)) = -ddLosVec' * norm(hArgs.phoneInfo.posBody) * ...         TODO: generalize 3 angles in state vector
-    [cos(yaw)*sin(roll); sin(yaw)*sin(roll); cos(roll)];
-H(idxStateAttXyz(3)) = -ddLosVec' *  norm(hArgs.phoneInfo.posBody) * ...        TODO: generalize 3 angles in state vector
-    [sin(yaw)*cos(roll); -cos(yaw)*cos(roll); 0];
+
+% LTP(ENU)->ECEF rotation matrix
+Rned2enu = [0 1 0; 1 0 0; 0 0 -1];
+Rltp2ecef = Rned2enu * compute_Rn2e(rxPos(1), rxPos(2), rxPos(3));
+
+% Body->LTP rotation matrix differentiated over roll
+Rbody2ltp_diffRoll = ...
+    [-cos(roll)*sin(yaw)    0   cos(roll)*cos(yaw); ...
+    -sin(roll)*sin(yaw)     0   cos(roll)*sin(yaw); ...
+    -cos(yaw)               0   -sin(yaw)];
+
+% Body->LTP rotation matrix differentiated over yaw
+Rbody2ltp_diffYaw = ...
+    [-sin(roll)*cos(yaw)    -cos(roll)  -sin(roll)*sin(yaw);    ...
+    cos(roll)*cos(yaw)      -sin(roll)  cos(roll)*sin(yaw);     ...
+    0                       0           0];
+
+H(idxStateAttXyz(2)) = -ddLosVec' * Rltp2ecef * Rbody2ltp_diffRoll * hArgs.phoneInfo.posBody;
+H(idxStateAttXyz(3)) = -ddLosVec' * Rltp2ecef * Rbody2ltp_diffYaw * hArgs.phoneInfo.posBody;
+
 H(idxStatePivSat) = lambda;
 H(idxStateVarSat) = -lambda;
 

@@ -17,6 +17,8 @@ tic
 switch config.EVALUATE_DATASETS
     case 'single'
         [ref, result, ~] = evaluateTrace();
+        disp('Navigation ended, saving results...');
+        resultsFilePath = saveResults(result, config.PHONE_NAME);
         disp('Plotting results...')
         plotResults(ref, result);        
     case 'all'
@@ -30,13 +32,30 @@ switch config.EVALUATE_DATASETS
             config.campaignName = campaignNames{iCampaign};
 %             campaignPath = [config.obsDataPath campaignNames{iCampaign} filesep];
             phoneNames = getPhoneNamesInCampaign(config);
+            config.phoneNames = phoneNames;
 %             datasetResults = [];
+            evaluate = true;
             for iPhone = 1:length(phoneNames)
-                config.phoneNames = {phoneNames{iPhone}};
+%                 config.phoneNames = {config.phoneNames{iPhone}};
                 fprintf('Evaluating %s/%s \n', config.campaignName, strjoin(config.phoneNames, '+'))
                 iTrace = iTrace + 1;
-                [datasetResults(iTrace).ref, datasetResults(iTrace).result, resultsFilePath] ...
-                    = evaluateTrace();
+                if evaluate
+                    [datasetResults(iTrace).ref, datasetResults(iTrace).result, isKnownGeometry] ...
+                        = evaluateTrace();
+                    if isKnownGeometry % has coomputed with multi-rx
+                        evaluate = false;
+                    else
+                        config.phoneNames = phoneNames(iPhone);
+                    end
+                else
+                    [phones, ~, ~, ~] = loadData();
+                    if strcmp(config.DATASET_TYPE, 'train')
+                        datasetResults(iTrace).ref = phones(iPhone).ref;
+                    end
+                    datasetResults(iTrace).result = datasetResults(1).result;
+                end
+                disp('Navigation ended, saving results...');
+                resultsFilePath = saveResults(datasetResults(iTrace).result, phoneNames{iPhone});
                 
                 datasetResults(iTrace).campaignName = campaignNames{iCampaign};
                 datasetResults(iTrace).phoneName = phoneNames{iPhone};

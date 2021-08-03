@@ -1,11 +1,11 @@
-function [resultsFilePath] = saveResults(result, fileNamePreamble)
+function [resultsFilePath] = saveResults(result, phoneName, fileNamePreamble)
 %SAVERESULTS Summary of this function goes here
 %   Detailed explanation goes here
 
 config = Config.getInstance;
 assert(size(result.xRTK, 2) == length(result.utcSeconds), 'Inputs do not have the same number of epochs');
 
-if nargin < 2, fileNamePreamble = ''; end
+if nargin < 3, fileNamePreamble = ''; end
 
 %% Initializations
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
@@ -38,7 +38,6 @@ resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, 
 
 %% Interpolate to match sample submission time
 % TODO: perform interpolation for all smartphones
-phoneName = config.phoneNames{1};
 if strcmp(config.EVALUATE_DATASETS, 'all') && strcmp(config.DATASET_TYPE, 'test')
     resultsFilename = [fileNamePreamble config.RES_FILENAME '_interp_' config.resFileTimestamp '.csv'];
     refTable = readtable('data/sample_submission.csv');

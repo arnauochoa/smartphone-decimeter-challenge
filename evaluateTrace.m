@@ -1,4 +1,4 @@
-function [ref, result, resultsFilePath] = evaluateTrace()
+function [ref, result, isKnownGeometry] = evaluateTrace()
 % EVALUATETRACE Evaluates a single trace using the selected configuration
 
     config = Config.getInstance;
@@ -8,7 +8,7 @@ function [ref, result, resultsFilePath] = evaluateTrace()
     
     if ~isempty(osrRnx.obs)
         %% Compute geometry
-        phones = findGeometry(phones);
+        [phones, isKnownGeometry]= findGeometry(phones);
 
         %% Pre-process IMU measurements
         phones = preprocessIns(phones);
@@ -21,8 +21,7 @@ function [ref, result, resultsFilePath] = evaluateTrace()
         result = navigate(phones, osr, nav);
 
         %% Output
-        disp('Navigation ended, saving results...');
-        resultsFilePath = saveResults(result);
+
         ref = phones(1).ref;
     else
         ref = []; result = [];

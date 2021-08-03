@@ -6,6 +6,7 @@ pathOfThisScript = mfilename('fullpath');
 addpath([pathstr filesep 'android-measurements']);
 addpath([pathstr filesep 'EKF']);
 addEKFToMatlabPath;
+addpath([pathstr filesep 'geometry']);
 addpath([pathstr filesep 'gps-measurement-tools' filesep 'NmeaUtils']);
 addpath([pathstr filesep 'imu']);
 addpath([pathstr filesep 'input']);

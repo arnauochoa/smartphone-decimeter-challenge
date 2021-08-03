@@ -1,12 +1,26 @@
 function [result] = navigate(phones, osr, nav)
-%NAVIGATE Summary of this function goes here
-%   Detailed explanation goes here
-
+%NAVIGATE Runs the KF over all the trace
+%   Runs the KF over all the trace. Returns a structure containing the
+%   estimated positions and other information (e.g. covariances)
+%
+%       [result] = NAVIGATE(phones, osr, nav)
+%
+% Input:    phones  =   Array of structures. Contains the measurements (INS
+%                       and GNSS), groundtruth (if any), and information of
+%                       each phone
+%           osr     =   Structure containing the position of the reference
+%                       station and the observations.
+%           nav     =   Structure containing the navigation data.
+%
+% Output:   result  =   Structure containing timeline, estimated state,
+%                       covariances, rejections, and other information 
+%
 %% Initializations
 config = Config.getInstance;
 pb = CmdLineProgressBar(sprintf('Evaluating %s %s... ', config.campaignName, strjoin(config.phoneNames, '+')));
 nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
+idxStateAtt = PVTUtils.getStateIndex(PVTUtils.ID_ATT_XYZ);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 % idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);     % TODO: change phones index to iPhone
 % idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
@@ -15,6 +29,9 @@ nSatFreqs = PVTUtils.getNumSatFreqIndices();
 epochTimesUtc = getAllPhonesEpochs(phones);
 if isinf(config.EPOCHS_TO_RUN), nGnssEpochs = length(epochTimesUtc);
 else,                           nGnssEpochs = config.EPOCHS_TO_RUN;     end
+
+fid = fopen('log.txt', 'a+');
+fprintf(fid, '\n >>>>>>>>>>>>>>>>>>>>>> %s :\n', config.resFileTimestamp);
 
 % EKF:
 ekf = EKF.build(uint16(nStates), config.P_FALSE_OUTLIER_REJECT);
@@ -42,10 +59,16 @@ result.dopRejectedHist          = zeros(1, nGnssEpochs);
 result.dopInvalidHist           = zeros(1, nGnssEpochs);
 result.dopNumDD                 = zeros(1, nGnssEpochs);
 % Reference position observations
-result.refRejectedHist          = zeros(1, nGnssEpochs);
+if config.USE_REF_POS
+    result.refRejectedHist      = zeros(1, nGnssEpochs);
+end
+result.posStdNed                = nan(nGnssEpochs, 3);
+result.velNed                   = nan(nGnssEpochs, 3);
+result.velStdNed                = nan(nGnssEpochs, 3);
 
 %% Obtain first position
-[x0, ekf.P, ekf.tx, x0WLS, phoneInfo] = getFirstPosition(phones, nav);     
+[x0, P, ekf.tx, x0WLS, ~]   = getFirstPosition(phones, nav);
+ekf.P = P;
 % (TODO remove) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 % % Use ref position as first position
 % idxRef = find(phones(phoneInfo.idx).ref.utcSeconds > ekf.tx, 1, 'first');
@@ -174,44 +197,59 @@ while ~hasEnded % while there are more observations/measurements
         error('Covariance should not be negative');
     end
     
+    %% Save output
     result.xRTK(:, idxEst) = x0;
-    PRTK(:, :, idxEst) = ekf.P;
+    estPosEcef  = x0(idxStatePos);
+    Rn2e = compute_Rn2e(estPosEcef(1), estPosEcef(2), estPosEcef(3));
+    % Position STD in NED
+    Ppos = ekf.P(idxStatePos, idxStatePos);
+    result.posStdNed(idxEst, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
+    % Velocity to NED
+    result.velNed(idxEst, :) = Rn2e' * result.xRTK(idxStateVel, idxEst);
+    % Velocity STD in NED
+    Pvel = ekf.P(idxStateVel, idxStateVel);
+    result.velStdNed(idxEst, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
     result.phoneUsed(idxEst) = phoneInfo.idx;
     
     % Progress indicator
     if mod(idxEst, Constants.PROGRESS_BAR_STEP) == 0
         pb.print(idxEst, nGnssEpochs);
+        fprintf(fid, '%i / %i \n', idxEst, nGnssEpochs);
     end
     
     % TODO: Remove (lever arm test)
     result.sat(idxEst) = sat;
     
+    %% Prepare next observation
     idxEst = idxEst + 1;
-    
     % Check if there are more measurements/observations
     [gnssEpoch, osrEpoch, phoneInfo] = getNextGnss(thisUtcSeconds, phones, osr);
     hasEnded = isempty(gnssEpoch) || idxEst > nGnssEpochs; % TODO check imu
+    
+    
 end
 % Progress indicator
 pb.print(idxEst-1, nGnssEpochs);
 
-nEpochs = size(result.xRTK, 2);
-estPosXyz = result.xRTK(idxStatePos, :)';
-result.posStdNed = nan(nEpochs, 3);
-result.velNed = nan(nEpochs, 3);
-result.velStdNed = nan(nEpochs, 3);
-for iEpoch = 1:nEpochs
-    
-    
-    Rn2e = compute_Rn2e(estPosXyz(iEpoch, 1), estPosXyz(iEpoch, 2), estPosXyz(iEpoch, 3));
-    % Position STD in NED
-    Ppos = PRTK(idxStatePos, idxStatePos, iEpoch);
-    result.posStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
-    % Velocity to NED
-    result.velNed(iEpoch, :) = Rn2e' * result.xRTK(idxStateVel, iEpoch);
-    % Velocity STD in NED
-    Pvel = PRTK(idxStateVel, idxStateVel, iEpoch);
-    result.velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
-end
+% nEpochs     = size(result.xRTK, 2);
+% estPosEcef  = result.xRTK(idxStatePos, :)';
+% % estAtt      = result.xRTK(idxStateAtt, :)';
+% % result.phone(nPhones, 1).posEcef = nan(nEpochs, 3);
+% 
+% for iEpoch = 1:nEpochs
+%     Rn2e = compute_Rn2e(estPosEcef(iEpoch, 1), estPosEcef(iEpoch, 2), estPosEcef(iEpoch, 3));
+%     Re2n = Rn2e';
+%     
+%     % TODO: transform position from master Rx to all Rx's
+%     
+%     % Position STD in NED
+%     Ppos = PRTK(idxStatePos, idxStatePos, iEpoch);
+%     result.posStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Ppos * Rn2e)');
+%     % Velocity to NED
+%     result.velNed(iEpoch, :) = Re2n * result.xRTK(idxStateVel, iEpoch);
+%     % Velocity STD in NED
+%     Pvel = PRTK(idxStateVel, idxStateVel, iEpoch);
+%     result.velStdNed(iEpoch, :) = sqrt(diag(Rn2e' * Pvel * Rn2e)');
+% end
 
 end

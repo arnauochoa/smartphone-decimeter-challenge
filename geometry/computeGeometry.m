@@ -96,7 +96,7 @@ for iCampaign = 1:length(campaignNames)
     end
     
     % Compute geometry as mean of all epochs
-    fprintf('>>>>> %s', config.campaignName(1:end-2));
+    fprintf('>>>>> %s', config.campaignName(1:end));
     phoneNames      = config.phoneNames
     phonePosBody    = permute(mean(baselineBody, 1, 'omitnan'), [2 3 1])
     
@@ -104,7 +104,7 @@ for iCampaign = 1:length(campaignNames)
 %     pause;
     
     % Save geometry
-    filename        = config.campaignName(1:end-2);
+    filename        = config.campaignName(1:end);
     save([folderpath filename], 'phoneNames', 'phonePosBody');
     
     clear baselineBody baselineNed
