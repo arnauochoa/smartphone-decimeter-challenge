@@ -1,4 +1,4 @@
-function [ref, result, isKnownGeometry] = evaluateTrace()
+function [ref, result] = evaluateTrace()
 % EVALUATETRACE Evaluates a single trace using the selected configuration
 
     config = Config.getInstance;
@@ -8,7 +8,7 @@ function [ref, result, isKnownGeometry] = evaluateTrace()
     
     if ~isempty(osrRnx.obs)
         %% Compute geometry
-        [phones, isKnownGeometry]= findGeometry(phones);
+        [phones, ~]= findGeometry(phones);
 
         %% Pre-process IMU measurements
         phones = preprocessIns(phones);

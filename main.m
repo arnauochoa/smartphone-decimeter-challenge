@@ -5,8 +5,8 @@ clc;
 % configuration and calls the functions that plot and save the results.
 
 % Configuration can be changed in Config class
-% config = Config.getInstance;
-% delete(config); % Delete previous instance of Config
+config = Config.getInstance;
+delete(config); % Delete previous instance of Config
 config = Config.getInstance;
 
 datasetResults = [];
@@ -35,17 +35,22 @@ switch config.EVALUATE_DATASETS
             config.phoneNames = phoneNames;
 %             datasetResults = [];
             evaluate = true;
+            isSinglePhone = false;
+            if strcmp(config.DATASET_TYPE, 'test')
+                campaign = getGeometryForTest(config.campaignName);
+                isSinglePhone = isempty(campaign);
+            end
             for iPhone = 1:length(phoneNames)
-%                 config.phoneNames = {config.phoneNames{iPhone}};
+                if isSinglePhone
+                    config.phoneNames = phoneNames(iPhone);
+                end
                 fprintf('Evaluating %s/%s \n', config.campaignName, strjoin(config.phoneNames, '+'))
                 iTrace = iTrace + 1;
                 if evaluate
-                    [datasetResults(iTrace).ref, datasetResults(iTrace).result, isKnownGeometry] ...
+                    [datasetResults(iTrace).ref, datasetResults(iTrace).result] ...
                         = evaluateTrace();
-                    if isKnownGeometry % has coomputed with multi-rx
-                        evaluate = false;
-                    else
-                        config.phoneNames = phoneNames(iPhone);
+                    if ~isSinglePhone
+                        evaluate = false; 
                     end
                 else
                     [phones, ~, ~, ~] = loadData();

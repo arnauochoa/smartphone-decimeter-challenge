@@ -4,7 +4,7 @@ function reassignTraces(matFilePath)
 % IMPORTANT: Make sure that the fields EVALUATE_DATASETS and DATASET_TYPE 
 % in the configuration file match with the selected matFilePath 
 if nargin < 1
-    matFilePath = 'data/results/test/all/result_20210623_091453.mat';
+    matFilePath = 'data/results/test/all/result_20210804_092740.mat';%'data/results/test/all/result_20210623_091453.mat';
 end
 load(matFilePath, 'datasetResults');
 

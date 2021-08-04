@@ -34,22 +34,21 @@ millisSinceGpsEpoch = secondsSinceGpsEpoch * 1e3;
 estPosLla = ecef2geodeticVector(result.xRTK(idxStatePos, :)');
 
 % %% Write data to file
-resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla);
+resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla, phoneName);
 
 %% Interpolate to match sample submission time
-% TODO: perform interpolation for all smartphones
 if strcmp(config.EVALUATE_DATASETS, 'all') && strcmp(config.DATASET_TYPE, 'test')
     resultsFilename = [fileNamePreamble config.RES_FILENAME '_interp_' config.resFileTimestamp '.csv'];
     refTable = readtable('data/sample_submission.csv');
     refTableThis = refTable(strcmp(refTable.phone, [config.campaignName '_' phoneName]), :);
 
     estPosLlaInt = interp1(millisSinceGpsEpoch, estPosLla, refTableThis.millisSinceGpsEpoch, 'spline', 'extrap');
-    resultsFilePath = writeResult(resultsDir, resultsFilename, refTableThis.millisSinceGpsEpoch, estPosLlaInt);
+    resultsFilePath = writeResult(resultsDir, resultsFilename, refTableThis.millisSinceGpsEpoch, estPosLlaInt, phoneName);
 end
 end
 
 
-function resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla)
+function resultsFilePath = writeResult(resultsDir, resultsFilename, millisSinceGpsEpoch, estPosLla, phoneName)
 config = Config.getInstance;
 resultsHeader = 'phone,millisSinceGpsEpoch,latDeg,lngDeg\n';
 
@@ -63,7 +62,7 @@ fid = fopen(resultsFilePath, 'a');
 % Write header if necessary
 if writeHeader, fprintf(fid, resultsHeader); end
 for iEpoch = 1:length(millisSinceGpsEpoch)
-    fprintf(fid, '%s_%s,', config.campaignName, strjoin(config.phoneNames, '+'));      % phone
+    fprintf(fid, '%s_%s,', config.campaignName, phoneName);         % phone
     fprintf(fid, '%d,', millisSinceGpsEpoch(iEpoch));                   % millisSinceGpsEpoch
     fprintf(fid, '%.15f,%.14f', estPosLla(iEpoch, 1), estPosLla(iEpoch, 2)); % latDeg,lngDeg
     fprintf(fid, '\n');
