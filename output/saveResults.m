@@ -41,7 +41,7 @@ if strcmp(config.EVALUATE_DATASETS, 'all') && strcmp(config.DATASET_TYPE, 'test'
     resultsFilename = [fileNamePreamble config.RES_FILENAME '_interp_' config.resFileTimestamp '.csv'];
     refTable = readtable('data/sample_submission.csv');
     refTableThis = refTable(strcmp(refTable.phone, [config.campaignName '_' phoneName]), :);
-
+    
     estPosLlaInt = interp1(millisSinceGpsEpoch, estPosLla, refTableThis.millisSinceGpsEpoch, 'spline', 'extrap');
     resultsFilePath = writeResult(resultsDir, resultsFilename, refTableThis.millisSinceGpsEpoch, estPosLlaInt, phoneName);
 end

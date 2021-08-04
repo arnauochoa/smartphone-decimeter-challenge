@@ -4,7 +4,7 @@ function reassignTraces(matFilePath)
 % IMPORTANT: Make sure that the fields EVALUATE_DATASETS and DATASET_TYPE 
 % in the configuration file match with the selected matFilePath 
 if nargin < 1
-    matFilePath = 'data/results/test/all/result_20210804_092740.mat';%'data/results/test/all/result_20210623_091453.mat';
+    matFilePath = 'data/results/test/all/result_20210623_091453.mat';%'data/results/test/all/result_20210804_101731.mat';
 end
 load(matFilePath, 'datasetResults');
 
@@ -47,6 +47,7 @@ for iTrace = 1:nTraces
     answer = '';
     while ~strcmp(answer, 'y') && ~strcmp(answer, 'n')
         answer = input('Is this result correct (y/n) ? ', 's');
+%         answer = 'y';
     end
     selectedTracesTable.Campaign{iTrace} = datasetResults(iTrace).campaignName;
     selectedTracesTable.Phone{iTrace} = datasetResults(iTrace).phoneName;
@@ -118,7 +119,7 @@ for iTrace = 1:nTraces
         fprintf(fidScore, '%s,%s,%.4f\n', ...
             datasetResults(iTrace).campaignName, datasetResults(iTrace).phoneName, score(iTrace));
     end
-    resultsFilePath = saveResults(datasetResults(iTrace).result, fileNamePreamble);
+    resultsFilePath = saveResults(datasetResults(iTrace).result, datasetResults(iTrace).phoneName, fileNamePreamble);
 end
 if isTrain
     finalScore = mean(score);
