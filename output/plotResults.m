@@ -46,18 +46,20 @@ geobasemap(basemap);
 % Plot estimation with color depending on covariance
 hold on; colormap autumn;
 geoscatter(estPosLla(:, 1), estPosLla(:, 2), 6, stdHor, 'filled');
-c = colorbar; 
+c = colorbar;
 c.Label.String = 'Horizontal position STD (m)';
 if strcmp(config.DATASET_TYPE, 'test'), legend('WLS', 'RTK');
 else, legend('Groundtruth', 'WLS', 'RTK'); end
 figureWindowTitle(figures(end), 'Map');
 
 % Attitude
-figures = [figures figure];
-plot(timelineSec, estAttXyzDeg);
-xlabel('Time since start (s)'); ylabel('Attitude (degrees)');
-legend('Pitch', 'Roll', 'Yaw');
-figureWindowTitle(figures(end), 'Attitude');
+if config.MULTI_RX
+    figures = [figures figure];
+    plot(timelineSec, estAttXyzDeg);
+    xlabel('Time since start (s)'); ylabel('Attitude (degrees)');
+    legend('Pitch', 'Roll', 'Yaw');
+    figureWindowTitle(figures(end), 'Attitude');
+end
 
 % Velocity
 figures = [figures figure];
@@ -156,8 +158,8 @@ for iPhone = 1:nPhones
 end
 
 %% Rejected
-figures = [figures figure]; 
-subplot(3,1,1); 
+figures = [figures figure];
+subplot(3,1,1);
 area(timelineSec, [result.prRejectedHist', result.prInvalidHist', result.prNumDD' - result.prRejectedHist' - result.prInvalidHist']);
 legend({'Rejected', 'Invalid', 'Used'});
 ylabel('# Code DDs');
@@ -208,7 +210,7 @@ if contains(config.DATASET_TYPE, 'train')
         % Velocity to NED
         velErrNed(iEpoch, :) = Rn2e' * velErrEcef(iEpoch, :)';
     end
-
+    
     % Position error
     figures = [figures figure];
     coord = {'North', 'East', 'Down'};
@@ -281,9 +283,9 @@ if contains(config.DATASET_TYPE, 'train')
         plot([1;1]*velErrPctl(iDim), [0;1]*pctl/100, '--', 'Color', colors(iDim, :))
     end
     legend({'N',sprintf('%d%% bound = %.2f', pctl, velErrPctl(1)), ...
-            'E',sprintf('%d%% bound = %.2f', pctl, velErrPctl(2)), ...
-            'D',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
-            'Location','northeastoutside');
+        'E',sprintf('%d%% bound = %.2f', pctl, velErrPctl(2)), ...
+        'D',sprintf('%d%% bound = %.2f', pctl, velErrPctl(3))}, ...
+        'Location','northeastoutside');
     xlabel('Velocity error error (m/s)'); ylabel('Frequency')
     title([config.campaignName ' - ' strjoin(config.phoneNames, '+')], 'Interpreter', 'none');
     figureWindowTitle(figures(end), 'Velocity CDF');

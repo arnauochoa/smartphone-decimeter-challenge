@@ -22,7 +22,7 @@ classdef (Sealed) Config < handle
         
         %% Trace selection
         EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
-        CAMPAIGN_NAME           = '2021-04-15-US-MTV-1';%'2020-06-11-US-MTV-1';%'2021-04-15-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';%'2021-04-29-US-SJC-2';%'2020-06-11-US-MTV-1';%'2021-04-15-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                    % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
@@ -81,7 +81,7 @@ classdef (Sealed) Config < handle
     end
     
     properties
-        DATASET_TYPE            = 'test';                                  % 'train' 'test'
+        DATASET_TYPE            = 'train';                                  % 'train' 'test'
         campaignName = Config.CAMPAIGN_NAME;
         phoneNames;
         resFileTimestamp;

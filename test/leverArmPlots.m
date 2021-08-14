@@ -6,7 +6,7 @@ config = Config.getInstance;
 load res_multi-rx-CD_single-L
 nEpochs = length(result.utcSeconds);
 
-leverArmLength = 0.95;
+leverArmLength = 0.8;
 
 campaignPath = [config.obsDataPath config.campaignName filesep];
 config.phoneNames = getValidDir(campaignPath);
@@ -100,7 +100,8 @@ for iPhone = 1:nPhones
     subplot(nPhones, 1, iPhone)
     histogram(result.dopInnovations(:, :, iPhone))
     xlabel('Doppler innovation (m/s)'); ylabel('Frequency');
-    title(sprintf('%s std = %d', config.phoneNames{iPhone}, sigma));
+    xlim([-0.3 0.3]);
+%     title(sprintf('%s std = %d', config.phoneNames{iPhone}, sigma));
     
     %% Velocity error projected onto LOS
     refPosEcefInterpRes = interp1(ref.utcSeconds, refEcef, result.utcSeconds);
@@ -124,6 +125,7 @@ for iPhone = 1:nPhones
     figure(10)
     subplot(nPhones, 1, iPhone)
     histogram(leverVelLos);
-    xlabel('LOS velocity error due to lever arm');
-    title(sprintf('%s std = %d', config.phoneNames{iPhone}, sigma));
+    xlabel('LOS velocity error (m/s)');ylabel('Frequency')
+    xlim([-0.3 0.3]);
+%     title(sprintf('%s std = %d', config.phoneNames{iPhone}, sigma));
 end

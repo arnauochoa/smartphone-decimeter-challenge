@@ -11,7 +11,7 @@ function [ref, result] = evaluateTrace()
         [phones, ~]= findGeometry(phones);
 
         %% Pre-process IMU measurements
-        phones = preprocessIns(phones);
+%         phones = preprocessIns(phones);
     
         %% Interpolate OSR data
         [phones, osr] = interpOSR(osrRnx, phones);

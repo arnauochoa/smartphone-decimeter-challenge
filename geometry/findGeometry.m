@@ -16,6 +16,11 @@ nPhones         = length(phones);
 folderpath      = [projectPath filesep 'geometry' filesep 'baselines' filesep];
 isSinglePhone   = false;
 
+if ~config.MULTI_RX
+    phones.posBody = [0 0 0]';
+    return
+end
+
 switch config.DATASET_TYPE
     case 'train'
         campaign        = config.campaignName;

@@ -16,7 +16,7 @@ iTrace = 0;
 tic
 switch config.EVALUATE_DATASETS
     case 'single'
-        [ref, result, ~] = evaluateTrace();
+        [ref, result] = evaluateTrace();
         disp('Navigation ended, saving results...');
         resultsFilePath = saveResults(result, config.PHONE_NAME);
         disp('Plotting results...')
@@ -35,7 +35,7 @@ switch config.EVALUATE_DATASETS
             config.phoneNames = phoneNames;
 %             datasetResults = [];
             evaluate = true;
-            isSinglePhone = false;
+            isSinglePhone = ~config.MULTI_RX;
             if strcmp(config.DATASET_TYPE, 'test')
                 campaign = getGeometryForTest(config.campaignName);
                 isSinglePhone = isempty(campaign);
