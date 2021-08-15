@@ -25,9 +25,10 @@ switch config.EVALUATE_DATASETS
         campaignNames = getValidDir(config.obsDataPath);
         if strcmp(config.DATASET_TYPE, 'train')
             resultsDir = getResultsDir(config);
-            fidScore = fopen([resultsDir 'score_' config.resFileTimestamp '.csv'], 'w');
+            fidScore = fopen([resultsDir 'score_' config.resFileTimestamp '.csv'], 'w+');
             fprintf(fidScore, 'campaign,phone,score\n');
         end
+
         for iCampaign = 1:length(campaignNames)
             config.campaignName = campaignNames{iCampaign};
 %             campaignPath = [config.obsDataPath campaignNames{iCampaign} filesep];
@@ -40,6 +41,7 @@ switch config.EVALUATE_DATASETS
                 campaign = getGeometryForTest(config.campaignName);
                 isSinglePhone = isempty(campaign);
             end
+           
             for iPhone = 1:length(phoneNames)
                 if isSinglePhone
                     config.phoneNames = phoneNames(iPhone);

@@ -198,6 +198,9 @@ classdef (Sealed) Config < handle
                 otherwise
                     error('Invalid field for Config.EVALUATE_DATASETS, choose among ''single'' and ''all''');
             end
+            if ~exist(resultsDir, 'dir')
+                mkdir(resultsDir);
+            end
         end
         
         function phoneNames = getPhoneNamesInCampaign(this)
