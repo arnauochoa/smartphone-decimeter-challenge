@@ -10,6 +10,7 @@ classdef Config < handle
     
     properties (Constant)
         %% Dataset selection
+        DATASET_TYPE            = 'train';
         CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';
         PHONE_NAME              = 'Mi8';
         FILTER_RAW_MEAS         = true;
@@ -59,7 +60,7 @@ classdef Config < handle
         function [dirPath, fileName] = getObsDirFile()
             %GETOBSDIRFILE Returns the directory and the filename of the
             %observation file according to the selected configuration.
-            dirPath = [Config.dataPath 'datasets' filesep Config.CAMPAIGN_NAME filesep];
+            dirPath = [Config.dataPath Config.DATASET_TYPE filesep Config.CAMPAIGN_NAME filesep Config.PHONE_NAME filesep];
             fileName = [Config.PHONE_NAME '_GnssLog.txt'];
         end
         
@@ -80,6 +81,7 @@ classdef Config < handle
             %GETREFDIRFILE Returns the directory and the filename of the
             %groundtruth file according to the selected configuration.
             [dirPath, ~] = Config.getObsDirFile();
+            dirPath = [dirPath 'supplemental' filesep];
             fileName = ['SPAN_' Config.PHONE_NAME '_10Hz.nmea'];
         end
         
@@ -98,7 +100,7 @@ classdef Config < handle
     methods (Static, Access = private)
         function path = dataPath()
             % DATAPATH Returns the absolute path where all the data is saved
-            path = [workspacePath 'data' filesep 'training' filesep];
+            path = [workspacePath 'data' filesep 'sdc-data' filesep];
         end
         
     end
