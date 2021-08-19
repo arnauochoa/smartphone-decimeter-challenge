@@ -95,26 +95,28 @@ while ~hasEnded % while there are more observations/measurements
             
             % If outlier rejection active, use it in processObservation,
             % otherwise reject Doppler obs higher than threshold
-            if Config.OUTLIER_REJECTION || ...
-                    (~Config.OUTLIER_REJECTION && abs(prRate(iObs)) < Config.MAX_DOPPLER_MEAS)
-                % Pack Doppler observation
-                hArgs.obs = prRate(iObs);
-                hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
-                    Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
-                % Process Doppler observation
-                [esekf, innovation, innovationCovariance, rejected, z, y] = ...
-                    EKF.processObservation(esekf, thisUtcSeconds, ...
-                    @fTransition, fArgs, ...
-                    @hDopplerObs, hArgs, ...
-                    sprintf('Doppler (''%c%d'' f = %d)',hArgs.obsConst, gnss.obs(iObs).prn, hArgs.obsFreqHz));
-                dopInnovations(idxSat, idxEst) = innovation;
-                dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
-                dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + rejected;
-                fArgs.x0 = esekf.x;
-                hArgs.x0 = esekf.x;
-            else % prRate > Config.MAX_DOPPLER_MEAS
-                disp([mfilename '>> Doppler outlier rejected, value = ' num2str(prRate(iObs)) 'm/s'])
-                dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + 1;
+            if Config.USE_DOPPLER
+                if Config.OUTLIER_REJECTION || ...
+                        (~Config.OUTLIER_REJECTION && abs(prRate(iObs)) < Config.MAX_DOPPLER_MEAS)
+                    % Pack Doppler observation
+                    hArgs.obs = prRate(iObs);
+                    hArgs.sigmaObs = gnss.obs(iObs).D_sigma .* ...
+                        Constants.CELERITY ./ hArgs.obsFreqHz; % Doppler sigma in mps
+                    % Process Doppler observation
+                    [esekf, innovation, innovationCovariance, rejected, z, y] = ...
+                        EKF.processObservation(esekf, thisUtcSeconds, ...
+                        @fTransition, fArgs, ...
+                        @hDopplerObs, hArgs, ...
+                        sprintf('Doppler (''%c%d'' f = %d)',hArgs.obsConst, gnss.obs(iObs).prn, hArgs.obsFreqHz));
+                    dopInnovations(idxSat, idxEst) = innovation;
+                    dopInnovationCovariances(idxSat, idxEst) = innovationCovariance;
+                    dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + rejected;
+                    fArgs.x0 = esekf.x;
+                    hArgs.x0 = esekf.x;
+                else % prRate > Config.MAX_DOPPLER_MEAS
+                    disp([mfilename '>> Doppler outlier rejected, value = ' num2str(prRate(iObs)) 'm/s'])
+                    dopRejectedHist(idxEst) = dopRejectedHist(idxEst) + 1;
+                end
             end
         end
     end

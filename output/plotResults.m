@@ -44,7 +44,7 @@ if isprop(Config, 'OBS_RINEX_REF_XYZ') % Use observations from rinex
 else
     geoplot(ref.posLla(:, 1), ref.posLla(:, 2), '.-', posLat, posLon, '.-');
 end
-geobasemap none
+geobasemap streets
 legend('Groundtruth', 'Computed');
 figureWindowTitle(figures(end), 'Map');
 

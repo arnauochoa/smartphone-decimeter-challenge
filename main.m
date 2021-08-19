@@ -11,7 +11,8 @@ clc;
 %% Compute geometry
 
 %% Pre-process IMU measurements
-imuClean = preprocessImu(imuRaw);
+% imuClean = preprocessImu(imuRaw);
+imuClean = imuRaw;
 
 %% Navigate
 disp('Computing positions...');
