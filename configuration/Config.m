@@ -11,10 +11,10 @@ classdef Config < handle
     properties (Constant)
         %% Dataset selection
         DATASET_TYPE            = 'train';
-        CAMPAIGN_NAME           = '2020-05-14-US-MTV-2';
-        PHONE_NAME              = 'Pixel4';
+        CAMPAIGN_NAME           = '2021-04-28-US-SJC-1';
+        PHONE_NAME              = 'SamsungS20Ultra';
         FILTER_RAW_MEAS         = true;
-        NAV_FILE_DATETIME       = '20201350000'; % Date in broadcasted obs RINEX filename
+        NAV_FILE_DATETIME       = '20211180000'; % Date in broadcasted obs RINEX filename
         % OBSERVATION RINEX - Uncomment to use, path from workspace
 %         OBS_RINEX_PATH          = 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; % 'data/other/igs_data/STFU00USA_S_20202190900_15M_01S_MO.rnx'; ||| 'data/other/ARWD219W.rnx';
 %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100]; % [-2700404.1800 -4292605.5200  3855137.4100] ||| [-2687510.5240 -4290645.5230  3866179.1130]
