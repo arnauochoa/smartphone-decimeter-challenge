@@ -14,7 +14,7 @@ idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
 timelineSec = (result.utcSeconds - result.utcSeconds(1));
 nEpochs = size(result.xRTK, 2);
 figures = [];
-basemap = 'none';
+basemap = 'streets';
 
 %% RTK estimation
 estPosXyz       = result.xRTK(idxStatePos, :)';

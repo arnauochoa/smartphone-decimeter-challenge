@@ -21,8 +21,8 @@ classdef (Sealed) Config < handle
         RES_FILENAME            = 'result';
         
         %% Trace selection
-        EVALUATE_DATASETS       = 'all';                                 % 'single' 'all'
-        CAMPAIGN_NAME           = '2020-06-11-US-MTV-1';%'2021-04-29-US-SJC-2';%'2020-06-11-US-MTV-1';%'2021-04-15-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
+        CAMPAIGN_NAME           = '2020-05-29-US-MTV-1';%'2021-04-29-US-SJC-2';%'2020-06-11-US-MTV-1';%'2021-04-15-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
         PHONE_NAME              = 'Pixel4';                                    % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
@@ -34,13 +34,13 @@ classdef (Sealed) Config < handle
         %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        MULTI_RX                = true;                                     % If true, all phones from a campaign are used
+        MULTI_RX                = false;                                     % If true, all phones from a campaign are used
         P_FALSE_OUTLIER_REJECT  = 0.01;                                     % Probability of false outlier rejection
         
         %% RTK parameters
         USE_REF_POS             = false;
         USE_CODE_DD             = true;
-        USE_PHASE_DD            = true;
+        USE_PHASE_DD            = false;
         USE_DOPPLER             = true;
         MAX_OSR_INTERP_GAP_SEC  = 15;
         
