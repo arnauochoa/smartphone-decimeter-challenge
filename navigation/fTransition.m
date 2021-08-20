@@ -6,6 +6,8 @@ nPhones = length(config.phoneNames);
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
+idxStateIFClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_IF_CLK_DRIFT, 1:nPhones);
+idxStateISClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_IS_CLK_DRIFT, 1:nPhones);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
 
 % Transition time step
@@ -25,6 +27,12 @@ Q = zeros(PVTUtils.getNumStates);
 Q(idxStateVel, idxStateVel) = diag(config.SIGMA_Q_VEL_XYZ.^2);
 if ~isempty(idxStateClkDrift)
     Q(idxStateClkDrift, idxStateClkDrift) = config.SIGMA_Q_CLK_DRIFT.^2;
+end
+if ~isempty(idxStateIFClkDrift)
+    Q(idxStateIFClkDrift, idxStateIFClkDrift) = config.SIGMA_Q_IS_CLK_DRIFT.^2;
+end
+if ~isempty(idxStateISClkDrift)
+    Q(idxStateISClkDrift, idxStateISClkDrift) = config.SIGMA_Q_IS_CLK_DRIFT.^2;
 end
 if ~isempty(idxStateAllSdAmb)
     Q(idxStateAllSdAmb, idxStateAllSdAmb) = (config.SIGMA_Q_SD_AMBIG.^2) * eye(length(idxStateAllSdAmb));

@@ -76,6 +76,8 @@ idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateAtt = PVTUtils.getStateIndex(PVTUtils.ID_ATT_XYZ);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, 1:nPhones);
+idxStateIFClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_IF_CLK_DRIFT, 1:nPhones);
+idxStateISClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_IS_CLK_DRIFT, 1:nPhones);
 idxStateAllSdAmb = PVTUtils.getStateIndex(PVTUtils.ID_SD_AMBIGUITY, 1:nPhones);
 
 % Initialize state vector and cov matrix
@@ -98,6 +100,12 @@ end
 P0(idxStateVel, idxStateVel) = diag(config.SIGMA_P0_VEL_XYZ.^2);
 if ~isempty(idxStateClkDrift)
     P0(idxStateClkDrift, idxStateClkDrift) = config.SIGMA_P0_CLK_DRIFT.^2 * eye(length(idxStateClkDrift));
+end
+if ~isempty(idxStateIFClkDrift)
+    P0(idxStateIFClkDrift, idxStateIFClkDrift) = config.SIGMA_P0_IF_CLK_DRIFT.^2 * eye(length(idxStateIFClkDrift));
+end
+if ~isempty(idxStateISClkDrift)
+    P0(idxStateISClkDrift, idxStateISClkDrift) = config.SIGMA_P0_IS_CLK_DRIFT.^2 * eye(length(idxStateISClkDrift));
 end
 % Ambiguities
 if ~isempty(idxStateAllSdAmb)

@@ -9,7 +9,9 @@ classdef PVTUtils < handle
         ID_ATT_XYZ      = 2;
         ID_VEL          = 3;
         ID_CLK_DRIFT    = 4;
-        ID_SD_AMBIGUITY = 5;
+        ID_IF_CLK_DRIFT = 5;
+        ID_IS_CLK_DRIFT = 6;
+        ID_SD_AMBIGUITY = 7;
         
         % Data structures
         MAX_GPS_PRN = 40;
@@ -36,7 +38,9 @@ classdef PVTUtils < handle
                 nPhones = 1;
             end
             if Config.USE_DOPPLER % clk drift
-                nStates = nStates + nPhones;
+                nStates = nStates + nPhones; % rx clock drift
+                nStates = nStates + (PVTUtils.getNumFrequencies - 1); % I-F clock drift
+                nStates = nStates + (PVTUtils.getNumConstellations - 1); % I-S clock drift
             end
             if Config.USE_PHASE_DD % SD ambiguities
                 nStates = nStates + nPhones * PVTUtils.getNumSatFreqIndices();
@@ -76,10 +80,31 @@ classdef PVTUtils < handle
                     idx = prevIdx(end) + (1:3);
                 case PVTUtils.ID_CLK_DRIFT
                     if config.USE_DOPPLER % clk drift
-                        if nargin == 2
-                            idx = prevIdx(end) + idxPhone;
-                        else
+                        if nargin ~= 2
                             error('Phone index must be provided.');
+                        end
+                        idx = prevIdx(end) + idxPhone;
+                    end
+                case PVTUtils.ID_IF_CLK_DRIFT
+                    if config.USE_DOPPLER
+                        if nargin > 2 && nargin < 5
+                            error('Prn, const, and frequency must be provided.');
+                        end
+                        if nargin == 2
+                            idx = prevIdx(end) + (1:(PVTUtils.getNumFrequencies - 1));
+                        else
+                            idx = prevIdx(end) + (PVTUtils.getFreqIdx(freqHz) - 1);
+                        end
+                    end
+                case PVTUtils.ID_IS_CLK_DRIFT
+                    if config.USE_DOPPLER
+                        if nargin > 2 && nargin < 5
+                            error('Prn, const, and frequency must be provided.');
+                        end
+                        if nargin == 2
+                            idx = prevIdx(end) + (1:(PVTUtils.getNumConstellations - 1));
+                        else
+                            idx = prevIdx(end) + (PVTUtils.getConstelIdx(constellationLetter) - 1);
                         end
                     end
                 case PVTUtils.ID_SD_AMBIGUITY

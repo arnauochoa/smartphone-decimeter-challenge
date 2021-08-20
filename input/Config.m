@@ -22,8 +22,8 @@ classdef (Sealed) Config < handle
         
         %% Trace selection
         EVALUATE_DATASETS       = 'single';                                 % 'single' 'all'
-        CAMPAIGN_NAME           = '2021-04-28-US-SJC-1';%'2021-04-29-US-SJC-2';%'2020-06-11-US-MTV-1';%'2021-04-15-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
-        PHONE_NAME              = 'SamsungS20Ultra';                                    % Only if EVALUATE_DATASETS = single
+        CAMPAIGN_NAME           = '2020-08-06-US-MTV-2';%'2021-04-29-US-SJC-2';%'2020-06-11-US-MTV-1';%'2021-04-15-US-MTV-1';                    % Only if EVALUATE_DATASETS = single
+        PHONE_NAME              = 'Mi8';                                    % Only if EVALUATE_DATASETS = single
         FILTER_RAW_MEAS         = true;                                     % Enable/disable filtering of raw measurements (omited when caching)
         OSR_SOURCES             = {'Verizon', 'SwiftNav', 'IGS'};           % By order of preference
         OSR_STATION_NAME        = 'EAWD';                                   % Verizon station name
@@ -34,13 +34,13 @@ classdef (Sealed) Config < handle
         %         OBS_RINEX_REF_XYZ       = [-2700404.1800 -4292605.5200  3855137.4100];
         
         %% Operating mode
-        MULTI_RX                = true;                                     % If true, all phones from a campaign are used
+        MULTI_RX                = false;                                     % If true, all phones from a campaign are used
         P_FALSE_OUTLIER_REJECT  = 0.01;                                     % Probability of false outlier rejection
         
         %% RTK parameters
         USE_REF_POS             = false;
         USE_CODE_DD             = true;
-        USE_PHASE_DD            = true;
+        USE_PHASE_DD            = false;
         USE_DOPPLER             = true;
         MAX_OSR_INTERP_GAP_SEC  = 15;
         
@@ -63,7 +63,9 @@ classdef (Sealed) Config < handle
         % Process noise covariance matrix - Q
         SIGMA_Q_ATT_XYZ         = [0 pi/72 pi/18];  % std rad/sqrt(s) of XYZ attitude angles
         SIGMA_Q_VEL_XYZ         = [1e2 1e2 1e2];    % std m/sqrt(s^3) of XYZ velocity
-        SIGMA_Q_CLK_DRIFT       = 1e1;              % std m/sqrt(s^3) of clock drift
+        SIGMA_Q_CLK_DRIFT       = 1e0;              % std m/sqrt(s^3) of clock drift
+        SIGMA_Q_IF_CLK_DRIFT    = 1e-1;              % std m/sqrt(s^3) of clock drift
+        SIGMA_Q_IS_CLK_DRIFT    = 1e-1;              % std m/sqrt(s^3) of clock drift
         SIGMA_Q_SD_AMBIG        = 1e-2;             % std cyc of SD phase ambiguity
         % Measurement covariance matrix - R
         SIGMA_C_M               = 1e2;              % Default std (m) for pseudorange meas          (only for elevation-based model)
@@ -77,6 +79,8 @@ classdef (Sealed) Config < handle
         SIGMA_P0_ATT_XYZ        = [0 pi/36 pi];     % std rad/sqrt(s) of XYZ attitude angles
         SIGMA_P0_VEL_XYZ        = [1e2 1e2 1e2];    % std m/sqrt(s^3) of initial XYZ velocity
         SIGMA_P0_CLK_DRIFT      = 1e2;              % std m/sqrt(s^3) of initial clock drift
+        SIGMA_P0_IF_CLK_DRIFT   = 1e1;
+        SIGMA_P0_IS_CLK_DRIFT   = 1e1;
         SIGMA_P0_SD_AMBIG       = 1e5;              % std cyc of initial SD phase ambiguity
     end
     

@@ -28,6 +28,7 @@ for iObs = 1:length(phoneGnss.obs)
         hArgs.satClkDrift = sat.clkDrift(iObs);
         hArgs.satElDeg = sat.elDeg(iObs);
         hArgs.obsConst = thisObs.constellation;
+        hArgs.freqHz = thisObs.D_fcarrier_Hz;
 
         % Convert Doppler from Hz to mps (pseudorange-rate)
         hArgs.obs = -hz2mps(thisObs.D_Hz, thisObs.D_fcarrier_Hz);
@@ -70,6 +71,8 @@ function [z, y, H, R] = hDoppler(~, hArgs)
 idxStatePos = PVTUtils.getStateIndex(PVTUtils.ID_POS);
 idxStateVel = PVTUtils.getStateIndex(PVTUtils.ID_VEL);
 idxStateClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_CLK_DRIFT, hArgs.phoneInfo.idx);
+idxStateIFClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_IF_CLK_DRIFT, [], [], hArgs.obsConst, hArgs.freqHz);
+idxStateISClkDrift = PVTUtils.getStateIndex(PVTUtils.ID_IS_CLK_DRIFT, [], [], hArgs.obsConst, hArgs.freqHz);
 
 % Observation
 z = hArgs.obs;
@@ -79,7 +82,9 @@ vUS = unitVector(hArgs.satPos - hArgs.x0(idxStatePos));
 
 % Observation estimation
 y = vUS'*(hArgs.satVel - hArgs.x0(idxStateVel)) +   ...    % Radial velocity from user to sat
-    hArgs.x0(idxStateClkDrift) -                    ...    % Receiver clock drift
+    hArgs.x0(idxStateClkDrift) +                    ...    % Receiver clock drift
+    hArgs.x0(idxStateIFClkDrift) +                  ...    % Inter-Freq clock drift
+    hArgs.x0(idxStateISClkDrift) -                  ...    % Inter-System clock drift
     Constants.CELERITY * hArgs.satClkDrift;                % Satellite clock drift
 
 % Distance between receiver and satellite. Second term is Sagnac effect.
@@ -92,6 +97,8 @@ dist = norm(hArgs.x0(idxStatePos) - hArgs.satPos) + ...
 H = zeros(1, PVTUtils.getNumStates);
 H(idxStateVel) = (hArgs.x0(idxStatePos) - hArgs.satPos)/dist;
 H(idxStateClkDrift) = 1;
+H(idxStateIFClkDrift) = 1;
+H(idxStateISClkDrift) = 1;
 
 % Measurement covariance matrix
 R = Config.COV_FACTOR_D * computeMeasCovariance(hArgs.satElDeg, ...
