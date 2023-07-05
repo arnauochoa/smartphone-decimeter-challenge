@@ -1,12 +1,15 @@
 # Smartphone decimeter challenge
 Matlab package for the Google Smartphone Decimeter Challenge at ION GNSS+ 2021.
 
+This project was part of my Master's Thesis at ENAC (École Nationale de l'Aviation Civile).
+The thesis report and presentation can be found in [master_thesis](master_thesis) and the paper can be downloaded [here](https://enac.hal.science/hal-03450489/).
+
 ## Installation
 This code uses the following external packages:
 * __Submodules__
-    * [EKF](https://github.com/jtec/EKF)
-    * [INS](https://github.com/jtec/INS)
-    * [magnitude](https://redmine.recherche.enac.fr/projects/magnitude/repository)
+    * [EKF](https://github.com/jtec/EKF) (private)
+    * [INS](https://github.com/jtec/INS) (private)
+    * [magnitude](https://redmine.recherche.enac.fr/projects/magnitude/repository) (private)
     * [android-measurements](https://github.com/arnauochoa/android-measurements)
     * [gps-measurement-tools/NmeaUtils](https://github.com/google/gps-measurement-tools)
 * ___Yet not supported___
